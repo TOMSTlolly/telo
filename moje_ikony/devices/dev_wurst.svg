@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28.68 46.17">
+  <defs>
+    <style>
+      .cls-1, .cls-2 {
+        fill: #fff;
+      }
+
+      .cls-1, .cls-3, .cls-4 {
+        stroke: #000;
+        stroke-miterlimit: 10;
+        stroke-width: .5px;
+      }
+
+      .cls-2 {
+        stroke-width: 0px;
+      }
+
+      .cls-3 {
+        fill: #bcbcbc;
+      }
+
+      .cls-4 {
+        fill: none;
+      }
+    </style>
+  </defs>
+  <g id="Layer_1" data-name="Layer 1">
+    <rect class="cls-1" x="9.67" y="12.37" width="9.39" height="33.55"/>
+    <rect class="cls-3" x="9.67" y="11.02" width="9.39" height="1.35"/>
+    <polygon class="cls-1" points="17.51 10.14 10.96 10.15 10.59 11.02 18.04 11.02 17.51 10.14"/>
+    <g>
+      <g>
+        <path class="cls-1" d="m14.31.25C1.28.25.25,6.13.25,6.31h7.03l1.27,9.93h1.06V6.31h3.58l.39,9.93h.73"/>
+        <path class="cls-1" d="m14.36.25c13.03,0,14.06,5.88,14.06,6.06h-7.03l-1.27,9.93h-1.06V6.31h-3.58l-.39,9.93h-.73"/>
+      </g>
+      <line class="cls-1" x1="13.59" y1="16.24" x2="15.09" y2="16.24"/>
+    </g>
+    <line class="cls-4" x1="13.31" y1=".26" x2="15.77" y2=".25"/>
+  </g>
+  <g id="Layer_2" data-name="Layer 2">
+    <rect class="cls-2" x="14.02" y="7.96" width=".64" height="5.26"/>
+  </g>
+</svg>
