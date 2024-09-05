@@ -1,0 +1,674 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/grey_5"
+    android:fitsSystemWindows="true"
+    android:orientation="vertical"
+    android:id="@+id/panel"
+    tools:context=".ui.home.HomeFragment">
+
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/nested_scroll_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scrollbars="none"
+        android:scrollingCache="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:descendantFocusability="blocksDescendants"
+            android:orientation="vertical">
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/spacing_large" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingLeft="@dimen/spacing_middle"
+                android:paddingRight="@dimen/spacing_middle">
+
+                <androidx.cardview.widget.CardView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/spacing_xsmall"
+                    android:layout_marginLeft="@dimen/spacing_xsmall"
+                    android:layout_marginRight="@dimen/spacing_xsmall"
+                    android:layout_marginTop="@dimen/spacing_xsmall"
+                    android:layout_weight="1"
+                    android:visibility="visible"
+                    app:cardCornerRadius="2dp"
+                    app:cardElevation="2dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:padding="@dimen/spacing_large">
+
+                        <RelativeLayout
+                            android:layout_width="40dp"
+                            android:layout_height="40dp">
+
+                            <ImageView
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:layout_centerInParent="true"
+                                app:srcCompat="@drawable/shape_circle"
+                                app:tint="@color/orange_400" />
+
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:layout_centerInParent="true"
+                                app:srcCompat="@drawable/ic_person"
+                                app:tint="@android:color/white" />
+
+                        </RelativeLayout>
+
+                        <View
+                            android:layout_width="@dimen/spacing_middle"
+                            android:layout_height="0dp" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="927761222"
+                                android:textAppearance="@style/Base.TextAppearance.AppCompat.Subhead"
+                                android:textColor="@color/grey_60"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Serial"
+                                android:textAppearance="@style/Base.TextAppearance.AppCompat.Caption"
+                                android:textColor="@color/grey_40" />
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                </androidx.cardview.widget.CardView>
+
+                <View
+                    android:layout_width="@dimen/spacing_middle"
+                    android:layout_height="0dp" />
+
+
+                <androidx.cardview.widget.CardView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/spacing_xsmall"
+                    android:layout_marginLeft="@dimen/spacing_xsmall"
+                    android:layout_marginRight="@dimen/spacing_xsmall"
+                    android:layout_marginTop="@dimen/spacing_xsmall"
+                    android:layout_weight="1"
+                    android:visibility="visible"
+                    app:cardCornerRadius="2dp"
+                    app:cardElevation="2dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:padding="@dimen/spacing_large">
+
+                        <RelativeLayout
+                            android:layout_width="40dp"
+                            android:layout_height="40dp">
+
+                            <ImageView
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:layout_centerInParent="true"
+                                app:srcCompat="@drawable/shape_circle"
+                                app:tint="@color/indigo_400" />
+
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:layout_centerInParent="true"
+                                app:srcCompat="@drawable/ic_file_download"
+                                app:tint="@android:color/white" />
+
+                        </RelativeLayout>
+
+                        <View
+                            android:layout_width="@dimen/spacing_middle"
+                            android:layout_height="0dp" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+
+
+                            <ProgressBar
+                                android:id="@+id/dev_memory"
+                                style="@android:style/Widget.ProgressBar.Horizontal"
+                                android:progress="70"
+                                android:secondaryProgress="10"
+                                android:scaleY="1"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:progressBackgroundTint="@color/white"
+                                android:progressTint="@color/indigo_100"
+                                />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Memory"
+                                android:textAppearance="@style/Base.TextAppearance.AppCompat.Caption"
+                                android:textColor="@color/grey_40" />
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                </androidx.cardview.widget.CardView>
+
+        </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/spacing_small" />
+
+        <!-- Druhy radek, OBRAZEK LIZATKA, TEPLOTY, PAMET/BATERKA,REZIM -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:descendantFocusability="blocksDescendants"
+            android:orientation="vertical">
+
+            <!-- mezera -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/spacing_small" />
+
+            <!---slozeny obrazek -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingLeft="@dimen/spacing_middle"
+                android:paddingRight="@dimen/spacing_middle">
+
+                <androidx.cardview.widget.CardView
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginBottom="@dimen/spacing_xsmall"
+                    android:layout_marginLeft="@dimen/spacing_xsmall"
+                    android:layout_marginRight="@dimen/spacing_xsmall"
+                    android:layout_marginTop="@dimen/spacing_xsmall"
+                    android:layout_weight="1"
+                    android:visibility="visible"
+                    app:cardCornerRadius="2dp"
+                    app:cardElevation="2dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:padding="@dimen/spacing_large">
+
+                        <ImageView
+                            android:layout_width="40dp"
+                            android:layout_height="wrap_content"
+                            android:layout_centerHorizontal="true"
+                            android:layout_centerVertical="true"
+                            app:srcCompat="@drawable/tms3_small" />
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+
+                            android:padding="20dp">
+
+                            <!--- teplota T1 -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal">
+                                <!-- popiska k teplote -->
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="20dp"
+                                    android:textStyle="bold"
+                                    android:textColor="@color/grey_60"
+                                    android:text="T3/\u2103 "/>
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="20dp"
+                                    android:textColor="@color/grey_60"
+                                    android:text="50.2"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+                            <!--- teplota T1 -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal">
+                                <!-- popiska k teplote -->
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="20dp"
+                                    android:textStyle="bold"
+                                    android:textColor="@color/grey_60"
+                                    android:text="T2/\u2103 "/>
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="20dp"
+                                    android:text="12.5"
+                                    android:textColor="@color/grey_60"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+                            <!--- teplota T1 -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal">
+                                <!-- popiska k teplote -->
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="20dp"
+                                    android:textStyle="bold"
+                                    android:textColor="@color/grey_60"
+                                    android:text="T1/\u2103 "/>
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="20dp"
+                                    android:textColor="@color/grey_60"
+                                    android:text="-80.3"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <!--- mezera mezi slozenymi obrazky -->
+                <View
+                    android:layout_width="@dimen/spacing_middle"
+                    android:layout_height="0dp" />
+
+                <!--- zacatek druhe slozene karty -->
+                <androidx.cardview.widget.CardView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/spacing_xsmall"
+                    android:layout_marginLeft="@dimen/spacing_xsmall"
+                    android:layout_marginRight="@dimen/spacing_xsmall"
+                    android:layout_marginTop="@dimen/spacing_xsmall"
+                    android:layout_weight="1"
+                    android:visibility="visible"
+                    app:cardCornerRadius="2dp"
+                    app:cardElevation="2dp">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation = "vertical"
+                        android:padding="15dp">
+                        <!--- teplota T1 -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation = "horizontal"
+                            android:padding="15dp">
+                            <!-- popiska k teplote -->
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="20dp"
+                                android:layout_weight="1"
+                                android:text="T1/\u2103"
+                                android:textAppearance="@style/Base.TextAppearance.AppCompat.Subhead"
+                                android:textColor="@color/grey_60"
+                                android:textStyle="bold" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="20dp"
+                                android:layout_weight="1"
+                                android:text="255.4"
+                                android:textAppearance="@style/Base.TextAppearance.AppCompat.Subhead"
+                                android:textColor="@color/grey_60"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+                        <!--- teplota T2 -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation = "horizontal"
+                            android:padding="15dp">
+                            <!-- popiska k teplote -->
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="20dp"
+                                android:layout_weight="1"
+                                android:text="T2/\u2103"
+                                android:textAppearance="@style/Base.TextAppearance.AppCompat.Subhead"
+                                android:textColor="@color/grey_60"
+                                android:textStyle="bold" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="20dp"
+                                android:layout_weight="1"
+                                android:text="20.5"
+                                android:textAppearance="@style/Base.TextAppearance.AppCompat.Subhead"
+                                android:textColor="@color/grey_60"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+                        <!-- teplota T3 -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation = "horizontal"
+                            android:padding="15dp">
+                            <!-- popiska k teplote -->
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="20dp"
+                                android:layout_weight="1"
+                                android:text="T3/\u2103"
+                                android:textAppearance="@style/Base.TextAppearance.AppCompat.Subhead"
+                                android:textColor="@color/grey_60"
+                                android:textStyle="bold" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="20dp"
+                                android:layout_weight="1"
+                                android:text="22"
+                                android:textAppearance="@style/Base.TextAppearance.AppCompat.Subhead"
+                                android:textColor="@color/grey_60"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+                    </LinearLayout>
+                    <!-- karty teplot -->
+                </androidx.cardview.widget.CardView>
+
+            </LinearLayout>
+        </LinearLayout>
+
+
+        <!-- tms time/pc time/Delta -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingLeft="@dimen/spacing_middle"
+            android:paddingRight="@dimen/spacing_middle">
+
+            <androidx.cardview.widget.CardView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/spacing_xsmall"
+                android:layout_marginLeft="@dimen/spacing_xsmall"
+                android:layout_marginRight="@dimen/spacing_xsmall"
+                android:layout_marginTop="@dimen/spacing_xsmall"
+                android:layout_weight="1"
+                android:visibility="visible"
+                app:cardCornerRadius="2dp"
+                app:cardElevation="2dp">
+
+                <!-- velke radky, skladam je pod sebe -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/spacing_large">
+
+                    <!-- prvni radek v cardview -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        >
+                        <!-- zahlavi s popiskem zobrazenych casu -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="?attr/actionBarSize"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <View
+                                android:layout_width="@dimen/spacing_large"
+                                android:layout_height="0dp" />
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Device and phone time"
+                                android:textAppearance="@style/Base.TextAppearance.AppCompat.Subhead"
+                                android:textColor="@color/grey_60"
+                                android:textStyle="bold" />
+
+                            <ImageView
+                                android:layout_width="?attr/actionBarSize"
+                                android:layout_height="?attr/actionBarSize"
+                                android:background="?attr/selectableItemBackgroundBorderless"
+                                android:layout_centerHorizontal="true"
+                                android:layout_centerVertical="true"
+                                app:srcCompat="@drawable/hios_clock" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="@dimen/spacing_xmlarge"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <View
+                            android:layout_width="@dimen/spacing_large"
+                            android:layout_height="0dp" />
+
+                        <TextView
+                            android:layout_width="8dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="TMS time"
+                            android:textAppearance="@style/Base.TextAppearance.AppCompat.Body2"
+                            android:textColor="@color/grey_60" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="21.03.2023 23.55.55"
+                            android:textAppearance="@style/Base.TextAppearance.AppCompat.Body2"
+                            android:textColor="@color/grey_40" />
+
+                        <TextView
+                            android:layout_width="32dp"
+                            android:layout_height="wrap_content"
+                            android:text=" +32"
+                            android:textAppearance="@style/Base.TextAppearance.AppCompat.Body2"
+                            android:textColor="@color/grey_40" />
+
+                        <View
+                            android:layout_width="@dimen/spacing_large"
+                            android:layout_height="0dp" />
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="@dimen/spacing_xmlarge"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <View
+                            android:layout_width="@dimen/spacing_large"
+                            android:layout_height="0dp" />
+
+                        <TextView
+                            android:layout_width="8dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Telephone time"
+                            android:textAppearance="@style/Base.TextAppearance.AppCompat.Body2"
+                            android:textColor="@color/grey_60" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="21.03.2023 23.55.55"
+                            android:textAppearance="@style/Base.TextAppearance.AppCompat.Body2"
+                            android:textColor="@color/grey_40" />
+
+                        <View
+                            android:layout_width="48dp"
+                            android:layout_height="0dp" />
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="@dimen/spacing_xmlarge"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <View
+                            android:layout_width="@dimen/spacing_large"
+                            android:layout_height="0dp" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Difference: phone - device:"
+                            android:textAppearance="@style/Base.TextAppearance.AppCompat.Body2"
+                            android:textColor="@color/grey_60" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="10 Jan 18"
+                            android:textAppearance="@style/Base.TextAppearance.AppCompat.Body2"
+                            android:textColor="@color/grey_40" />
+
+                        <View
+                            android:layout_width="48dp"
+                            android:layout_height="0dp" />
+                    </LinearLayout>
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingLeft="@dimen/spacing_middle"
+            android:paddingRight="@dimen/spacing_middle">
+
+            <androidx.cardview.widget.CardView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/spacing_xsmall"
+                android:layout_marginLeft="@dimen/spacing_xsmall"
+                android:layout_marginRight="@dimen/spacing_xsmall"
+                android:layout_marginTop="@dimen/spacing_xsmall"
+                android:layout_weight="1"
+                android:visibility="visible"
+                app:cardCornerRadius="2dp"
+                app:cardElevation="2dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="@dimen/spacing_large">
+
+                    <RelativeLayout
+                        android:layout_width="128dp"
+                        android:layout_height="128dp">
+
+
+                        <ImageView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+
+                            android:layout_centerInParent="true"
+                            android:background="@android:color/transparent"
+                            app:srcCompat="@drawable/bookmark" />
+
+                        <ImageView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:layout_centerInParent="true"
+                            android:background="@android:color/transparent"
+                            app:srcCompat="@drawable/bookmark" />
+
+
+                    </RelativeLayout>
+
+                    <View
+                        android:layout_width="@dimen/spacing_middle"
+                        android:layout_height="0dp" />
+
+                </LinearLayout>
+
+            </androidx.cardview.widget.CardView>
+        </LinearLayout>
+
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <Button
+                android:id="@+id/button_toast"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="96dp"
+                android:backgroundTint="@color/purple_200"
+                android:onClick="showToast"
+                android:text="@string/button_label_toast"
+                android:textColor="@android:color/black"
+                app:layout_constraintTop_toTopOf="parent"
+                tools:layout_editor_absoluteX="0dp" />
+
+            <TextView
+                android:id="@+id/mShowCount"
+                android:layout_width="411dp"
+                android:layout_height="60dp"
+                android:background="#FFFF00"
+                android:gravity="center"
+                android:onClick="countUp"
+                android:text="@string/count_initial_value"
+                android:textColor="@color/purple_500"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                app:layout_constraintTop_toBottomOf="@+id/button_toast"
+                tools:layout_editor_absoluteX="0dp" />
+
+            <ProgressBar
+                android:id="@+id/proBar"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        </LinearLayout>
+
+    </androidx.core.widget.NestedScrollView>
+
+</LinearLayout>

@@ -1,0 +1,93 @@
+<resources>
+
+    <!-- uloz formular options !-->
+    <string name="save_options">save_options</string>
+    <string name="ReadAll">0</string>
+    <string name="ReadFromBookmark">1</string>
+    <string name="ReadFromDate">0</string>
+    <string name="ReadWeek">0</string>
+
+    <string-array name="download_array">
+        <item>Read All</item>
+        <item>Read From Bookmark</item>
+        <item>Read From Date</item>
+        <item>Preview last week</item>
+    </string-array>
+
+    <string name="measurement_mode">Choose a measurement mode</string>
+    <string-array name="modes_array">
+        <item>Please select the measurement mode</item>
+        <item>Basic</item>
+        <item>Meteo</item>
+        <item>Smart</item>
+        <item>Intensive</item>
+        <item>Experiment</item>
+    </string-array>
+
+    <string-array name="modes_desc">
+        <item>Omit mode setting</item>
+        <item>15 minutes</item>
+        <item>10 minutes</item>
+        <item>10,15,20,30,40,45,50,0 minutes</item>
+        <item>5 minutes</item>
+        <item>1 minute</item>
+    </string-array>
+
+    <string name="app_name">lolly</string>
+    <string name="title_home">Home</string>
+    <string name="title_dashboard">Graph</string>
+    <string name="title_notifications">Files</string>
+
+    <string name="user_name">tomst@tomst.com</string>
+    <string name="action_settings">Settings</string>
+    <!-- Strings used for fragments for navigation -->
+    <string name="first_fragment_label">Read the device</string>
+    <string name="second_fragment_label">Second Fragment</string>
+    <string name="next">Next</string>
+    <string name="previous">Previous</string>
+
+    <string name="hello_first_fragment">Reading the device</string>
+    <string name="hello_second_fragment">Hello second fragment. Arg: %1$s</string>
+    <string name="button_label_toast">Read device</string>
+    <string name="button_label_count">Count</string>
+    <string name="count_initial_value">0</string>
+    <string name="toast_message">Hello Toast!</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+
+
+    <string name="nav_inbox"> Mesagez</string>
+    <string name="nav_drafts">Draftz</string>
+    <string name="nav_sent">Sent mesagez</string>
+    <string name="nav_trash">In da trash</string>
+    <string name="nav_support">Support</string>
+    <string name="nav_help">Help</string>
+    <string name="nav_feedback">Giv us feedback</string>
+
+    <string name="nav_open_drawer">Open navigation drawer</string>
+    <string name="nav_close_drawer">Close navigation drawer</string>
+
+    <string name="dash">-</string>
+    <string name="fileViewer">FileViewer</string>
+    <string name="graph">Graph</string>
+    <string name="options">Options</string>
+    <string name="please_choose_mode">Please choose measurement mode</string>
+    <string name="app_version">Version</string>
+    <string name="versionName">Version</string>
+    <string name="version_unknown">Unknown</string>
+    <string name="dash_text">,</string>
+    <string name="login">login</string>
+    <string name="email" />
+    <string name="Login" />
+
+    <string-array name="friends">
+        <item>File 1</item>
+        <item>File 2</item>
+        <item>File 4</item>
+        <item>Xi Jinping</item>
+        <item>File xab</item>
+        <item>ahoj </item>
+        <item>nazdar</item>
+    </string-array>
+
+</resources>
