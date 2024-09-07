@@ -656,6 +656,83 @@ public class TMSReader extends Thread
         return (hi);
     }
 
+    private void mTestLoop() {
+        String s = "";
+        TInfo info;
+        info = new TInfo();
+        while ((devState != TDevState.tFinal)) {
+            switch (devState) {
+                case tStart:
+                    SendMeasure(TDevState.tStart, "test");
+                    if (startFTDI())
+                        devState = TDevState.tWaitForAdapter;
+                    else
+                        SystemClock.sleep(1000);
+                    break;
+
+                case tWaitForAdapter:
+                    AdapterNumber = "00-0000A1020304*56";//fHer.getAdapter();
+                    SendMeasure(TDevState.tWaitForAdapter, AdapterNumber);
+
+                    if (AdapterNumber.length() > 5)
+                        devState = TDevState.tHead;
+                    else
+                        devState = TDevState.tFinal;  // tady by melo byt, ze jsem nenasel adapter
+                    break;
+
+                case tFirmware:
+                    break;
+
+                case tSerialDuplicity:
+                    s = fHer.doCommand("#");
+                    if (s.length() < 3) {
+                        devState = TDevState.tFinal;
+                        break;
+                    }
+                    // seriove cislo
+                    s = aft(s, "=");
+
+                    // duplicita
+                    if (s.compareToIgnoreCase(SerialNumber) > 0) {
+                        SendMeasure(TDevState.tSerialDuplicity, "s");
+                        break;
+                    }
+                    devState = TDevState.tHead;
+                    break;
+
+                case tHead:
+                    s = fHer.doCommand(" ");
+                    // rozeber hlavicku a nastav rfir
+
+                    if (s.length() < 2)
+                        break;
+
+                    if (ParseHeader(s)) {
+                        info.msg = String.format("%d.%d.%d", rfir.Hw, rfir.Fw, rfir.Sub);
+                        SendMeasure(TDevState.tHead, s);
+                        devState = TDevState.tSerial;
+                    } else {
+                        //devState = TDevState.tFinal;
+                        Log.e(TAG, "Wrong Header:!" + s + " reading thread killed !");
+                    }
+                    break;
+
+                case tSerial:
+                    s = fHer.doCommand("#");
+                    if (s.length() < 3) {
+                        devState = TDevState.tFinal;
+                        break;
+                    }
+                    SerialNumber = aft(s, "=");
+                    SerialNumber = SerialNumber.replaceAll("(\\r|\\n)", "");
+                    mer.Serial = SerialNumber;
+                    SendMeasure(TDevState.tSerial, SerialNumber);
+                    devState = TDevState.tInfo;
+                    break;
+            }
+        }
+    }
+
     @RequiresApi(api = Build.VERSION_CODES.O)
     private void mLoop()
     {
@@ -905,7 +982,6 @@ public class TMSReader extends Thread
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
-
                     break;
 
                 case tCheckTMSFirmware:

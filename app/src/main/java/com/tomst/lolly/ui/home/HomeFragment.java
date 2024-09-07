@@ -33,6 +33,7 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
+import com.tomst.lolly.LollyApplication;
 import com.tomst.lolly.LollyService;
 import com.tomst.lolly.R;
 import com.tomst.lolly.core.CSVReader;
@@ -83,9 +84,9 @@ public class HomeFragment extends Fragment {
         @Override
         public void handleMessage(Message msg) {
             TMereni mer = (TMereni) msg.obj;
-            dmd.AddMereni(mer);
-            csv.AddMerToCsv(mer);
-            csv.AppendStat(mer);
+            dmd.AddMereni(mer);   // array of values for graph
+            csv.AddMerToCsv(mer); // add to csv file
+            //csv.AppendStat(mer);  // statistics, we'll omit this in the next version
         }
     };
 
@@ -161,16 +162,10 @@ public class HomeFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState){
         super.onCreate(savedInstanceState);
-
-
         Log.i("| DEBUG |", "Home Fragment, right above jni string");
 
         Log.i("| DEBUG |", getExampleStringJNI());
-
     }
-
-
-
 
     private ServiceConnection connection = new ServiceConnection() {
        @Override
@@ -260,7 +255,6 @@ public class HomeFragment extends Fragment {
     }
      */
 
-
     private String FullName(String AFileName){
         File[] rootDirectories = FileOperation.getAllStorages(getContext());
         //return FILEPATH+AFileName;
@@ -288,7 +282,7 @@ public class HomeFragment extends Fragment {
             idx++;
         }
 
-//        String result = "data_"+Serial+"_"+localDateTime.format(formatter)+"_"+ Integer.valueOf(idx)+".csv";
+        // String result = "data_"+Serial+"_"+localDateTime.format(formatter)+"_"+ Integer.valueOf(idx)+".csv";
         String result = localDateTime.format(formatter)+"_"+Serial+"_"+ Integer.valueOf(idx)+".csv";
         return result;
     }
@@ -298,27 +292,27 @@ public class HomeFragment extends Fragment {
         switch (met){
             case mBasic:
                 //img.setImageResource(R.drawable.basic);
-                img.setImageResource(R.drawable.mode_basic);
+                img.setImageResource(R.drawable.home_basic);
                 break;
 
             case mMeteo:
                 //img.setImageResource(R.drawable.meteo);
-                img.setImageResource(R.drawable.mode_meteo);
+                img.setImageResource(R.drawable.home_meteo);
                 break;
 
             case mSmart:
                 //img.setImageResource(R.drawable.smart);
-                img.setImageResource(R.drawable.mode_smart);
+                img.setImageResource(R.drawable.home_smart);
                 break;
 
             case mIntensive:
                 //img.setImageResource(R.drawable.a5);
-                img.setImageResource(R.drawable.mode_5min);
+                img.setImageResource(R.drawable.home_5min);
                 break;
 
             case mExperiment:
                 //img.setImageResource(R.drawable.a1);
-                img.setImageResource(R.drawable.mode_1min);
+                img.setImageResource(R.drawable.home_1min);
                 break;
 
             default:
@@ -372,19 +366,16 @@ public class HomeFragment extends Fragment {
                     String AFileName  = CompileFileName(info.msg);  // cislo lizatka
                     AFileName = FullName(AFileName);
 
-                    //String AFileName = FullName("test.csv");
                     csv = new CSVReader(getContext());   // vytvorim novy csv soubor
-                    csv.SetTxf(true);
+                    // csv.SetTxf(true);
                     csv.CreateCsvFile(AFileName);
                     break;
 
                 case tInfo:
-
                     binding.devhumAD.setText(String.valueOf(info.humAd));
                     binding.devt1.setText(String.valueOf(info.t1));
                     binding.devt2.setText(String.valueOf(info.t2));
                     binding.devt3.setText(String.valueOf(info.t3));
-
                     break;
 
                 case tCapacity:
@@ -484,21 +475,15 @@ public class HomeFragment extends Fragment {
     };
 
 
-
-
     @RequiresApi(api = Build.VERSION_CODES.O)
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
-
         HomeViewModel homeViewModel = new ViewModelProvider(this).get(HomeViewModel.class);
-
         // sdileny datovy model
         dmd = new ViewModelProvider(getActivity()).get(DmdViewModel.class);
         dmd.ClearMereni();
-
         binding = FragmentHomeBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
-
         binding.proBar.setProgress(0); // vycisti progress bar
 
         //final TextView textView = binding.mShowCount;
@@ -509,14 +494,19 @@ public class HomeFragment extends Fragment {
         Context mContext = getContext();
 
         // testovaci crash button
-        /*
-        Button crashButton = binding.btnTestCrash;
+
+        Button crashButton = binding.testCrash;
         crashButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
                     throw new RuntimeException("Test Crash"); // Force a crash
             }
         });
-         */
+
+        // exportation path
+        //        String  exportPath = LollyApplication.getInstance().getPrefExportFolder();
+       // binding.expPath.setText(exportPath);
+
+
 
         /*
         ftTMS = new TMSReader(mContext);

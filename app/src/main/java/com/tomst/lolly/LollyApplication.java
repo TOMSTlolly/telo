@@ -64,8 +64,10 @@ public class LollyApplication extends AppCompatActivity implements View.OnClickL
     public static String FILE_EMPTY_CSV;                         // The full path of a empty GPX file
     public static String FILE_EMPTY_LOG;                         // The full path of a empty KML file
 
-    private String  prefExportFolder            = "";            // The folder for tracks exportation
-
+    private String  prefExportFolder            = "";            // The folder for csv exportation
+    public String getPrefExportFolder() {
+        return prefExportFolder;                                 // The folder for csv exportation
+    }
 
     private View view;
     private ActivityMainBinding binding;
@@ -248,6 +250,8 @@ public class LollyApplication extends AppCompatActivity implements View.OnClickL
 
     public boolean isExportFolderWritable() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            Context context = getApplicationContext();
+
             Uri uri = Uri.parse(prefExportFolder);
             Log.w("myApp", "[#] GPSApplication.java - isExportFolderWritable: " + prefExportFolder);
 
@@ -258,7 +262,7 @@ public class LollyApplication extends AppCompatActivity implements View.OnClickL
                     try {
                         DocumentFile pickedDir;
                         if (prefExportFolder.startsWith("content")) {
-                            pickedDir = DocumentFile.fromTreeUri(getInstance(), uri);
+                            pickedDir = DocumentFile.fromTreeUri(getApplicationContext(), uri);
                         } else {
                             pickedDir = DocumentFile.fromFile(new File(prefExportFolder));
                         }
@@ -381,11 +385,12 @@ public class LollyApplication extends AppCompatActivity implements View.OnClickL
         Context context = getApplicationContext();
         SharedPreferences sharedPref = context.getSharedPreferences(getString(R.string.save_options), context.MODE_PRIVATE);
         prefExportFolder = sharedPref.getString("prefExportFolder", "");
-        if (!prefExportFolder.isEmpty())
-           if (!isExportFolderWritable())
-               Toast.makeText(context, "Export folder is not writable!", Toast.LENGTH_SHORT).show();
+        if (!prefExportFolder.isEmpty()) {
+            if (!isExportFolderWritable())
+                Toast.makeText(context, "Export folder is not writable!", Toast.LENGTH_SHORT).show();
             //   prefExportFolder = "";  // pokud neexistuje, tak se nastavi na prazdny retezec (
             //prefExportFolder = Environment.DIRECTORY_DOWNLOADS;)
+        }
 
        /*
         String sExportFolder = sharedPref.getString("prefExportFolder",",");

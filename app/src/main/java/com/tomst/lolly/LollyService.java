@@ -164,7 +164,6 @@ public class LollyService extends Service {
         SharedPreferences sharedPref = mContext.getSharedPreferences(getString(R.string.save_options), mContext.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPref.edit();
 
-
         ftTMS = new TMSReader(mContext);
         ftTMS.ConnectDevice();
         ftTMS.SetHandler(handler);

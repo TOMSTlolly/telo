@@ -287,6 +287,11 @@ public class OptionsFragment extends Fragment implements AdapterView.OnItemSelec
             binding.pExportFolder.setText("Exportation folder is empty");
         }
 
+        // zobrazeni uri cesty
+        String s = sharedPref.getString("prefExportFolder", "");
+        s = extractFolderNameFromEncodedUri(s);
+        binding.pExportFolder.setText(s)  ;
+
         // jak budu vycitat
         int rx = sharedPref.getInt("readFrom",-1);
         binding.spiDownload.setSelection(rx);
@@ -303,7 +308,7 @@ public class OptionsFragment extends Fragment implements AdapterView.OnItemSelec
         binding.showmicro.setChecked(sharedPref.getBoolean("showmicro",false));
         binding.settime.setChecked(sharedPref.getBoolean("settime",false));
 
-        String s = sharedPref.getString("decimalseparator",",");  // desetinny oddelovac
+        s = sharedPref.getString("decimalseparator",",");  // desetinny oddelovac
         binding.Deci.setText(s);
 
         // bookmark and fromDate
