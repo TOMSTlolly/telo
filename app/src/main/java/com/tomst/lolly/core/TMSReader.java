@@ -20,6 +20,7 @@ import androidx.annotation.RequiresApi;
 
 import com.ftdi.j2xx.D2xxManager;
 import com.ftdi.j2xx.FT_Device;
+import com.google.firebase.encoders.json.BuildConfig;
 
 import java.io.File;
 import java.time.Instant;
@@ -214,7 +215,10 @@ public class TMSReader extends Thread
             }
         };
 
-        mLoop();
+        if (BuildConfig.BUILD_TYPE.equals("debug"))
+            mTestLoop();
+        else
+            mLoop();
     }
 
     public void SetRunning(boolean running){
