@@ -16,7 +16,7 @@ allprojects{
 }
 
 ext {
- globalVariable = true
+ simulateHardware = true
 }
 
 android {
@@ -43,13 +43,13 @@ android {
         debug{
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            buildConfigField "Boolean", "SIMULATE_HARDWARE", "${globalVariable}"
+            buildConfigField "Boolean", "SIMULATE_HARDWARE", "${simulateHardware}"
         }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.debug
-            buildConfigField "Boolean", "SIMULATE_HARDWARE", "${globalVariable}"
+            buildConfigField "Boolean", "SIMULATE_HARDWARE", "${simulateHardware}"
         }
     }
     compileOptions {

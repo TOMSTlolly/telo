@@ -204,7 +204,6 @@ public class TMSReader extends Thread
     {
         Looper.prepare();
 
-
         // vybiram zpravy z HomeFragment.java
         handler = new Handler(Looper.myLooper()) {
             @Override
