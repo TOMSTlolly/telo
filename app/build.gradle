@@ -15,6 +15,10 @@ allprojects{
     }
 }
 
+ext {
+ globalVariable = true
+}
+
 android {
     namespace 'com.tomst.lolly'
     compileSdk 33
@@ -39,13 +43,13 @@ android {
         debug{
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            buildConfigField "boolean", "DEBUG_MODE", "true"
-            buildConfigField "boolean", "SIMULATE_HARDWARE","true"
+            buildConfigField "Boolean", "SIMULATE_HARDWARE", "${globalVariable}"
         }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            buildConfigField "boolean", "DEBUG_MODE", "false"
+            signingConfig signingConfigs.debug
+            buildConfigField "Boolean", "SIMULATE_HARDWARE", "${globalVariable}"
         }
     }
     compileOptions {

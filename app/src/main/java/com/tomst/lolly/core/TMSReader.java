@@ -15,12 +15,13 @@ import android.os.Message;
 import android.os.SystemClock;
 import android.util.Log;
 import android.widget.Toast;
+import com.tomst.lolly.BuildConfig;
 
 import androidx.annotation.RequiresApi;
 
 import com.ftdi.j2xx.D2xxManager;
 import com.ftdi.j2xx.FT_Device;
-import com.google.firebase.encoders.json.BuildConfig;
+//import com.google.firebase.encoders.json.BuildConfig;
 
 import java.io.File;
 import java.time.Instant;
@@ -215,7 +216,7 @@ public class TMSReader extends Thread
             }
         };
 
-        if (BuildConfig.BUILD_TYPE.equals("debug"))
+        if (BuildConfig.SIMULATE_HARDWARE)
             mTestLoop();
         else
             mLoop();
