@@ -1,8 +1,6 @@
 package com.tomst.lolly.core;
 
 
-import android.util.Log;
-
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.SavedStateHandle;
@@ -19,7 +17,7 @@ public class DmdViewModel extends ViewModel
 {
     private final SavedStateHandle state;
     // Holds the names of one or more datasets the user will want to visualize
-    private final MutableLiveData<String> messageContainerGraph;
+    private final MutableLiveData<String> messageContainerToFragment;
     private int fIdx = 0;
     private TDeviceType fDevType;
     private ArrayList<Entry> valT1 = new ArrayList<>();
@@ -125,19 +123,19 @@ public class DmdViewModel extends ViewModel
     public DmdViewModel(SavedStateHandle state)
     {
         this.state = state;
-        messageContainerGraph = state.getLiveData("Starting value");
+        messageContainerToFragment = state.getLiveData("Starting value");
        // messageContainerGraph = new SingleLiveEvent<>();
     }
 
 
-    public void sendMessageToGraph(String msg)
+    public void sendMessageToFragment(String msg)
     {
-        messageContainerGraph.setValue(msg);
+        messageContainerToFragment.setValue(msg);
     }
 
 
-    public LiveData<String> getMessageContainerGraph()
+    public LiveData<String> getMessageContainerToFragment()
     {
-        return messageContainerGraph;
+        return messageContainerToFragment;
     }
 }

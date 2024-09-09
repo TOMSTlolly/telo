@@ -1,15 +1,10 @@
 package com.tomst.lolly.ui.graph;
 
-import static android.graphics.Color.BLACK;
 import static android.graphics.Color.RED;
 import static android.graphics.Color.red;
 
-import android.content.Context;
 import android.content.pm.ActivityInfo;
-import android.content.res.Configuration;
 import android.graphics.Color;
-import android.graphics.ColorSpace;
-import android.graphics.DashPathEffect;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -34,48 +29,28 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoField;
-import java.time.temporal.TemporalField;
 import java.util.ArrayList;
 
-import com.github.mikephil.charting.animation.Easing;
 import com.github.mikephil.charting.charts.CombinedChart;
 import com.github.mikephil.charting.components.AxisBase;
-import com.github.mikephil.charting.components.Description;
-import com.github.mikephil.charting.components.Legend;
 import com.github.mikephil.charting.components.LegendEntry;
 import com.github.mikephil.charting.components.XAxis;
 import com.github.mikephil.charting.components.YAxis;
-import com.github.mikephil.charting.data.BarData;
-import com.github.mikephil.charting.data.BarDataSet;
-import com.github.mikephil.charting.data.BarEntry;
 import com.github.mikephil.charting.data.CombinedData;
 import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
-import com.github.mikephil.charting.formatter.DefaultAxisValueFormatter;
-import com.github.mikephil.charting.formatter.IAxisValueFormatter;
-import com.github.mikephil.charting.formatter.IndexAxisValueFormatter;
 import com.github.mikephil.charting.formatter.ValueFormatter;
 import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
 import com.github.mikephil.charting.data.LineDataSet;
 
 import com.github.mikephil.charting.utils.ColorTemplate;
 import com.tomst.lolly.R;
-import com.tomst.lolly.core.CSVReader;
 import com.tomst.lolly.core.CSVFile;
-import com.tomst.lolly.core.Constants;
-import com.tomst.lolly.core.OnProListener;
 import com.tomst.lolly.core.TDendroInfo;
 import com.tomst.lolly.core.TMereni;
 import com.tomst.lolly.core.TPhysValue;
 import com.tomst.lolly.databinding.FragmentGraphBinding;
 import com.tomst.lolly.core.DmdViewModel;
-
-
-import org.apache.commons.lang3.ObjectUtils;
-
-import java.io.File;
-import java.util.TimeZone;
 
 
 @RequiresApi(api = Build.VERSION_CODES.O)
@@ -181,7 +156,7 @@ public class GraphFragment extends Fragment {
 
     @Override
     public void onStop() {
-        dmd.sendMessageToGraph("");
+        dmd.sendMessageToFragment("");
         dmd.ClearMereni();
 
         super.onStop();
@@ -553,7 +528,7 @@ public class GraphFragment extends Fragment {
 
         // we have set two observers, one for physical data received from TMD adapter, second from the ListFragment viewer
         // observer message for TMD adapter
-        dmd.getMessageContainerGraph()
+        dmd.getMessageContainerToFragment()
                 .observe(getViewLifecycleOwner(), msg ->
                 {
                     //
@@ -612,7 +587,7 @@ public class GraphFragment extends Fragment {
                             DisplayData();
                     }
 
-                    dmd.getMessageContainerGraph()
+                    dmd.getMessageContainerToFragment()
                             .removeObservers(getViewLifecycleOwner());
                 });
 

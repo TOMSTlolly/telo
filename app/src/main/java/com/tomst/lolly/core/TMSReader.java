@@ -201,6 +201,19 @@ public class TMSReader extends Thread
     public void run()
     {
         Looper.prepare();
+
+
+        // vybiram zpravy z HomeFragment.java
+        handler = new Handler(Looper.myLooper()) {
+            @Override
+            public void handleMessage(Message msg) {
+                // Handle the message here
+                String message = (String) msg.obj;
+                Log.d("TMSReader", "Received message: " + message);
+                // Process the message
+            }
+        };
+
         mLoop();
     }
 

@@ -476,7 +476,14 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:backgroundTint="#f1a033"
-                />
+            />
+            <Button
+                android:id="@+id/testLolly"
+                android:text="t.Inst"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:backgroundTint="#f1a033"
+              />
 
         </LinearLayout>
 

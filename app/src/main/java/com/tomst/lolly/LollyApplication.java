@@ -325,8 +325,19 @@ public class LollyApplication extends AppCompatActivity implements View.OnClickL
     FirebaseUser user;
 
     @Override
+    protected void onStart() {
+        super.onStart();
+        Intent intent = new Intent(this, LollyService.class);
+        bindService(intent, connection, Context.BIND_AUTO_CREATE);
+        dmdViewModel.sendMessageToFragment("Hello from MainActivity");
+
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        singleton = this;
 
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
@@ -457,6 +468,10 @@ public class LollyApplication extends AppCompatActivity implements View.OnClickL
         NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
         NavigationUI.setupWithNavController(binding.navView, navController);
 
+    }
+
+    public void sendMessageToHomeFragment(String message) {
+        dmdViewModel.sendMessageToFragment(message);
     }
 
 }

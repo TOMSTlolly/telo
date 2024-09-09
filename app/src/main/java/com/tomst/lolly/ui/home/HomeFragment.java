@@ -1,15 +1,12 @@
 package com.tomst.lolly.ui.home;
 
-import android.app.DownloadManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.ActivityInfo;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -54,13 +51,14 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
 public class HomeFragment extends Fragment {
+    LollyApplication lollyApp = LollyApplication.getInstance();
+
     static final byte MIN_ADANUMBER = 5;  // pozaduju, aby mel adapter minimalne 5 znaku
     private FragmentHomeBinding binding;
     private long MaxPos;
     //private Context DeviceUARTContext;
 
     private CSVReader csv;
-    // private TMSReader ftTMS;
 
     private int heartIdx = 0;
     private char cHeart = '-';
@@ -175,7 +173,7 @@ public class HomeFragment extends Fragment {
            odometer = odometerBinder.getOdometer();
            odometer.SetHandler(handler);
            odometer.SetDataHandler(datahandler);   // do tohoto handleru posilam naparsovane data
-           odometer.SetContext(getContext());  // az tady muze startovat hardware
+           odometer.SetContext(getContext());      // az tady muze startovat hardware
            odometer.startBindService();
            bound = true;
        }
@@ -362,9 +360,12 @@ public class HomeFragment extends Fragment {
                 case tSerial:
                     //String AFileName  = CompileFileName(ftTMS.SerialNumber);
                     serialNumber = info.msg;
-                    binding.devser.setText(info.msg);  // cislo lizatka
-                    String AFileName  = CompileFileName(info.msg);  // cislo lizatka
-                    AFileName = FullName(AFileName);
+                    binding.devser.setText(info.msg);
+
+                    // adresar
+                    String AFileName = lollyApp.getPrefExportFolder() + info.msg;
+                    AFileName  = CompileFileName(AFileName);  // cislo lizatka
+                    //AFileName = FullName(AFileName);
 
                     csv = new CSVReader(getContext());   // vytvorim novy csv soubor
                     // csv.SetTxf(true);
@@ -463,7 +464,7 @@ public class HomeFragment extends Fragment {
 
                     if (true) {
                         // prepni se do Grafu
-                        dmd.sendMessageToGraph("TMD " + serialNumber);
+                        dmd.sendMessageToFragment("TMD " + serialNumber);
                         switchToGraphFragment();
                     }
                     break;
@@ -475,16 +476,41 @@ public class HomeFragment extends Fragment {
     };
 
 
+    @Override
+    public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        // Perform additional view setup here, such as finding views by ID and setting up listeners
+        binding.expPath.setText("Home Fragment onViewCreated");
+    }
+
+
     @RequiresApi(api = Build.VERSION_CODES.O)
+
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
         HomeViewModel homeViewModel = new ViewModelProvider(this).get(HomeViewModel.class);
         // sdileny datovy model
         dmd = new ViewModelProvider(getActivity()).get(DmdViewModel.class);
         dmd.ClearMereni();
+
+        // tady vybiram callbacky od jinych fragmentu a aplikace
+        dmd.getMessageContainerToFragment().observe(getViewLifecycleOwner(), message -> {
+             String exportPath = lollyApp.getPrefExportFolder();
+            binding.expPath.setText(exportPath);
+        });
+
         binding = FragmentHomeBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
         binding.proBar.setProgress(0); // vycisti progress bar
+
+        Button testLollyInstance = binding.testLolly;
+        testLollyInstance.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View view) {
+                lollyApp = LollyApplication.getInstance();
+                String exportPath = lollyApp.getPrefExportFolder();
+                binding.expPath.setText(exportPath);
+            }
+        });
 
         //final TextView textView = binding.mShowCount;
         //homeViewModel.getText().observe(getViewLifecycleOwner(), textView::setText);
@@ -502,11 +528,18 @@ public class HomeFragment extends Fragment {
             }
         });
 
-        // exportation path
-        //        String  exportPath = LollyApplication.getInstance().getPrefExportFolder();
-       // binding.expPath.setText(exportPath);
-
-
+        // nasimulu odeslani serioveho cisla z threadu
+        Button sendSerial =binding.genSerial;
+        sendSerial.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View view) {
+                odometer.SetState(TDevState.tSerial);
+                // dmd.sendMessageToFragment("TSN");
+                //Message message = handler.obtainMessage();//odometer.obtainMessage();
+                //TInfo info = (TInfo) msg.obj;
+                //message.obj = "Hello from HomeFragment";
+                //handler.sendMessage(message);
+            }
+        });
 
         /*
         ftTMS = new TMSReader(mContext);

@@ -31,5 +31,7 @@ public enum TDevState
     tStart,
     tWaitForAdapter,
     tWaitForMeasure,
-    tWaitInLimbo
+    tWaitInLimbo,
+
+    tSimulateSerial
 }

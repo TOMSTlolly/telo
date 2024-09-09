@@ -220,7 +220,8 @@ public class OptionsFragment extends Fragment implements AdapterView.OnItemSelec
 //        editor.putBoolean("read_date",binding.readDate.isChecked());
 
         // adresar, kam se budou ukladat soubory
-        editor.putString("prefExportFolder", binding.pExportFolder.toString());
+        // POZOR prefExportFolder se uklada pri zpracovani SAF v setPrefExportFolder
+        // editor.putString("prefExportFolder", binding.pExportFolder.toString());
 
         // odkud vycitam
         int spiDownload = (int) binding.spiDownload.getSelectedItemId();

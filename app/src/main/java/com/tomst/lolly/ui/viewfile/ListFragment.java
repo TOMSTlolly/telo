@@ -273,7 +273,7 @@ public class ListFragment extends Fragment
          */
 
         dmd = new ViewModelProvider(getActivity()).get(DmdViewModel.class);
-        dmd.sendMessageToGraph("");
+        dmd.sendMessageToFragment("");
 
         permissionManager = new PermissionManager(getActivity());
         fopen = new FileOpener(getActivity());
@@ -333,7 +333,7 @@ public class ListFragment extends Fragment
 
                 if (!fileNameMsg.contains("_parallel"))
                 {
-                    dmd.sendMessageToGraph(fileNameMsg);
+                    dmd.sendMessageToFragment(fileNameMsg);
                     switchToGraphFragment();
                 }
                 else
