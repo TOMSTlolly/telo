@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.ActivityInfo;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -21,6 +22,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
+import androidx.documentfile.provider.DocumentFile;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
@@ -45,6 +47,8 @@ import com.tomst.lolly.core.TMeteo;
 import com.tomst.lolly.databinding.FragmentHomeBinding;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -56,8 +60,10 @@ public class HomeFragment extends Fragment {
     static final byte MIN_ADANUMBER = 5;  // pozaduju, aby mel adapter minimalne 5 znaku
     private FragmentHomeBinding binding;
     private long MaxPos;
-    //private Context DeviceUARTContext;
 
+    private DocumentFile kmlFile;
+    private DocumentFile gpxFile;
+    private DocumentFile txtFile;
     private CSVReader csv;
 
     private int heartIdx = 0;
@@ -259,30 +265,91 @@ public class HomeFragment extends Fragment {
          return Constants.FILEDIR+AFileName;
      }
 
-     // 2024-04-24_92225141_0.csv
+    // 2024-04-24_92225141_0.csv
+    // vyrobi testovaci soubor s daty, chci vyzkouset, jestli mi hraje zapis na dane misto
     @RequiresApi(api = Build.VERSION_CODES.O)
-    private boolean FileExists(String Serial, LocalDateTime localDateTime, int idx){
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd").withZone(ZoneId.of("UTC"));
-        //String locFile = FILEPATH+ "\\"+localDateTime.format(formatter)+"_"+Serial+"_"+ Integer.valueOf(idx)+".csv";
-        String locFile = Constants.FILEDIR + "\\"+localDateTime.format(formatter)+"_"+Serial+"_"+ Integer.valueOf(idx)+".csv";
-        File file = new File(getContext().getFilesDir(),locFile);
-        return (file.exists());
+    private boolean CreateTestFile(String saveIntoFolder) {
+        try {
+            DocumentFile pickedDir;
+            if (saveIntoFolder.startsWith("content")) {
+                Uri uri = Uri.parse(saveIntoFolder);
+                pickedDir = DocumentFile.fromTreeUri(getContext(), uri);
+            } else {
+                pickedDir = DocumentFile.fromFile(new File(saveIntoFolder));
+            }
+
+            if (!pickedDir.exists()) {
+                Log.w("myApp", "[#] Exporter.java - UNABLE TO CREATE THE FOLDER");
+                //exportingTask.setStatus(ExportingTask.STATUS_ENDED_FAILED);
+                return false;
+            }
+
+            String fName = "testfile";
+            txtFile = pickedDir.findFile(fName + ".txt");
+            if ((txtFile != null) && (txtFile.exists()))
+                txtFile.delete();
+            txtFile = pickedDir.createFile("", fName + ".txt");
+            Log.w("myApp", "[#] HomeFragment.java - Export " + txtFile.getUri().toString());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+        return true;
     }
 
     // 2024-04-24_92225141_0.csv
     @RequiresApi(api = Build.VERSION_CODES.O)
-    private String CompileFileName(String Serial){
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd").withZone(ZoneId.of("UTC"));
+    private String CompileFileName(String Serial, String ADir){
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy_MM_dd").withZone(ZoneId.of("UTC"));
         LocalDateTime localDateTime = LocalDateTime.now();
-        int idx=0;
-        boolean bex = false;
-        while ( (bex = FileExists(Serial,localDateTime,idx)) == true){
-            idx++;
-        }
 
-        // String result = "data_"+Serial+"_"+localDateTime.format(formatter)+"_"+ Integer.valueOf(idx)+".csv";
-        String result = localDateTime.format(formatter)+"_"+Serial+"_"+ Integer.valueOf(idx)+".csv";
-        return result;
+        int idx=0;
+        boolean filex = true;
+        String locFile = null;
+        String fmtdate = localDateTime.format(formatter);
+
+        //CreateTestFile(ADir);
+
+        try {
+            DocumentFile pickedDir;
+            if (ADir.startsWith("content")) {
+                Uri uri = Uri.parse(ADir);
+                pickedDir = DocumentFile.fromTreeUri(getContext(), uri);
+            } else {
+                pickedDir = DocumentFile.fromFile(new File(ADir));
+            }
+
+            // katastrofa, nemuzu vytvorit adresar
+            if (!pickedDir.exists()) {
+                Log.w("myApp", "[#] Exporter.java - UNABLE TO CREATE THE FOLDER");
+                //exportingTask.setStatus(ExportingTask.STATUS_ENDED_FAILED);
+                return null;
+            }
+
+            //String fName = "testfile";
+            filex = true;
+            Integer i = 0;
+            while (filex == true) {
+                //locFile = ADir + "//data_"+Serial+"_"+fmtdate+"_"+ Integer.valueOf(i)+".csv";
+                locFile = fmtdate+"_"+Integer.valueOf(i)+".csv";
+                txtFile = pickedDir.findFile(locFile);
+                // soubor uz existuje, neprepisuju, ale pridam index na konci souboru
+
+                if ((txtFile ==null) || (!txtFile.exists()))
+                    filex = false;
+                else
+                    i++;
+            }
+            txtFile = pickedDir.createFile("", locFile);
+            Log.w("myApp", "[#] HomeFragment.java - Export " + txtFile.getUri().toString());
+
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+        return locFile;
     }
 
     private void setMeteoImage(ImageView img, TMeteo met)
@@ -363,9 +430,7 @@ public class HomeFragment extends Fragment {
                     binding.devser.setText(info.msg);
 
                     // adresar
-                    String AFileName = lollyApp.getPrefExportFolder() + info.msg;
-                    AFileName  = CompileFileName(AFileName);  // cislo lizatka
-                    //AFileName = FullName(AFileName);
+                    String AFileName  = CompileFileName(info.msg,lollyApp.getPrefExportFolder());  // cislo lizatka
 
                     csv = new CSVReader(getContext());   // vytvorim novy csv soubor
                     // csv.SetTxf(true);

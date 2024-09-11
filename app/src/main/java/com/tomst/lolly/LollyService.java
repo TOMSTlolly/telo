@@ -169,12 +169,14 @@ public class LollyService extends Service {
         ftTMS.SetHandler(handler);
         ftTMS.SetDataHandler(this.dataHandler);
 
-        ftTMS.SetRunning(true); // povol provoz v mLoop
-        //ftTMS.start();
-
         Message msg = serviceHandler.obtainMessage();
         msg.arg1 = 12;
         serviceHandler.sendMessage(msg);
+
+        ftTMS.SetRunning(true); // povol provoz v mLoop
+        //ftTMS.start();
+
+
     }
 
     @Override

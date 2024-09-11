@@ -329,7 +329,7 @@ public class LollyApplication extends AppCompatActivity implements View.OnClickL
         super.onStart();
         Intent intent = new Intent(this, LollyService.class);
         bindService(intent, connection, Context.BIND_AUTO_CREATE);
-        dmdViewModel.sendMessageToFragment("Hello from MainActivity");
+    //    dmdViewModel.sendMessageToFragment("Hello from MainActivity");
 
     }
 

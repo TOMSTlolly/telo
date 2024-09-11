@@ -161,7 +161,7 @@ public class CSVReader extends Thread
         {
             fNewCsv = new FileOutputStream(file_name);
             // otevre AFileName, ale s priponou .txf
-            if (this.writeTxf ) openTxf(file_name);
+            //if (this.writeTxf ) openTxf(file_name);
 
         }
         catch(Exception e)

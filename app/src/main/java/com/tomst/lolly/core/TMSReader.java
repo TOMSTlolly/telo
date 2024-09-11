@@ -204,6 +204,7 @@ public class TMSReader extends Thread
     {
         Looper.prepare();
 
+        /*
         // vybiram zpravy z HomeFragment.java
         handler = new Handler(Looper.myLooper()) {
             @Override
@@ -214,6 +215,8 @@ public class TMSReader extends Thread
                 // Process the message
             }
         };
+        */
+
 
         if (BuildConfig.SIMULATE_HARDWARE)
             mTestLoop();
@@ -677,11 +680,14 @@ public class TMSReader extends Thread
         String s = "";
         TInfo info;
         info = new TInfo();
+        devState = TDevState.tStart;
+
         while ((devState != TDevState.tFinal)) {
             switch (devState) {
                 case tStart:
                     SendMeasure(TDevState.tStart, "test");
-                    if (startFTDI())
+                    //if (startFTDI())
+                    if (true)
                         devState = TDevState.tWaitForAdapter;
                     else
                         SystemClock.sleep(1000);
@@ -718,9 +724,9 @@ public class TMSReader extends Thread
                     break;
 
                 case tHead:
-                    s = fHer.doCommand(" ");
+                    //s = fHer.doCommand(" ");
                     // rozeber hlavicku a nastav rfir
-
+                    s = "@=&93^33%01.80 TMS-A";
                     if (s.length() < 2)
                         break;
 
@@ -735,16 +741,31 @@ public class TMSReader extends Thread
                     break;
 
                 case tSerial:
-                    s = fHer.doCommand("#");
+                    //s = fHer.doCommand("#");
+                    s = "@#=92223069";
+
                     if (s.length() < 3) {
                         devState = TDevState.tFinal;
                         break;
                     }
+
                     SerialNumber = aft(s, "=");
                     SerialNumber = SerialNumber.replaceAll("(\\r|\\n)", "");
                     mer.Serial = SerialNumber;
+
                     SendMeasure(TDevState.tSerial, SerialNumber);
-                    devState = TDevState.tInfo;
+                    devState = TDevState.tWaitInLimbo;
+                    break;
+
+                case tWaitInLimbo:
+                    try {
+                        Thread.sleep(3000); // 5 seconds
+                        SendMeasure(TDevState.tWaitInLimbo, SerialNumber);
+
+                        //devState = TDevState.tStart;
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                     break;
             }
         }
@@ -996,6 +1017,7 @@ public class TMSReader extends Thread
                     try {
                         Thread.sleep(3000); // 5 seconds
                         //devState = TDevState.tStart;
+                        SendMeasure(TDevState.tWaitInLimbo,sMeteo);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
