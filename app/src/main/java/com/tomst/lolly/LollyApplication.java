@@ -64,9 +64,13 @@ public class LollyApplication extends AppCompatActivity implements View.OnClickL
     public static String FILE_EMPTY_CSV;                         // The full path of a empty GPX file
     public static String FILE_EMPTY_LOG;                         // The full path of a empty KML file
 
+    // nastaveni preferovane cesty pro ukladani dat
     private String  prefExportFolder            = "";            // The folder for csv exportation
     public String getPrefExportFolder() {
         return prefExportFolder;                                 // The folder for csv exportation
+    }
+    public void setPrefExportFolder(String prefExportFolder) {
+        this.prefExportFolder = prefExportFolder;                 // The folder for csv exportation
     }
 
     private View view;

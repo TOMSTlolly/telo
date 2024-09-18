@@ -58,7 +58,7 @@ public class FileViewerAdapter extends BaseAdapter
         return 0;
     }
 
-
+    /*
     @Override
     public View getView(int position, View convertView, ViewGroup parent)
     {
@@ -102,6 +102,63 @@ public class FileViewerAdapter extends BaseAdapter
         }
 
         return view;
+    }
+     */
+
+    @Override
+    public View getView(int position, View convertView, ViewGroup parent) {
+        ViewHolder holder;
+        if (convertView == null) {
+            LayoutInflater myInflater = LayoutInflater.from(mContext);
+            convertView = myInflater.inflate(R.layout.rowitem, parent, false);
+            holder = new ViewHolder();
+            holder.cloudIcon = convertView.findViewById(R.id.cloudIcon);
+            holder.imageView = convertView.findViewById(R.id.iconID);
+            holder.checkBox  = convertView.findViewById(R.id.checkBox);
+            holder.trackName = convertView.findViewById(R.id.id_textView_card_TrackName);
+            holder.annotation= convertView.findViewById(R.id.id_textView_card_TrackDesc);
+            holder.count = convertView.findViewById(R.id.id_file_count);
+            holder.from = convertView.findViewById(R.id.id_file_from);
+            holder.into = convertView.findViewById(R.id.id_file_into);
+
+            convertView.setTag(holder);
+        } else {
+            holder = (ViewHolder) convertView.getTag();
+        }
+        FileDetail currentFile = mAllFiles.get(position);
+
+        // napln hodnotama z datoveho listu
+        holder.trackName.setText(currentFile.getName());
+        holder.count.setText(String.valueOf(currentFile.getiCount()));
+        holder.annotation.setText("Annotation");
+      //  holder.from.setText(currentFile.getiFrom().toString());
+      //  holder.into.setText(currentFile.getiInto().toString());
+
+
+        // zbyla cast stareho holderu
+        // holder.cloudIcon.setVisibility(currentFile.isUploaded() ? View.VISIBLE : View.GONE);
+        holder.imageView.setImageResource(currentFile.getIconID());
+        holder.checkBox.setText(currentFile.getName());
+        holder.checkBox.setChecked(currentFile.isSelected());
+        holder.checkBox.setOnCheckedChangeListener((compoundButton, isChecked) -> {
+            Log.d("FILEVIEWER", getFullName(position) + " selected = " + isChecked);
+            currentFile.setSelected(isChecked);
+        });
+
+        return convertView;
+    }
+
+    private static class ViewHolder {
+        ImageView cloudIcon;
+        ImageView imageView;
+        CheckBox checkBox;
+        TextView trackName;
+        TextView annotation;
+        TextView count;
+        TextView from;
+        TextView into;
+        TextView maxtx;
+
     }
 
     public String getShortName(int position)

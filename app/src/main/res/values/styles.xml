@@ -1,0 +1,111 @@
+<resources>
+    <!-- Overall Styles -->
+    <style name="MyMaterialTheme" parent="MyMaterialTheme.Base">
+    </style>
+
+    <style name="MyMaterialTheme.Base" parent="Theme.AppCompat.DayNight">
+        <item name="windowNoTitle">true</item>
+        <item name="windowActionBar">false</item>
+
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorAccent">@color/colorAccent</item>
+
+        <item name="editTextStyle">@style/MyEditText</item>
+        <item name="preferenceTheme">@style/MyPreferenceThemeOverlay</item>
+        <item name="android:windowBackground">@color/colorBackground</item>
+        <!--  It should be true otherwise action mode will not overlay toolbar -->
+        <item name="windowActionModeOverlay">true</item>
+        <!--  For Custom Action Mode Background Color/Drawable -->
+        <item name="actionModeBackground">@color/colorPrimaryDark</item>
+    </style>
+
+    <style name="MyPreferenceThemeOverlay" parent="@style/PreferenceThemeOverlay.v14.Material">
+        <item name="android:listSeparatorTextViewStyle">@style/ListSeparatorTextView</item>
+        <item name="divider">@color/colorAccent</item>
+    </style>
+
+    <style name="AppBarLayout" parent="@style/ThemeOverlay.AppCompat.Dark.ActionBar">
+        <item name="colorAccent">@android:color/white</item>
+    </style>
+
+    <style name="ToolbarTitle" parent="@style/TextAppearance.Widget.AppCompat.Toolbar.Title">
+        <item name="android:textSize">20sp</item>
+    </style>
+
+    <style name="ProgressBar" parent="@android:style/Widget.ProgressBar.Horizontal">
+        <item name="android:layout_margin">0dp</item>
+        <item name="android:minHeight">5dp</item>
+        <item name="android:maxHeight">5dp</item>
+        <item name="android:progressDrawable">@drawable/progress</item>
+    </style>
+
+    <style name="TextAppearanceLargeNumbers" parent="@android:style/TextAppearance.Large">
+        <item name="android:textColor">@color/textColorPrimary</item>
+        <item name="android:textSize">@dimen/TextAppearanceLargeNumbersSize</item>
+        <item name="android:freezesText">true</item>
+        <item name="android:gravity">center_horizontal</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="TextAppearanceLargeUM" parent="@android:style/TextAppearance.Small">
+        <item name="android:textColor">@color/textColorPrimary</item>
+        <item name="android:textSize">@dimen/TextAppearanceTextUMSize</item>
+    </style>
+
+    <style name="TextAppearanceCardSmall" parent="@android:style/TextAppearance.Small">
+        <item name="android:textSize">@dimen/TextAppearanceSmallTextSize</item>
+    </style>
+
+    <style name="MyCrossfadeAnimation.Window" parent="@android:style/Animation.Activity">
+        <item name="android:windowEnterAnimation">@android:anim/fade_in</item>
+        <item name="android:windowExitAnimation">@android:anim/fade_out</item>
+    </style>
+
+    <style name="MyEditText" parent="android:style/Widget.EditText">
+        <item name="colorAccent">@color/colorAccent</item>
+        <item name="colorControlNormal">@color/colorAccent</item>
+        <item name="colorControlActivated">@color/colorAccent</item>
+        <item name="android:textCursorDrawable">@null</item>
+        <item name="backgroundTint">@color/colorAccent</item>
+    </style>
+
+    <!-- SettingsActivity -->
+    <style name="MySettingsTheme" parent="MyMaterialTheme">
+        <item name="colorAccent">@color/preference_accent</item>
+        <item name="alertDialogTheme">@style/MyPreferenceDialog</item>
+    </style>
+
+    <style name="ListSeparatorTextView">
+        <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/preference_accent</item>
+        <item name="android:paddingTop">16dp</item>
+        <item name="android:layout_marginBottom">16dp</item>
+    </style>
+
+    <style name="MyPreferenceDialog" parent="Theme.AppCompat.DayNight.Dialog">
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/textColorPrimary</item>
+    </style>
+
+    <!-- About Screen -->
+    <style name="MyMaterialThemeAbout" parent="MyMaterialTheme.Base">
+        <item name="android:windowBackground">@color/colorBackground</item>
+        <item name="colorAccent">@color/textColorPrimary</item>
+        <item name="android:windowAnimationStyle">@style/MyAboutAnimation.Window</item>
+    </style>
+
+    <style name="MyAboutAnimation.Window" parent="@android:style/Animation.Activity">
+        <item name="android:windowEnterAnimation">@android:anim/fade_in</item>
+        <item name="android:windowExitAnimation">@android:anim/slide_out_right</item>
+    </style>
+
+    <!-- Launch Screen -->
+    <style name="LaunchScreenTheme" parent="Theme.AppCompat">
+        <item name="android:windowBackground">@drawable/launch_screen</item>
+        <item name="colorPrimary">@android:color/black</item>
+        <item name="colorPrimaryDark">@android:color/black</item>
+    </style>
+</resources>

@@ -10,8 +10,11 @@ package com.tomst.lolly.core;
 
  import androidx.annotation.RequiresApi;
  import androidx.core.content.FileProvider;
+ import androidx.documentfile.provider.DocumentFile;
+
  import java.io.BufferedReader;
  import java.io.File;
+ import java.io.FileNotFoundException;
  import java.io.IOException;
  import java.io.InputStream;
  import java.io.InputStreamReader;
@@ -30,6 +33,7 @@ package com.tomst.lolly.core;
  import java.util.Locale;
 
  import com.tomst.lolly.BuildConfig;
+ import com.tomst.lolly.LollyApplication;
 
 public class CSVReader extends Thread
 {
@@ -78,12 +82,9 @@ public class CSVReader extends Thread
 
     public OnProListener mFinListener; // listener field
 
-
     //private Handler progressBarHandler = new Handler();  // handler pro vysilani z Threadu
 
-    long iFileSize = 0; // velikost souboru v bytech
     private String FileName="";
-
     public String getFileName(){
         return this.FileName;
     }
@@ -105,11 +106,47 @@ public class CSVReader extends Thread
     private static Context context = null;
 
     // csv file constructor
-    public CSVReader(Context context)
+    public CSVReader(String AFileName)
     {
-        this.context = context;
+        this.context = LollyApplication.getInstance().getApplicationContext();
+
+        try {
+            DocumentFile privateDocument;
+            if (AFileName.startsWith("content")) {
+                Uri uri = Uri.parse(AFileName);
+                privateDocument = DocumentFile.fromTreeUri(this.context, uri);
+            } else {
+                privateDocument = DocumentFile.fromFile(new File(AFileName));
+            }
+
+            if (!privateDocument.exists()) {
+                Log.w("", "[#] CSVReader.java - UNABLE TO  FIND THE FOLDER");
+                return ;
+            }
+
+            InputStream fin;
+            try {
+                fin = LollyApplication.getInstance().getContentResolver().openInputStream(privateDocument.getUri());
+            } catch (FileNotFoundException e) {
+                Log.w("myApp", "[#] CSVReader.java - FileNotFoundException");
+                 return;
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ;
+        }
+
         this.fout  = null;
-        this.writeTxf = false;
+        Log.d(TAG,"New CSV file name = " +AFileName);
+        try
+        {
+            fNewCsv = new FileOutputStream(AFileName);
+        }
+        catch(Exception e)
+        {
+            System.out.println(e);
+        }
 
         currDay = 0;
         iline = 0;
@@ -117,71 +154,36 @@ public class CSVReader extends Thread
         ClearAvg();
     }
 
-    // Tomasuv zkraceny format zobrazeni grafu
-    public void SetTxf(boolean AWriteTxf)
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    private String readFileContent(Uri uri) throws IOException
     {
-        this.writeTxf = AWriteTxf; // budu vytvaret txf soubor
-    }
+        Integer idx = 0;
 
-    // uloz a zavri txf
-    private  void CloseTxf()
-    {
-        try
+        // Streamovane vycteni, zatim nejrychlejsi verze
+        InputStream inputStream =
+                this.context.getContentResolver().openInputStream(uri);
+        BufferedReader reader =
+                new BufferedReader(new InputStreamReader(inputStream));
+        Integer j = inputStream.available();  // pocet dostupnych bytu
+        StringBuilder stringBuilder = new StringBuilder();
+
+        currDay = 0;
+        iline = 0;
+        ClearAvg();
+
+        String currentline = "";
+        while ((currentline = reader.readLine()) != null)
         {
-          fout.close();
+            ProcessLine(currentline);
+            idx = j - inputStream.available();
+            DoProgress(idx);
+            stringBuilder.append(currentline).append("\n");
+            idx++;
         }
-        catch (IOException e)
-        {
-          throw new RuntimeException(e);
-        }
-    }
-
-
-    // Txf soubor pro zkraceny zapis
-    private void openTxf(String AFileName)
-    {
-      // vymen priponu csv -> txf
-      AFileName = AFileName.replace(".csv",".txf");
-      Log.d(TAG,"TxfFileName="+AFileName);
-      try
-      {
-          fout = new FileOutputStream(AFileName);
-      }
-      catch(Exception e)
-      {
-          System.out.println(e);
-      }
-    }
-
-    // novy CSV soubor
-    public void CreateCsvFile(String file_name)
-    {
-        Log.d(TAG,"New CSV file name = " + file_name);
-        try
-        {
-            fNewCsv = new FileOutputStream(file_name);
-            // otevre AFileName, ale s priponou .txf
-            //if (this.writeTxf ) openTxf(file_name);
-
-        }
-        catch(Exception e)
-        {
-            System.out.println(e);
-        }
-    }
-
-    public void setFileName(String AFileName)
-    {
-        this.FileName = AFileName;
-
-        if (AFileName.contains(".txf"))
-        {
-            this.writeTxf = false;
-            return;
-        }
-
-        // otevre pro zapis zkracenych grafu
-        if (this.writeTxf) openTxf(AFileName);
+        DoFinished(0);
+        inputStream.close();
+        //if (this.writeTxf) CloseTxf();
+        return stringBuilder.toString();
     }
 
     // tohle pustim po startu
@@ -245,6 +247,9 @@ public class CSVReader extends Thread
 
         return 0;
     }
+
+
+
 
     private void DoProgress(long pos)
     {
@@ -498,36 +503,8 @@ public class CSVReader extends Thread
         return (mer.dev);
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.O)
-    private String readFileContent(Uri uri) throws IOException
-    {
-        Integer idx = 0;
 
-        // Streamovane vycteni, zatim nejrychlejsi verze
-        InputStream inputStream =
-                this.context.getContentResolver().openInputStream(uri);
-        BufferedReader reader =
-                new BufferedReader(new InputStreamReader(inputStream));
-        Integer j = inputStream.available();  // pocet dostupnych bytu
-        StringBuilder stringBuilder = new StringBuilder();
 
-        currDay = 0;
-        iline = 0;
-        ClearAvg();
 
-        String currentline = "";
-        while ((currentline = reader.readLine()) != null)
-        {
-            ProcessLine(currentline);
-            idx = j - inputStream.available();
-            DoProgress(idx);
-            stringBuilder.append(currentline).append("\n");
-            idx++;
-        }
-        DoFinished(0);
-        inputStream.close();
-        if (this.writeTxf) CloseTxf();
 
-        return stringBuilder.toString();
-    }
 }

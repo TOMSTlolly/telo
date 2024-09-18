@@ -330,7 +330,7 @@ public class HomeFragment extends Fragment {
             //String fName = "testfile";
             filex = true;
             Integer i = 0;
-            while (filex == true) {
+            while ((filex == true) && (i<100)) {
                 //locFile = ADir + "//data_"+Serial+"_"+fmtdate+"_"+ Integer.valueOf(i)+".csv";
                 locFile = fmtdate+"_"+Integer.valueOf(i)+".csv";
                 txtFile = pickedDir.findFile(locFile);
@@ -432,9 +432,8 @@ public class HomeFragment extends Fragment {
                     // adresar
                     String AFileName  = CompileFileName(info.msg,lollyApp.getPrefExportFolder());  // cislo lizatka
 
-                    csv = new CSVReader(getContext());   // vytvorim novy csv soubor
-                    // csv.SetTxf(true);
-                    csv.CreateCsvFile(AFileName);
+                    csv = new CSVReader(AFileName);   // novy, eventuelne otevru existujici soubor
+
                     break;
 
                 case tInfo:

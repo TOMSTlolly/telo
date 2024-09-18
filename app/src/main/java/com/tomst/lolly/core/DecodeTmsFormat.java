@@ -9,7 +9,6 @@ import android.util.Log;
 
 import androidx.annotation.RequiresApi;
 
-import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
@@ -19,7 +18,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
-public class pars {
+public class DecodeTmsFormat {
     static private byte[] fBuf ;
     static private byte INBUF = 16;
     // static private int fMicroInter = 1279;
@@ -365,7 +364,7 @@ public class pars {
 
     /*** Konstruktor, nastavim defaultni hodnoty ***/
     @RequiresApi(api = Build.VERSION_CODES.O)
-    public pars(){
+    public DecodeTmsFormat(){
         //RandomAccessFile file = new RandomAccessFile("/Users/pankaj/Downloads/myfile.txt", "r");
         InitConstants();
     }

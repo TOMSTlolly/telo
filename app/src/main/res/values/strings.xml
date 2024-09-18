@@ -7,6 +7,17 @@
     <string name="ReadFromDate">0</string>
     <string name="ReadWeek">0</string>
 
+    <string name="card_trackinfo_count">1</string>
+    <string name="card_trackinfo_start">2</string>
+    <string name="card_trackinfo_stop">3</string>
+    <string name="card_trackinfo_maxtx">4</string>
+
+    <string name="card_trackinfo_place1">1</string>
+    <string name="card_trackinfo_place2">2</string>
+    <string name="card_trackinfo_place3">3</string>
+    <string name="card_trackinfo_place4">4</string>
+    <string name="card_trackinfo_annotations">0</string>
+
     <string-array name="download_array">
         <item>Read All</item>
         <item>Read From Bookmark</item>

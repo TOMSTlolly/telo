@@ -3,6 +3,13 @@
     <dimen name="activity_horizontal_margin">16dp</dimen>
     <dimen name="activity_vertical_margin">16dp</dimen>
 
+
+    <dimen name="thumbSize">24dp</dimen>
+    <dimen name="thumbLineWidth">1.5dp</dimen>
+    <dimen name="TextAppearanceLargeNumbersSize">26sp</dimen>
+    <dimen name="TextAppearanceTextUMSize">14sp</dimen>
+    <dimen name="TextAppearanceSmallTextSize">11sp</dimen>
+
     <!--genaral spacing-->
     <dimen name="spacing_xsmall">2dp</dimen>
     <dimen name="spacing_small">3dp</dimen>

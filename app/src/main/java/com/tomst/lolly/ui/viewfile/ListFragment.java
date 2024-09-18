@@ -13,6 +13,7 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.text.InputType;
@@ -31,9 +32,11 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.FileProvider;
 import androidx.annotation.NonNull;
+import androidx.documentfile.provider.DocumentFile;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
@@ -44,7 +47,9 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageMetadata;
 import com.google.firebase.storage.StorageReference;
+import com.tomst.lolly.LollyApplication;
 import com.tomst.lolly.R;
+import com.tomst.lolly.core.CSVReader;
 import com.tomst.lolly.core.Constants;
 import com.tomst.lolly.core.DmdViewModel;
 import com.tomst.lolly.core.FileOpener;
@@ -58,7 +63,11 @@ import com.tomst.lolly.BuildConfig;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -67,6 +76,13 @@ import android.os.storage.StorageManager;
 
 public class ListFragment extends Fragment
 {
+    public void SetFilePath(String path)
+    {
+        filePath = path;
+    }
+    DocumentFile sharedFolder;
+    DocumentFile privateFolder;
+
     private FragmentViewerBinding binding;
     private View rootView = null;
     private int mywidth;
@@ -106,6 +122,7 @@ public class ListFragment extends Fragment
     }
 
 
+    @RequiresApi(api = Build.VERSION_CODES.O)
     public View onCreateView(
             @NonNull LayoutInflater inflater,
             ViewGroup container,
@@ -119,10 +136,21 @@ public class ListFragment extends Fragment
         );
         rootView = binding.getRoot();
 
-        // Saving folder destination
-        TextView folderName = binding.tvFolderDest;
-        folderName.setText("Folder: " + Constants.FILEDIR);
+        // nacti uri z shared preferences v hlavni aplikaci
+        String sharedPath = LollyApplication.getInstance().getPrefExportFolder();
+        if (sharedPath.startsWith("content"))
+            sharedFolder = DocumentFile.fromTreeUri(LollyApplication.getInstance(), Uri.parse(sharedPath));
+        else
+            sharedFolder = DocumentFile.fromFile(new File(sharedPath));
+        String privatePath = getContext().getFilesDir().toString();
+        privateFolder = DocumentFile.fromFile(new File(privatePath));
 
+
+        TextView folderName = binding.tvFolderDest;
+        folderName.setText("Folder: " + sharedFolder.getUri().getPath());
+
+
+        // Saving folder destination
         Button btn_reload = binding.btnLoadFolder;
         btn_reload.setOnClickListener(new View.OnClickListener()
         {
@@ -884,7 +912,11 @@ public class ListFragment extends Fragment
     }
 
     public static boolean canListFiles(File f) {
-        return f.canRead() && f.isDirectory();
+        boolean ret=false;
+        if (f.canRead())
+         if (f.isDirectory())
+             ret = true;
+        return(ret);
     }
 
     private boolean isExternalStorageWriteble()
@@ -971,27 +1003,63 @@ public class ListFragment extends Fragment
         return resultBuffer.toString();
     }
 
+    //  otevre prvni a posledni radek csv, zjisti zacatek a konec dat.
+    private FileDetail getCsvDetail(String name)
+    {
+       // downloadCSVFile();
+        CSVReader reader = new CSVReader(name);
+
+        return null;
+    }
+
+    //public void DoLoadFiles(String sharedPath, String privatePath)
+    @RequiresApi(api = Build.VERSION_CODES.O)
     public void DoLoadFiles()
     {
-       fFriends = setFriends();
-
+      // fFriends = setFriends();
        fFriends.clear();
-       // filePath = Constants.FILEDIR; //"/storage/emulated/0/Documents/";
-       // File directory = new File("/storage/emulated/0/");
-       // File[] rootDirectories = FileOperation.getAllStorages(getContext());
+       if (sharedFolder != null)
+        {
+            List<DocumentFile> files = Arrays.asList(sharedFolder.listFiles());
+            Collections.sort(files, new Comparator<DocumentFile>() {
+                @Override
+                public int compare(DocumentFile f1, DocumentFile f2) {
+                    return f1.getName().compareToIgnoreCase(f2.getName());
+                }
+            });
 
-       // Ukladani do uloziste specifickeho pro aplikaci
+            FileDetail fdet = null;
+            for (DocumentFile file : files) {
 
-       filePath = Environment.getExternalStoragePublicDirectory(DIRECTORY_DOCUMENTS).getAbsolutePath();
+                fdet = new FileDetail(file.getName(),R.drawable.file);
+                fdet.setCount(10);   // testovaci pocet udalosti
+                fdet.setFrom(LocalDateTime.now());
+                fdet.setInto(LocalDateTime.now());
+                fdet.setFileSize((int) file.length());
+
+                fFriends.add(new FileDetail(file.getName(), R.drawable.file));
+
+            }
+        }
+
+        ListView mListView = rootView.findViewById(R.id.listView);
+        FileViewerAdapter friendsAdapter = new FileViewerAdapter(getContext(), fFriends);
+        mListView.setAdapter(friendsAdapter);
+        mListView.animate();
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            testMem(1000);
+        }
+
+
+       // loadAllFiles();
+
+       /*
        boolean ret = isExternalStorageWriteble();
        ret = isExternalStorageReadable();
-       // test na fyzickou sd-kartu
        File [] externalStorageVolumes = getContext().getExternalFilesDirs(null);
        File primaryExternalStorage = externalStorageVolumes[0];
-
        testMem(1000);
-       // filePath = Environment.getExternalStorageDirectory().getAbsolutePath();
-       filePath = primaryExternalStorage.getAbsolutePath();
        File file = new File(filePath);
        if (!canListFiles(file))
          {
@@ -1000,7 +1068,6 @@ public class ListFragment extends Fragment
               //file.filePath = file.filePath + "/Documents";
               //filePath = filePath + "/Documents";
          }
-
 
        File directory = new File(file.getParent());
        File[] rootDirectories = directory.listFiles();
@@ -1032,8 +1099,11 @@ public class ListFragment extends Fragment
             }
         };
 
+
 //        loadFromStorage();
         loadAllFiles();
+
+        */
     }
 
     @Override

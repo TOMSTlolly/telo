@@ -1,11 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
     <color name="yellow_800">#F9A825</color>
 
+    <color name="textColorPrimary">#111111</color>
     <color name="colorPrimary">#3F51B5</color>
     <color name="colorPrimaryDark">#303F9F</color>
     <color name="colorPrimaryLight">#1E88E5</color>
 
+    <color name="colorCardBackground_Title">#ffffff</color>
+    <color name="colorCardBackground_Line">#f7f7f7</color>
+    <color name="colorCardBackground_Data">#fbfbfb</color>
+    <color name="colorCardBackground">#f7f7f7</color>
+    <color name="colorCardBackground_Selected">#5fff8888</color>
+    <color name="textColorCardTitle">#272727</color>
+    <color name="colorBackground">#e9e9e9</color>
+
+    <color name="colorAccent">#000000</color>
+    <color name="preference_accent">#b51111</color>
+    <color name="preference_fallback_accent_color" tools:override="true">#b51111</color>
 
     <color name="vT1">#FF4466A4</color>
     <color name="vT2">#FFF39C35</color>

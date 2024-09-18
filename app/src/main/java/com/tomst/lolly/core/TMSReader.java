@@ -23,10 +23,8 @@ import com.ftdi.j2xx.D2xxManager;
 import com.ftdi.j2xx.FT_Device;
 //import com.google.firebase.encoders.json.BuildConfig;
 
-import java.io.File;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -164,11 +162,11 @@ public class TMSReader extends Thread
         TInfo info = new TInfo();
         info.stat  = TDevState.tProgress;
         info.idx   = pos;
-        if ((pos>0) && (pars.lastDateTrace != null)) {
-            long days = DaysBetween(pars.lastDateTrace,GetPhoneTime());
+        if ((pos>0) && (DecodeTmsFormat.lastDateTrace != null)) {
+            long days = DaysBetween(DecodeTmsFormat.lastDateTrace,GetPhoneTime());
             info.msg = String.format("Remain %d days", days);
             info.remainDays = days;
-            info.currDay = pars.lastDateTrace;
+            info.currDay = DecodeTmsFormat.lastDateTrace;
         }
         message.obj = info;
         handler.sendMessage(message);
@@ -1099,9 +1097,9 @@ public class TMSReader extends Thread
     private boolean ReadData()
     {
         String respond = "";
-        pars parser = new pars();
-        pars.SetHandler(datahandler);
-        pars.SetDeviceType(rfir.DeviceType);
+        DecodeTmsFormat parser = new DecodeTmsFormat();
+        DecodeTmsFormat.SetHandler(datahandler);
+        DecodeTmsFormat.SetDeviceType(rfir.DeviceType);
 
         SharedPreferences prefs = context.getSharedPreferences(
                 "save_options", Context.MODE_PRIVATE
