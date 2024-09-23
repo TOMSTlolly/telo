@@ -6,6 +6,9 @@ import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 import static android.app.Activity.RESULT_CANCELED;
 import static android.os.Environment.*;
 
+import static com.tomst.lolly.LollyApplication.DIRECTORY_TEMP;
+import static dagger.internal.Preconditions.checkNotNull;
+
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
@@ -58,17 +61,23 @@ import com.tomst.lolly.databinding.FragmentViewerBinding;
 import com.tomst.lolly.fileview.FileDetail;
 import com.tomst.lolly.fileview.FileViewerAdapter;
 import com.tomst.lolly.core.PermissionManager;
+import com.tomst.lolly.core.SecondaryCardChannel;
+import com.tomst.lolly.core.TMereni;
 
 import com.tomst.lolly.BuildConfig;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import android.os.storage.StorageManager;
@@ -82,6 +91,7 @@ public class ListFragment extends Fragment
     }
     DocumentFile sharedFolder;
     DocumentFile privateFolder;
+
 
     private FragmentViewerBinding binding;
     private View rootView = null;
@@ -104,6 +114,79 @@ public class ListFragment extends Fragment
     FirebaseFirestore db;
 
     List<FileDetail> fFriends = null;
+
+    private List<FileDetail> setFiles(String path)
+    {
+        List<FileDetail> fil = new ArrayList<>();
+
+        File directory = new File(path);
+        File[] files = directory.listFiles();
+
+        for (File pathname : files)
+        {
+            System.out.println(pathname);
+        }
+
+        return fil;
+    };
+
+
+    private List<FileDetail> setFriends()
+    {
+        String[] names = getResources().getStringArray(R.array.friends);
+        int[] iconID = {
+                R.drawable.ic_mood_white_24dp,
+                R.drawable.ic_mood_bad_white_24dp,
+                R.drawable.ic_sentiment_neutral_white_24dp,
+                R.drawable.ic_sentiment_dissatisfied_white_24dp,
+                R.drawable.ic_sentiment_satisfied_white_24dp,
+                R.drawable.ic_sentiment_very_dissatisfied_white_24dp,
+                R.drawable.ic_sentiment_very_satisfied_white_24dp,
+        };
+        List<FileDetail> friends = new ArrayList<>();
+
+        for (int i = 0; i < names.length; i++)
+        {
+            friends.add(new FileDetail(names[i], iconID[i]));
+        }
+
+        return friends;
+    }
+
+
+    private void setupBitmaps()
+    {
+        mywidth = Resources.getSystem().getDisplayMetrics().widthPixels;
+        folderImage = BitmapFactory.decodeResource(
+                getResources(), R.drawable.folder
+        );
+        fileImage = BitmapFactory.decodeResource(
+                getResources(), R.drawable.file
+        );
+        archiveImage = BitmapFactory.decodeResource(
+                getResources(), R.drawable.archive
+        );
+        audioImage = BitmapFactory.decodeResource(
+                getResources(), R.drawable.audio
+        );
+        videoImage = BitmapFactory.decodeResource(
+                getResources(), R.drawable.video
+        );
+        pictureImage = BitmapFactory.decodeResource(
+                getResources(), R.drawable.picture
+        );
+        unknownImage = BitmapFactory.decodeResource(
+                getResources(), R.drawable.unknown
+        );
+    }
+
+
+    @Override
+    public void onDestroyView()
+    {
+        super.onDestroyView();
+        binding = null;
+    }
 
     @Override
     public void onResume() {
@@ -148,7 +231,6 @@ public class ListFragment extends Fragment
 
         TextView folderName = binding.tvFolderDest;
         folderName.setText("Folder: " + sharedFolder.getUri().getPath());
-
 
         // Saving folder destination
         Button btn_reload = binding.btnLoadFolder;
@@ -721,6 +803,7 @@ public class ListFragment extends Fragment
     }
 
 
+
     private void AddFileName(String FileName)
     {
         fFriends.add(new FileDetail(FileName,R.drawable.file));
@@ -1004,12 +1087,58 @@ public class ListFragment extends Fragment
     }
 
     //  otevre prvni a posledni radek csv, zjisti zacatek a konec dat.
-    private FileDetail getCsvDetail(String name)
-    {
-       // downloadCSVFile();
-        CSVReader reader = new CSVReader(name);
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    private void getCsvDetail( DocumentFile documentFile, FileDetail adet) {
+        // downloadCSVFile();
+        CSVReader reader = new CSVReader();
+        String AFileName = documentFile.getUri().getPath();
+        SecondaryCardChannel channel = new SecondaryCardChannel(documentFile.getUri(), getContext());
+        RandomAccessFile rac = channel.openLocalFile(documentFile.getUri());
 
-        return null;
+        try {
+            // Read data from the file
+            ByteBuffer readBuffer = ByteBuffer.allocate(2048);
+            int bytesRead = channel.readLast2048Bytes(readBuffer);
+            if (bytesRead != -1) {
+                readBuffer.flip();
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    public void DoLoadFil()
+    {
+        fFriends.clear();
+        File cacheDir = new File(DIRECTORY_TEMP);
+        if (cacheDir.isDirectory()) {
+        File[] files = cacheDir.listFiles();
+        if (files == null || files.length == 0)
+            return;
+
+        FileDetail fdet = null;
+        CSVReader reader = new CSVReader();
+        for (File file : files) {
+            if (null != file) {
+                Uri fileUri = Uri.fromFile(file);  // Convert File to Uri
+                try {
+                    fdet = reader.readFileContent(fileUri);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                fdet.setName(file.getName());
+                fdet.setFileSize((int) file.length());
+                fFriends.add(fdet);
+            }
+        }
+        ListView mListView = rootView.findViewById(R.id.listView);
+        FileViewerAdapter friendsAdapter = new FileViewerAdapter(getContext(), fFriends);
+        mListView.setAdapter(friendsAdapter);
+        mListView.animate();
+
+        }
+
     }
 
     //public void DoLoadFiles(String sharedPath, String privatePath)
@@ -1021,6 +1150,7 @@ public class ListFragment extends Fragment
        if (sharedFolder != null)
         {
             List<DocumentFile> files = Arrays.asList(sharedFolder.listFiles());
+           //List<DocumentFile> files = Arrays.asList()
             Collections.sort(files, new Comparator<DocumentFile>() {
                 @Override
                 public int compare(DocumentFile f1, DocumentFile f2) {
@@ -1029,17 +1159,18 @@ public class ListFragment extends Fragment
             });
 
             FileDetail fdet = null;
+            CSVReader reader = new CSVReader();
             for (DocumentFile file : files) {
+                try {
+                   fdet = reader.readFileContent(file.getUri());  // projdi soubor, najdi minima/maxima
+                   fdet.setName(file.getName());
+                   fdet.setFileSize((int) file.length());
 
-                fdet = new FileDetail(file.getName(),R.drawable.file);
-                fdet.setCount(10);   // testovaci pocet udalosti
-                fdet.setFrom(LocalDateTime.now());
-                fdet.setInto(LocalDateTime.now());
-                fdet.setFileSize((int) file.length());
-
-                fFriends.add(new FileDetail(file.getName(), R.drawable.file));
-
-            }
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                fFriends.add(fdet);
+             }
         }
 
         ListView mListView = rootView.findViewById(R.id.listView);
@@ -1050,10 +1181,7 @@ public class ListFragment extends Fragment
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             testMem(1000);
         }
-
-
        // loadAllFiles();
-
        /*
        boolean ret = isExternalStorageWriteble();
        ret = isExternalStorageReadable();
@@ -1106,15 +1234,18 @@ public class ListFragment extends Fragment
         */
     }
 
+
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
     public void onStart()
     {
         Log.d("LIST", "Started...");
         super.onStart();
 
-        DoLoadFiles();
-
        // DoLoadFiles();
+
+        DoLoadFil();
 
         /*
         executor.execute(() -> {
@@ -1133,76 +1264,5 @@ public class ListFragment extends Fragment
     }
 
 
-    private List<FileDetail> setFiles(String path)
-    {
-        List<FileDetail> fil = new ArrayList<>();
 
-        File directory = new File(path);
-        File[] files = directory.listFiles();
-
-        for (File pathname : files)
-        {
-            System.out.println(pathname);
-        }
-
-        return fil;
-    };
-
-
-    private List<FileDetail> setFriends()
-    {
-        String[] names = getResources().getStringArray(R.array.friends);
-        int[] iconID = {
-                R.drawable.ic_mood_white_24dp,
-                R.drawable.ic_mood_bad_white_24dp,
-                R.drawable.ic_sentiment_neutral_white_24dp,
-                R.drawable.ic_sentiment_dissatisfied_white_24dp,
-                R.drawable.ic_sentiment_satisfied_white_24dp,
-                R.drawable.ic_sentiment_very_dissatisfied_white_24dp,
-                R.drawable.ic_sentiment_very_satisfied_white_24dp,
-        };
-        List<FileDetail> friends = new ArrayList<>();
-
-        for (int i = 0; i < names.length; i++)
-        {
-            friends.add(new FileDetail(names[i], iconID[i]));
-        }
-
-        return friends;
-    }
-
-
-    private void setupBitmaps()
-    {
-        mywidth = Resources.getSystem().getDisplayMetrics().widthPixels;
-        folderImage = BitmapFactory.decodeResource(
-                getResources(), R.drawable.folder
-        );
-        fileImage = BitmapFactory.decodeResource(
-                getResources(), R.drawable.file
-        );
-        archiveImage = BitmapFactory.decodeResource(
-                getResources(), R.drawable.archive
-        );
-        audioImage = BitmapFactory.decodeResource(
-                getResources(), R.drawable.audio
-        );
-        videoImage = BitmapFactory.decodeResource(
-                getResources(), R.drawable.video
-        );
-        pictureImage = BitmapFactory.decodeResource(
-                getResources(), R.drawable.picture
-        );
-        unknownImage = BitmapFactory.decodeResource(
-                getResources(), R.drawable.unknown
-        );
-    }
-
-
-    @Override
-    public void onDestroyView()
-    {
-        super.onDestroyView();
-        binding = null;
-    }
 }

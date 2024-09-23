@@ -2,6 +2,7 @@ package com.tomst.lolly.fileview;
 
 import android.content.Context;
 import android.media.Image;
+import android.os.Build;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -12,8 +13,14 @@ import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import androidx.annotation.RequiresApi;
+
 import com.tomst.lolly.R;
 
+import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -105,6 +112,7 @@ public class FileViewerAdapter extends BaseAdapter
     }
      */
 
+    @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
         ViewHolder holder;
@@ -117,9 +125,14 @@ public class FileViewerAdapter extends BaseAdapter
             holder.checkBox  = convertView.findViewById(R.id.checkBox);
             holder.trackName = convertView.findViewById(R.id.id_textView_card_TrackName);
             holder.annotation= convertView.findViewById(R.id.id_textView_card_TrackDesc);
-            holder.count = convertView.findViewById(R.id.id_file_count);
             holder.from = convertView.findViewById(R.id.id_file_from);
             holder.into = convertView.findViewById(R.id.id_file_into);
+            holder.count = convertView.findViewById(R.id.id_file_count);
+            holder.size = convertView.findViewById(R.id.id_file_size);
+            holder.mintx = convertView.findViewById(R.id.id_min_tx);
+            holder.maxtx = convertView.findViewById(R.id.id_max_tx);
+            holder.minhum = convertView.findViewById(R.id.id_min_hum);
+            holder.maxhum = convertView.findViewById(R.id.id_max_hum);
 
             convertView.setTag(holder);
         } else {
@@ -127,13 +140,21 @@ public class FileViewerAdapter extends BaseAdapter
         }
         FileDetail currentFile = mAllFiles.get(position);
 
-        // napln hodnotama z datoveho listu
+       // DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneId.of("UTC"));
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+        String formattedFrom = currentFile.getiFrom().toString();
+        String formattedInto = currentFile.getiInto().toString();
+
         holder.trackName.setText(currentFile.getName());
         holder.count.setText(String.valueOf(currentFile.getiCount()));
         holder.annotation.setText("Annotation");
-      //  holder.from.setText(currentFile.getiFrom().toString());
-      //  holder.into.setText(currentFile.getiInto().toString());
-
+        holder.from.setText(formattedFrom);
+        holder.into.setText(formattedInto);
+        holder.mintx.setText(String.valueOf(currentFile.getMinT1()));
+        holder.maxtx.setText(String.valueOf(currentFile.getMaxT1()));
+        holder.minhum.setText(String.valueOf(currentFile.getMinHum()));
+        holder.maxhum.setText(String.valueOf(currentFile.getMaxHum()));
+        holder.size.setText(String.valueOf(currentFile.getFileSize()));
 
         // zbyla cast stareho holderu
         // holder.cloudIcon.setVisibility(currentFile.isUploaded() ? View.VISIBLE : View.GONE);
@@ -154,11 +175,16 @@ public class FileViewerAdapter extends BaseAdapter
         CheckBox checkBox;
         TextView trackName;
         TextView annotation;
-        TextView count;
+
         TextView from;
         TextView into;
-        TextView maxtx;
+        TextView count;
+        TextView size;
 
+        TextView maxtx;
+        TextView mintx;
+        TextView maxhum;
+        TextView minhum;
     }
 
     public String getShortName(int position)

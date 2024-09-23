@@ -483,6 +483,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:backgroundTint="#f1a033"
+                android:visibility="gone"
               />
 
         </LinearLayout>

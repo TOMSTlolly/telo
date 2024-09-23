@@ -1,27 +1,32 @@
 package com.tomst.lolly.core;
 
  import android.content.Context;
+ import android.database.Cursor;
  import android.net.Uri;
  import android.os.Build;
  import android.os.Handler;
  import android.os.Looper;
  import android.os.Message;
+ import android.provider.DocumentsContract;
+ import android.provider.MediaStore;
  import android.util.Log;
 
  import androidx.annotation.RequiresApi;
  import androidx.core.content.FileProvider;
  import androidx.documentfile.provider.DocumentFile;
 
+ import java.io.BufferedInputStream;
  import java.io.BufferedReader;
+ import java.io.ByteArrayInputStream;
+ import java.io.ByteArrayOutputStream;
+ import java.io.DataInputStream;
  import java.io.File;
  import java.io.FileNotFoundException;
  import java.io.IOException;
  import java.io.InputStream;
  import java.io.InputStreamReader;
- import java.text.SimpleDateFormat;
- import java.time.ZoneId;
+ import java.io.RandomAccessFile;
  import java.time.format.DateTimeFormatter;
- import java.util.Date;
 
  import java.nio.file.Files;
  import java.nio.file.Path;
@@ -30,10 +35,18 @@ package com.tomst.lolly.core;
  import java.io.FileOutputStream;
 
  import java.time.LocalDateTime;
+ import java.util.List;
  import java.util.Locale;
+ import java.util.concurrent.atomic.AtomicInteger;
+ import java.util.stream.Collectors;
+ import java.util.stream.IntStream;
+ import java.util.stream.Stream;
 
  import com.tomst.lolly.BuildConfig;
  import com.tomst.lolly.LollyApplication;
+ import com.tomst.lolly.fileview.FileDetail;
+
+ import org.apache.commons.io.input.RandomAccessFileInputStream;
 
 public class CSVReader extends Thread
 {
@@ -102,43 +115,138 @@ public class CSVReader extends Thread
         this.mListener = AListener;
     }
 
-
     private static Context context = null;
+   private  DocumentFile privateDocumentDir;
+   private  DocumentFile documentFile;
 
-    // csv file constructor
-    public CSVReader(String AFileName)
+
+
+
+    public static class FileUtils {
+        public static File copyDocumentFileToTempFile(Context context, DocumentFile documentFile) throws IOException {
+            File tempFile = File.createTempFile("temp", null, context.getCacheDir());
+            try (InputStream inputStream = context.getContentResolver().openInputStream(documentFile.getUri());
+                 FileOutputStream outputStream = new FileOutputStream(tempFile)) {
+
+                byte[] buffer = new byte[1024];
+                int length;
+                while ((length = inputStream.read(buffer)) > 0) {
+                    outputStream.write(buffer, 0, length);
+                }
+
+                /*
+                public static ByteArrayInputStream readStreamToSeekableStream(InputStream inputStream) throws IOException {
+                    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+                    buffer = new byte[1024];
+                    int bytesRead;
+                    while ((bytesRead = inputStream.read(buffer)) != -1) {
+                        byteArrayOutputStream.write(buffer, 0, bytesRead);
+                    }
+                    return new ByteArrayInputStream(byteArrayOutputStream.toByteArray());
+                }
+                */
+            }
+            return tempFile;
+        }
+    }
+
+    public String getRealPathFromUri(Context context, Uri uri) {
+        String filePath = "";
+        if (DocumentsContract.isDocumentUri(context, uri)) {
+            String documentId = DocumentsContract.getDocumentId(uri);
+            String[] split = documentId.split(":");
+            String type = split[0];
+
+            Uri contentUri = MediaStore.Files.getContentUri(type);
+            String selection = MediaStore.Files.FileColumns._ID + "=?";
+            String[] selectionArgs = new String[] { split[1] };
+
+            Cursor cursor = context.getContentResolver().query(contentUri, null, selection, selectionArgs, null);
+            if (cursor != null && cursor.moveToFirst()) {
+                int columnIndex = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATA);
+                filePath = cursor.getString(columnIndex);
+                cursor.close();
+            }
+        }
+        return filePath;
+    }
+
+
+    public String getRealPathFromUri(Uri uri) {
+        String filePath = "";
+        String[] projection = { MediaStore.Images.Media.DATA };
+       // Cursor cursor = getContentResolver().query(uri, projection, null, null, null);
+        Cursor cursor = LollyApplication.getInstance().getContentResolver().query(uri, projection, null, null, null);
+        if (cursor != null) {
+            cursor.moveToFirst();
+            int columnIndex = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
+            filePath = cursor.getString(columnIndex);
+            cursor.close();
+        }
+        return filePath;
+    }
+
+    public String getPathFromUri(Context context, Uri uri) {
+        String filePath = "";
+        if (DocumentsContract.isDocumentUri(context, uri)) {
+            DocumentFile documentFile = DocumentFile.fromSingleUri(context, uri);
+            filePath = documentFile.getUri().getPath();
+        }
+        return filePath;
+    }
+
+    public void readN(DocumentFile docFile, int n)
     {
-        this.context = LollyApplication.getInstance().getApplicationContext();
-
         try {
-            DocumentFile privateDocument;
+            Context context = LollyApplication.getInstance().getApplicationContext();
+            File tempFile = FileUtils.copyDocumentFileToTempFile(context, docFile);
+            RandomAccessFile randomAccessFile = new RandomAccessFile(tempFile, "r");
+
+            // Use the RandomAccessFile as needed
+            randomAccessFile.seek(100);
+            byte[] buffer = new byte[1024];
+            int bytesRead = randomAccessFile.read(buffer);
+            //System.out.write(buffer, 0, bytesRead);
+            Log.d(TAG, "readN: " + bytesRead);
+            randomAccessFile.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    public void OpenForRead(String AFileName){
+        this.context = LollyApplication.getInstance().getApplicationContext();
+       // String AFileName = this.FileName;
+        try {
             if (AFileName.startsWith("content")) {
                 Uri uri = Uri.parse(AFileName);
-                privateDocument = DocumentFile.fromTreeUri(this.context, uri);
+                documentFile = DocumentFile.fromSingleUri(this.context, uri);;
+                privateDocumentDir = DocumentFile.fromTreeUri(this.context, uri);
             } else {
-                privateDocument = DocumentFile.fromFile(new File(AFileName));
+                File file = new File(AFileName);
+                if (!file.exists()) {
+                    Log.w(TAG, "[#] CSVReader.java - UNABLE TO FIND THE FILE");
+                    return;
+                }
+                privateDocumentDir = DocumentFile.fromFile(file);
             }
 
-            if (!privateDocument.exists()) {
-                Log.w("", "[#] CSVReader.java - UNABLE TO  FIND THE FOLDER");
-                return ;
-            }
-
+            /*
             InputStream fin;
             try {
-                fin = LollyApplication.getInstance().getContentResolver().openInputStream(privateDocument.getUri());
+                fin = LollyApplication.getInstance().getContentResolver().openInputStream(privateDocumentDir.getUri());
             } catch (FileNotFoundException e) {
                 Log.w("myApp", "[#] CSVReader.java - FileNotFoundException");
-                 return;
+                return;
             }
-
-        } catch (Exception e) {
+             */
+        }catch (Exception e) {
             e.printStackTrace();
             return ;
         }
 
-        this.fout  = null;
-        Log.d(TAG,"New CSV file name = " +AFileName);
+        /*
         try
         {
             fNewCsv = new FileOutputStream(AFileName);
@@ -147,44 +255,129 @@ public class CSVReader extends Thread
         {
             System.out.println(e);
         }
+        this.fout  = null;
+        Log.d(TAG,"New CSV file name = " +AFileName);
+        */
 
+    }
+
+
+    private void ClearPrivate()
+    {
         currDay = 0;
         iline = 0;
         currIx = 1;
-        ClearAvg();
     }
-
-    @RequiresApi(api = Build.VERSION_CODES.O)
-    private String readFileContent(Uri uri) throws IOException
+    // constructor
+    public CSVReader(String AFileName)
     {
-        Integer idx = 0;
-
-        // Streamovane vycteni, zatim nejrychlejsi verze
-        InputStream inputStream =
-                this.context.getContentResolver().openInputStream(uri);
-        BufferedReader reader =
-                new BufferedReader(new InputStreamReader(inputStream));
-        Integer j = inputStream.available();  // pocet dostupnych bytu
-        StringBuilder stringBuilder = new StringBuilder();
-
-        currDay = 0;
-        iline = 0;
+        this.FileName = AFileName;
+        ClearPrivate();
         ClearAvg();
-
-        String currentline = "";
-        while ((currentline = reader.readLine()) != null)
-        {
-            ProcessLine(currentline);
-            idx = j - inputStream.available();
-            DoProgress(idx);
-            stringBuilder.append(currentline).append("\n");
-            idx++;
-        }
-        DoFinished(0);
-        inputStream.close();
-        //if (this.writeTxf) CloseTxf();
-        return stringBuilder.toString();
     }
+
+    public CSVReader()
+    {
+       this.FileName = null;
+       ClearPrivate();
+       ClearAvg();
+    }
+    public static void printLastNLines(String filePath, int n) {
+        File file = new File(filePath);
+        StringBuilder builder = new StringBuilder();
+        try {
+            RandomAccessFile randomAccessFile = new RandomAccessFile(filePath, "r");
+            long pos = file.length() - 1;
+            randomAccessFile.seek(pos);
+
+            for (long i = pos - 1; i >= 0; i--) {
+                randomAccessFile.seek(i);
+                char c = (char) randomAccessFile.read();
+                if (c == '\n') {
+                    n--;
+                    if (n == 0) {
+                        break;
+                    }
+                }
+                builder.append(c);
+            }
+            builder.reverse();
+            System.out.println(builder.toString());
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    /*
+    public class RandomAccessFileExample {
+            File file = new File("path/to/your/file.txt");
+            try (RandomAccessFileInputStream rafis = new RandomAccessFileInputStream(file)) {
+                byte[] buffer = new byte[1024];
+                int bytesRead;
+
+                // Read the file content
+                while ((bytesRead = rafis.read(buffer)) != -1) {
+                    System.out.write(buffer, 0, bytesRead);
+                }
+
+                // Seek to a specific position
+                rafis.seek(100);
+                bytesRead = rafis.read(buffer);
+                System.out.write(buffer, 0, bytesRead);
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+*/
+
+    public void readL(DocumentFile docFile)
+    {
+        InputStream fin;
+        try {
+            fin  = LollyApplication.getInstance().getContentResolver().openInputStream(docFile.getUri());
+        } catch (FileNotFoundException e) {
+            Log.w("myApp", "[#] EGM96.java - FileNotFoundException");
+            //Toast.makeText(getApplicationContext(), "Oops", Toast.LENGTH_SHORT).show();
+            //e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+            return;
+        }
+        BufferedInputStream bin = new BufferedInputStream(fin);
+        DataInputStream din = new DataInputStream(bin);
+
+        if (docFile.getUri().getPath() == null)
+            return;;
+    }
+
+    public  String readLastLine(DocumentFile documentFile) {
+        Uri uri = documentFile.getUri();
+        //this.context = LollyApplication.getInstance().getApplicationContext();
+        try (
+             InputStream inputStream = LollyApplication.getInstance().getContentResolver().openInputStream(uri);
+             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+
+            RandomAccessFile raf = new RandomAccessFile(new File(uri.getPath()), "r");
+            long fileLength = raf.length() - 1;
+            StringBuilder sb = new StringBuilder();
+
+            for (long pointer = fileLength; pointer >= 0; pointer--) {
+                raf.seek(pointer);
+                char c = (char) raf.read();
+                if (c == '\n' && sb.length() > 0) {
+                    break;
+                }
+                sb.append(c);
+            }
+            return sb.reverse().toString();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
 
     // tohle pustim po startu
     @RequiresApi(api = Build.VERSION_CODES.O)
@@ -194,13 +387,9 @@ public class CSVReader extends Thread
         try
         {
             Looper.prepare();
-
-            if (this.FileName.contains(".csv")
-                    || this.FileName.contains(".txf"))
-            {
-                openCsv(this.FileName);
+            if (this.FileName.contains(".csv") ){
+            openCsv(this.FileName);
             }
-
         }
         catch (IOException e)
         {
@@ -208,7 +397,6 @@ public class CSVReader extends Thread
         }
     }
 
-    // TODO: write a custom function for TXF files
     @RequiresApi(api = Build.VERSION_CODES.O)
     private Uri openCsv(String full_file_name) throws IOException
     {
@@ -248,9 +436,6 @@ public class CSVReader extends Thread
         return 0;
     }
 
-
-
-
     private void DoProgress(long pos)
     {
         progressBarHandler.post(new Runnable()
@@ -283,6 +468,9 @@ public class CSVReader extends Thread
     private void sendMessage (TMereni mer)
     {
         // Handle sending message back to handler
+        if (handler==null)
+            return;
+
         Message message = handler.obtainMessage();
         message.obj = new TMereni(mer);
         handler.sendMessage(message);
@@ -426,15 +614,63 @@ public class CSVReader extends Thread
         }
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.O)
-    private void ProcessLine(String currentline)
+    private TDeviceType GuessDevice(TMereni mer)
     {
-        String T1,T2,T3;
+        mer.dev = TDeviceType.dUnknown;
+        if (mer.mvs == 1)
+        {
+            return (TDeviceType.dLolly3);
+        }
+
+        //  existuji t2,t3 teplomery
+        if ((mer.t2 <-199) && (mer.t3<-199))
+        {
+            // wurst nebo dendrometr
+            if (mer.adc>65300)
+            {
+                mer.dev = TDeviceType.dTermoChron;
+            }
+            else
+            {
+                mer.dev = TDeviceType.dAD;
+            }
+        }
+        else
+        {
+            mer.dev = TDeviceType.dLolly4;
+        }
+
+        return (mer.dev);
+    }
+
+
+    private void FindMinMax(TMereni Mer)
+    {
+        if (Mer.t1 > maxT1)
+            maxT1 = Mer.t1;
+        if (Mer.t2 > maxT2)
+            maxT2 = Mer.t2;
+        if (Mer.t3 > maxT3)
+            maxT3 = Mer.t3;
+        if (Mer.t1 < minT1)
+            minT1 = Mer.t1;
+        if (Mer.t2 < minT2)
+            minT2 = Mer.t2;
+        if (Mer.t3 < minT3)
+            minT3 = Mer.t3;
+        if (Mer.hum > maxHm)
+            maxHm = Mer.hum;
+        if (Mer.hum < minHm)
+            minHm = Mer.hum;
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    private void ProcessLine(String currentline) {
+        String T1, T2, T3;
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern(DMD_PATTERN);
         LocalDateTime dateTime = null;
 
-        if (!currentline.isEmpty())
-        {
+        if (!currentline.isEmpty()) {
             // rozsekej radku
             String[] str = currentline.split(";", 0);
             // datum
@@ -448,60 +684,84 @@ public class CSVReader extends Thread
                     currDate = Mer.dtm;
                 }
 
+                // teploty
+                T1 = str[iT1].replace(',', '.');//replaces all occurrences of 'a' to 'e'
+                T2 = str[iT2].replace(',', '.');//replaces all occurrences of 'a' to 'e'
+                T3 = str[iT3].replace(',', '.');//replaces all occurrences of 'a' to 'e'
+                Mer.t1 = Float.parseFloat(T1);
+                Mer.t2 = Float.parseFloat(T2);
+                Mer.t3 = Float.parseFloat(T3);
+                Mer.hum = Integer.parseInt(str[iHum]);
+                Mer.mvs = Integer.parseInt(str[iMvs]);
+
+                if (Mer.mvs >= 200)
+                    Mer.dev = shared.MvsToDevice(Mer.mvs);
+                else
+                    Mer.dev = GuessDevice(Mer);
+
+
             } catch (Exception e) {
                 System.out.println(e);
             }
-            // teploty
-            T1 = str[iT1].replace(',', '.');//replaces all occurrences of 'a' to 'e'
-            T2 = str[iT2].replace(',', '.');//replaces all occurrences of 'a' to 'e'
-            T3 = str[iT3].replace(',', '.');//replaces all occurrences of 'a' to 'e'
-            Mer.t1 = Float.parseFloat(T1);
-            Mer.t2 = Float.parseFloat(T2);
-            Mer.t3 = Float.parseFloat(T3);
-            Mer.hum = Integer.parseInt(str[iHum]);
-            Mer.mvs = Integer.parseInt(str[iMvs]);
-
-            if (Mer.mvs >= 200)
-               Mer.dev = shared.MvsToDevice(Mer.mvs);
-            else
-               Mer.dev = GuessDevice(Mer) ;
-
-            Mer.idx = ++iline;
-            if (this.writeTxf)
-               AppendStat(Mer);
-            else
-               sendMessage(Mer);
         }
     }
 
-    private TDeviceType GuessDevice(TMereni mer)
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    public FileDetail readFileContent(Uri uri) throws IOException
     {
-        mer.dev = TDeviceType.dUnknown;
-        if (mer.mvs == 1)
-        {
-            return (TDeviceType.dLolly3);
-        }
+        Integer idx = 0;
+        this.context = LollyApplication.getInstance().getApplicationContext();
+        // Streamovane vycteni, zatim nejrychlejsi verze
+        InputStream inputStream =
+                this.context.getContentResolver().openInputStream(uri);
+        BufferedReader reader =
+                new BufferedReader(new InputStreamReader(inputStream));
+        Integer j = inputStream.available();  // pocet dostupnych bytu
+        StringBuilder stringBuilder = new StringBuilder();
 
-        //  existuji t2,t3 teplomery
-        if ((mer.t2 <-199) && (mer.t3<-199))
-        {
-           // wurst nebo dendrometr
-           if (mer.adc>65300)
-           {
-               mer.dev = TDeviceType.dTermoChron;
-           }
-           else
-           {
-               mer.dev = TDeviceType.dAD;
-           }
-        }
-        else
-        {
-            mer.dev = TDeviceType.dLolly4;
-        }
+        currDay = 0;
+        iline = 0;
+        ClearAvg();
+        // cas prvniho mereni
+        FileDetail fileDetail = new FileDetail(uri.getLastPathSegment());
+        String currentline = reader.readLine();
+        ProcessLine(currentline);
+        fileDetail.setFrom(Mer.dtm);
 
-        return (mer.dev);
+        while ((currentline = reader.readLine()) != null)
+        {
+            //  vysledek je v lokalni promenne Mer
+            ProcessLine(currentline);
+            Mer.idx = ++iline;
+            idx = j - inputStream.available();
+
+           // AppendStat(Mer);
+            FindMinMax(Mer);
+            sendMessage(Mer);
+            if (progressBarHandler != null)
+                DoProgress(idx);
+
+            stringBuilder.append(currentline).append("\n");
+            //idx++;
+        }
+        DoFinished(0);
+        inputStream.close();
+
+        fileDetail.setInto(Mer.dtm);
+        fileDetail.setCount(Mer.idx);
+        fileDetail.setMaxT1(maxT1);
+        fileDetail.setMinT1(minT1);
+        fileDetail.setMaxT2(maxT2);
+        fileDetail.setMinT2(minT2);
+        fileDetail.setMaxT3(maxT3);
+        fileDetail.setMinT3(minT3);
+        fileDetail.setMaxHum(maxHm);
+        fileDetail.setMinHum(minHm);
+
+        //return stringBuilder.toString();
+        return fileDetail;
     }
+
 
 
 

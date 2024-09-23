@@ -109,4 +109,6 @@ dependencies {
 
     implementation 'androidx.preference:preference:1.2.0'
     implementation 'com.google.android.material:material:1.7.0'
+
+    implementation group: 'commons-io', name: 'commons-io', version: '2.11.0'
 }

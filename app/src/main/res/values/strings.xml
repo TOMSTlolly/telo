@@ -7,16 +7,24 @@
     <string name="ReadFromDate">0</string>
     <string name="ReadWeek">0</string>
 
-    <string name="card_trackinfo_count">1</string>
-    <string name="card_trackinfo_start">2</string>
-    <string name="card_trackinfo_stop">3</string>
-    <string name="card_trackinfo_maxtx">4</string>
-
+    <string name="label_from">from</string>
+    <string name="card_data_into">Start</string>
+   <string name="card_data_to">End</string>
+    <string name="card_data_file">File</string>
+    <string name="card_data_filesize">Size</string>
+    <string name="card_data_filedate">Date</string>
+    <string name="card_data_filetime">Time</string>
+    <string name="card_data_filetype">Type</string>
     <string name="card_trackinfo_place1">1</string>
     <string name="card_trackinfo_place2">2</string>
     <string name="card_trackinfo_place3">3</string>
     <string name="card_trackinfo_place4">4</string>
     <string name="card_trackinfo_annotations">0</string>
+
+    <string name="card_data_mode">Mode</string>
+    <string name="card_data_interval">Interval</string>
+    <string name="card_data_count">Count</string>
+
 
     <string-array name="download_array">
         <item>Read All</item>
@@ -90,6 +98,14 @@
     <string name="login">login</string>
     <string name="email" />
     <string name="Login" />
+    <string name="filesize">Size</string>
+    <string name="label_events">Events</string>
+    <string name="label_min_tx">minT1</string>
+    <string name="label_max_tx" >maxT1</string>
+    <string name="label_into">into</string>
+    <string name="label_size">bytes</string>
+    <string name="label_max_hum">mxHum</string>
+    <string name="label_min_hum">minHum</string>
 
     <string-array name="friends">
         <item>File 1</item>

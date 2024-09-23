@@ -332,7 +332,7 @@ public class HomeFragment extends Fragment {
             Integer i = 0;
             while ((filex == true) && (i<100)) {
                 //locFile = ADir + "//data_"+Serial+"_"+fmtdate+"_"+ Integer.valueOf(i)+".csv";
-                locFile = fmtdate+"_"+Integer.valueOf(i)+".csv";
+                locFile = "data_"+Serial+"_"+fmtdate+"_"+Integer.valueOf(i)+".csv";
                 txtFile = pickedDir.findFile(locFile);
                 // soubor uz existuje, neprepisuju, ale pridam index na konci souboru
 
@@ -430,10 +430,9 @@ public class HomeFragment extends Fragment {
                     binding.devser.setText(info.msg);
 
                     // adresar
-                    String AFileName  = CompileFileName(info.msg,lollyApp.getPrefExportFolder());  // cislo lizatka
-
-                    csv = new CSVReader(AFileName);   // novy, eventuelne otevru existujici soubor
-
+                    //String AFileName  = CompileFileName(info.msg,lollyApp.getPrefExportFolder());  // cislo lizatka
+                   //  csv = new CSVReader(AFileName);   // novy, eventuelne otevru existujici soubor
+                    // csv.OpenForRead(AFileName);                                // stream otevru na zapis
                     break;
 
                 case tInfo:

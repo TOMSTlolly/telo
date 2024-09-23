@@ -149,56 +149,51 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textAppearance="@style/TextAppearanceCardSmall"
-                        android:text="@string/card_trackinfo_count"
-                        android:id="@+id/id_textView_card_lengthLabel"
+                        android:text="@string/label_from"
                         android:layout_marginTop="2dp"/>
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textAppearance="@style/TextAppearanceCardSmall"
-                        android:text="@string/card_trackinfo_start"
-                        android:id="@+id/id_textView_card_durationLabel"
+                        android:text="@string/label_events"
                         android:layout_marginTop="3dp"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:text="@string/label_min_tx"
+                        android:textAppearance="@style/TextAppearanceCardSmall" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textAppearance="@style/TextAppearanceCardSmall"
-                        android:text="@string/card_trackinfo_stop"
-                        android:id="@+id/id_textView_card_altitudegapLabel"
-                        android:layout_marginTop="3dp"/>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textAppearance="@style/TextAppearanceCardSmall"
-                        android:text="@string/card_trackinfo_maxtx"
-                        android:id="@+id/id_textView_card_geopointsLabel"
+                        android:text="@string/label_min_hum"
                         android:layout_marginTop="9dp"/>
 
                 </LinearLayout>
 
-                <!-- vlastni hodnoty count/start/stop/maxtx -->
+                <!-- hodnoty prvni sloupec-->
                 <LinearLayout
                     android:orientation="vertical"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content" >
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="@style/TextAppearanceCardSmall"
+                        android:id="@+id/id_file_from"
+                        android:layout_marginTop="2dp"
+                        android:textColor="@color/textColorPrimary"
+                        android:maxLines="1" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textAppearance="@style/TextAppearanceCardSmall"
                         android:id="@+id/id_file_count"
-                        android:layout_marginTop="2dp"
-                        android:textColor="@color/textColorPrimary"
-                        android:maxLines="1" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textAppearance="@style/TextAppearanceCardSmall"
-                        android:id="@+id/id_file_from"
                         android:layout_marginTop="3dp"
                         android:textColor="@color/textColorPrimary"
                         android:maxLines="1" />
@@ -207,7 +202,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textAppearance="@style/TextAppearanceCardSmall"
-                        android:id="@+id/id_file_into"
+                        android:id="@+id/id_min_tx"
                         android:layout_marginTop="3dp"
                         android:textColor="@color/textColorPrimary"
                         android:maxLines="1" />
@@ -216,57 +211,11 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textAppearance="@style/TextAppearanceCardSmall"
-                        android:id="@+id/id_file_maxtx"
-                        android:layout_marginTop="9dp"
+                        android:id="@+id/id_min_hum"
+                        android:layout_marginTop="3dp"
                         android:textColor="@color/textColorPrimary"
                         android:maxLines="1" />
-
                 </LinearLayout>
-
-
-                <LinearLayout
-                    android:orientation="vertical"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" >
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textAppearance="@style/TextAppearanceCardSmall"
-                        android:id="@+id/id_textView_card_length"
-                        android:layout_marginTop="2dp"
-                        android:textColor="@color/textColorPrimary"
-                        android:maxLines="1" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textAppearance="@style/TextAppearanceCardSmall"
-                        android:id="@+id/id_textView_card_duration"
-                        android:layout_marginTop="3dp"
-                        android:textColor="@color/textColorPrimary"
-                        android:maxLines="1" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textAppearance="@style/TextAppearanceCardSmall"
-                        android:id="@+id/id_textView_card_altitudegap"
-                        android:layout_marginTop="3dp"
-                        android:textColor="@color/textColorPrimary"
-                        android:maxLines="1" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textAppearance="@style/TextAppearanceCardSmall"
-                        android:id="@+id/id_textView_card_geopoints"
-                        android:layout_marginTop="9dp"
-                        android:textColor="@color/textColorPrimary"
-                        android:maxLines="1" />
-
-                </LinearLayout>
-
             </LinearLayout>
 
             <!-- prava cast boxu s malinkyma hodnotama pod hlavni popiskou -->
@@ -287,36 +236,32 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textAppearance="@style/TextAppearanceCardSmall"
-                        android:text="@string/card_trackinfo_place1"
-                        android:id="@+id/id_trackinfo_label_place1"
+                        android:text="@string/label_into"
                         android:layout_marginTop="2dp"/>
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textAppearance="@style/TextAppearanceCardSmall"
-                        android:text="@string/card_trackinfo_place2"
-                        android:id="@+id/id_trackinfo_label_place2"
-                        android:layout_marginTop="3dp"/>
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:textAppearance="@style/TextAppearanceCardSmall"
-                        android:text="@string/card_trackinfo_place3"
-                        android:id="@+id/id_trackinfo_place3"
+                        android:text="@string/label_size"
                         android:layout_marginTop="3dp"/>
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textAppearance="@style/TextAppearanceCardSmall"
-                        android:id="@+id/id_trackinfo_label_place4"
-                        android:layout_marginTop="9dp"
-                        android:text="@string/card_trackinfo_annotations" />
+                        android:text="@string/label_max_tx"
+                        android:layout_marginTop="3dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="@style/TextAppearanceCardSmall"
+                        android:layout_marginTop="3dp"
+                        android:text="@string/label_max_hum" />
                 </LinearLayout>
 
-                <!-- vlastni hodnoty maxspeed/averagespeed + 2x placeholder -->
+                <!-- druhy sloupec -->
                 <LinearLayout
                     android:orientation="vertical"
                     android:layout_width="wrap_content"
@@ -326,7 +271,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textAppearance="@style/TextAppearanceCardSmall"
-                        android:id="@+id/id_cardinfo_right_place1"
+                        android:id="@+id/id_file_into"
                         android:layout_marginTop="2dp"
                         android:textColor="@color/textColorPrimary"
                         android:maxLines="1" />
@@ -335,16 +280,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textAppearance="@style/TextAppearanceCardSmall"
-                        android:id="@+id/id_cardinfo_right_place2"
-                        android:layout_marginTop="3dp"
-                        android:textColor="@color/textColorPrimary"
-                        android:maxLines="1" />
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:textAppearance="@style/TextAppearanceCardSmall"
-                        android:id="@+id/textView7"
+                        android:id="@+id/id_file_size"
                         android:layout_marginTop="3dp"
                         android:textColor="@color/textColorPrimary"
                         android:maxLines="1" />
@@ -353,7 +289,16 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textAppearance="@style/TextAppearanceCardSmall"
-                        android:id="@+id/id_textView_card_placemarks"
+                        android:id="@+id/id_max_tx"
+                        android:layout_marginTop="3dp"
+                        android:textColor="@color/textColorPrimary"
+                        android:maxLines="1" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="@style/TextAppearanceCardSmall"
+                        android:id="@+id/id_max_hum"
                         android:layout_marginTop="9dp"
                         android:textColor="@color/textColorPrimary"
                         android:maxLines="1" />
