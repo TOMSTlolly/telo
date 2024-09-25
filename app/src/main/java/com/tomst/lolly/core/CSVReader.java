@@ -17,8 +17,6 @@ package com.tomst.lolly.core;
 
  import java.io.BufferedInputStream;
  import java.io.BufferedReader;
- import java.io.ByteArrayInputStream;
- import java.io.ByteArrayOutputStream;
  import java.io.DataInputStream;
  import java.io.File;
  import java.io.FileNotFoundException;
@@ -35,16 +33,12 @@ package com.tomst.lolly.core;
  import java.io.FileOutputStream;
 
  import java.time.LocalDateTime;
- import java.util.List;
  import java.util.Locale;
- import java.util.concurrent.atomic.AtomicInteger;
- import java.util.stream.Collectors;
- import java.util.stream.IntStream;
- import java.util.stream.Stream;
 
  import com.tomst.lolly.BuildConfig;
  import com.tomst.lolly.LollyApplication;
  import com.tomst.lolly.fileview.FileDetail;
+import com.tomst.lolly.core.Constants;
 
  import org.apache.commons.io.input.RandomAccessFileInputStream;
 
@@ -118,9 +112,6 @@ public class CSVReader extends Thread
     private static Context context = null;
    private  DocumentFile privateDocumentDir;
    private  DocumentFile documentFile;
-
-
-
 
     public static class FileUtils {
         public static File copyDocumentFileToTempFile(Context context, DocumentFile documentFile) throws IOException {
@@ -278,10 +269,13 @@ public class CSVReader extends Thread
 
     public CSVReader()
     {
-       this.FileName = null;
+        this.context = LollyApplication.getInstance().getApplicationContext();
+        this.FileName = null;
        ClearPrivate();
        ClearAvg();
     }
+
+
     public static void printLastNLines(String filePath, int n) {
         File file = new File(filePath);
         StringBuilder builder = new StringBuilder();
@@ -352,31 +346,6 @@ public class CSVReader extends Thread
             return;;
     }
 
-    public  String readLastLine(DocumentFile documentFile) {
-        Uri uri = documentFile.getUri();
-        //this.context = LollyApplication.getInstance().getApplicationContext();
-        try (
-             InputStream inputStream = LollyApplication.getInstance().getContentResolver().openInputStream(uri);
-             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
-
-            RandomAccessFile raf = new RandomAccessFile(new File(uri.getPath()), "r");
-            long fileLength = raf.length() - 1;
-            StringBuilder sb = new StringBuilder();
-
-            for (long pointer = fileLength; pointer >= 0; pointer--) {
-                raf.seek(pointer);
-                char c = (char) raf.read();
-                if (c == '\n' && sb.length() > 0) {
-                    break;
-                }
-                sb.append(c);
-            }
-            return sb.reverse().toString();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
 
 
     // tohle pustim po startu
@@ -706,11 +675,72 @@ public class CSVReader extends Thread
         }
     }
 
+    public  String readLastLine(DocumentFile documentFile) {
+        Uri uri = documentFile.getUri();
+        //this.context = LollyApplication.getInstance().getApplicationContext();
+        try (
+                InputStream inputStream = LollyApplication.getInstance().getContentResolver().openInputStream(uri);
+                BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+
+            RandomAccessFile raf = new RandomAccessFile(new File(uri.getPath()), "r");
+            long fileLength = raf.length() - 1;
+            StringBuilder sb = new StringBuilder();
+
+            for (long pointer = fileLength; pointer >= 0; pointer--) {
+                raf.seek(pointer);
+                char c = (char) raf.read();
+                if (c == '\n' && sb.length() > 0) {
+                    break;
+                }
+                sb.append(c);
+            }
+            return sb.reverse().toString();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+
+    // nacte prvni a posledni radek ze souboru
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    public FileDetail FirstLast(Uri uri) throws IOException {
+        FileDetail fdet = new FileDetail(uri.getLastPathSegment());     // nastavim rovnou jmeno souboru
+        DocumentFile docFile = DocumentFile.fromSingleUri(context, uri);
+        File tempFile = FileUtils.copyDocumentFileToTempFile(context, docFile);
+        RandomAccessFile raf = new RandomAccessFile(tempFile, "r");
+        // extrahuj seriove cislo z jmena souboru
+        String serialNumber = shared.getSerialNumberFromFileName(uri.getLastPathSegment());
+
+        // prvni radek
+        String s = raf.readLine();
+        ProcessLine(s);
+        fdet .setFrom(Mer.dtm);
+
+        // posledni radek
+        long fileLength = raf.length() - 1;
+        StringBuilder sb = new StringBuilder();
+        for (long pointer = fileLength; pointer >= 0; pointer--) {
+            raf.seek(pointer);
+            char c = (char) raf.read();
+            if (c == '\n' && sb.length() > 0) {
+                break;
+            }
+            sb.append(c);
+        }
+        s= sb.reverse().toString();
+        ProcessLine(s);
+        fdet.setInto(Mer.dtm);
+        fdet.setCount(Mer.idx);
+        return fdet;
+    }
+
+
     @RequiresApi(api = Build.VERSION_CODES.O)
     public FileDetail readFileContent(Uri uri) throws IOException
     {
         Integer idx = 0;
-        this.context = LollyApplication.getInstance().getApplicationContext();
+
         // Streamovane vycteni, zatim nejrychlejsi verze
         InputStream inputStream =
                 this.context.getContentResolver().openInputStream(uri);
@@ -742,7 +772,6 @@ public class CSVReader extends Thread
                 DoProgress(idx);
 
             stringBuilder.append(currentline).append("\n");
-            //idx++;
         }
         DoFinished(0);
         inputStream.close();

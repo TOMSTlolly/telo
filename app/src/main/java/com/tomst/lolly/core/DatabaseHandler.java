@@ -1,0 +1,230 @@
+package com.tomst.lolly.core;
+
+import android.annotation.SuppressLint;
+import android.content.ContentValues;
+import android.content.Context;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
+import android.location.Location;
+import android.os.Build;
+
+import androidx.annotation.RequiresApi;
+
+import com.tomst.lolly.fileview.FileDetail;
+
+import java.time.LocalDateTime;
+
+public class DatabaseHandler extends SQLiteOpenHelper {
+    private static final int DATABASE_VERSION = 1;
+    private static final String DATABASE_NAME = "lolly";
+
+    //  tables
+    private static final String TABLE_CLIST= "csvlist";
+    private static final String TABLE_TRACKS = "tracks";
+    private static final String TABLE_PLACEMARKS = "placemarks";
+
+    // common field name
+    private static final String KEY_ID = "id";
+    private static final String KEY_LINE ="idj";
+
+    /** @noinspection SpellCheckingInspection*/ //  table csvlist "list of data .csv files"
+    private static final String KEY_CLIST_NAME = "name";   //  nazev souboru
+    private static final String KEY_CLIST_URL = "url";             //  cela cesta k souboru
+    private static final String KEY_CLIST_TYPE = "type";                  //  typ zarizeni
+    private static final String KEY_CLIST_MD5 = "md5";
+    private static final String  KEY_CLIST_CREATED ="created";
+    private static final String  KEY_CLIST_FIRST="first";
+    private static final String  KEY_CLIST_LAST="last";
+    private static final String  KEY_CLIST_COUNT = "count";
+    private static final String  KEY_CLIST_SIZE = "size"; // velikost souboru
+    private static final  String  KEY_CLIST_MINT1 = "mint1";
+    private static final String  KEY_CLIST_MAXT1 = "maxt1";
+    private static final String  KEY_CLIST_MINT2 = "mint2";
+    private static final String  KEY_CLIST_MAXT2 = "maxt2";
+    private static final String  KEY_CLIST_MINT3 = "mint3";
+    private static final String  KEY_CLIST_MAXT3 = "maxt3";
+    private static final String  KEY_CLIST_MINHUM="minhum";
+    private static final String KEY_CLIST_MAXHUM="maxhum";
+
+    private static final String KEY_LOCATION_NUMBER = "nr";
+    private static final String KEY_LOCATION_LATITUDE = "latitude";
+    private static final String KEY_LOCATION_LONGITUDE = "longitude";
+    private static final String KEY_LOCATION_ALTITUDE = "altitude";
+    private static final String KEY_LOCATION_SPEED = "speed";
+    private static final String KEY_LOCATION_ACCURACY = "accuracy";
+    private static final String KEY_LOCATION_BEARING = "bearing";
+    private static final String KEY_LOCATION_TIME = "time";
+    private static final String KEY_LOCATION_NUMBEROFSATELLITES = "number_of_satellites";
+    private static final String KEY_LOCATION_TYPE = "type";
+    private static final String KEY_LOCATION_NUMBEROFSATELLITESUSEDINFIX = "number_of_satellites_used_in_fix";
+
+    public DatabaseHandler(Context context) {
+        super(context, DATABASE_NAME, null, DATABASE_VERSION);
+    }
+
+    @Override
+    public void onCreate(SQLiteDatabase db) {
+        String CREATE_CLIST_TABLE = "CREATE TABLE " + TABLE_CLIST + "("
+                + KEY_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
+                + KEY_LINE + " INTEGER,"
+                + KEY_CLIST_NAME + " TEXT,"
+                + KEY_CLIST_URL + " TEXT,"
+                + KEY_CLIST_TYPE + " INTEGER,"
+                + KEY_CLIST_MD5 + " TEXT,"
+                + KEY_CLIST_CREATED + " DATETIME DEFAULT CURRENT_TIMESTAMP,"
+                + KEY_CLIST_FIRST + " DATETIME,"
+                + KEY_CLIST_LAST + " DATETIME,"
+                + KEY_CLIST_COUNT + " INTEGER,"
+                + KEY_CLIST_SIZE + " INTEGER,"
+                + KEY_CLIST_MINT1 + " REAL,"
+                + KEY_CLIST_MAXT1 + " REAL,"
+                + KEY_CLIST_MINT2 + " REAL,"
+                + KEY_CLIST_MAXT2 + " REAL,"
+                + KEY_CLIST_MINT3 + " REAL,"
+                + KEY_CLIST_MAXT3 + " REAL,"
+                + KEY_CLIST_MINHUM + " REAL,"
+                + KEY_CLIST_MAXHUM + " REAL,"
+                + KEY_LOCATION_NUMBER + " INTEGER,"
+                + KEY_LOCATION_LATITUDE + " REAL,"
+                + KEY_LOCATION_LONGITUDE + " REAL,"
+                + KEY_LOCATION_ALTITUDE + " REAL,"
+                + KEY_LOCATION_SPEED + " REAL,"
+                + KEY_LOCATION_ACCURACY + " REAL,"
+                + KEY_LOCATION_BEARING + " REAL,"
+                + KEY_LOCATION_TIME + " DATETIME,"
+                + KEY_LOCATION_NUMBEROFSATELLITES + " INTEGER,"
+                + KEY_LOCATION_TYPE + " INTEGER,"
+                + KEY_LOCATION_NUMBEROFSATELLITESUSEDINFIX + " INTEGER)";
+        db.execSQL(CREATE_CLIST_TABLE);
+    }
+
+    @Override
+    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_CLIST);
+        onCreate(db);
+    }
+
+    public void addFileDetail(FileDetail fdet) {
+
+    }
+
+    public long addFile(FileDetail fileDetail, Location location) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+
+        // Populate ContentValues with FileDetail data
+        values.put(KEY_CLIST_NAME, fileDetail.getName());
+        values.put(KEY_CLIST_URL, fileDetail.getFull());
+        values.put(KEY_CLIST_TYPE, 0); // Assuming type is 0, adjust as needed
+        values.put(KEY_CLIST_MD5, ""); // Assuming MD5 is empty, adjust as needed
+        values.put(KEY_CLIST_CREATED, fileDetail.getiFrom().toString());
+        values.put(KEY_CLIST_FIRST, fileDetail.getiFrom().toString());
+        values.put(KEY_CLIST_LAST, fileDetail.getiInto().toString());
+        values.put(KEY_CLIST_COUNT, fileDetail.getiCount());
+        values.put(KEY_CLIST_SIZE, fileDetail.getFileSize());
+        values.put(KEY_CLIST_MINT1, fileDetail.getMinT1());
+        values.put(KEY_CLIST_MAXT1, fileDetail.getMaxT1());
+        values.put(KEY_CLIST_MINT2, fileDetail.getMinT2());
+        values.put(KEY_CLIST_MAXT2, fileDetail.getMaxT2());
+        values.put(KEY_CLIST_MINT3, fileDetail.getMinT3());
+        values.put(KEY_CLIST_MAXT3, fileDetail.getMaxT3());
+        values.put(KEY_CLIST_MINHUM, fileDetail.getMinHum());
+        values.put(KEY_CLIST_MAXHUM, fileDetail.getMaxHum());
+
+        // Populate ContentValues with Location data
+        if (location != null) {
+            values.put(KEY_LOCATION_LATITUDE, location.getLatitude());
+            values.put(KEY_LOCATION_LONGITUDE, location.getLongitude());
+            values.put(KEY_LOCATION_ALTITUDE, location.getAltitude());
+            values.put(KEY_LOCATION_SPEED, location.getSpeed());
+            values.put(KEY_LOCATION_ACCURACY, location.getAccuracy());
+            values.put(KEY_LOCATION_BEARING, location.getBearing());
+            values.put(KEY_LOCATION_TIME, location.getTime());
+            values.put(KEY_LOCATION_NUMBEROFSATELLITES, 0); // Assuming 0, adjust as needed
+            values.put(KEY_LOCATION_TYPE, 0); // Assuming type is 0, adjust as needed
+            values.put(KEY_LOCATION_NUMBEROFSATELLITESUSEDINFIX, 0); // Assuming 0, adjust as needed
+        }
+        long result = db.insert(TABLE_CLIST, null, values);
+        db.close();
+        return 0;
+    }
+
+    public void updateFile(FileDetail fileDetail) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+
+        // Populate ContentValues with FileDetail data
+        values.put(KEY_CLIST_NAME, fileDetail.getName());
+        values.put(KEY_CLIST_URL, fileDetail.getFull());
+        values.put(KEY_CLIST_TYPE, 0); // Assuming type is 0, adjust as needed
+        values.put(KEY_CLIST_MD5, ""); // Assuming MD5 is empty, adjust as needed
+        values.put(KEY_CLIST_CREATED, fileDetail.getiFrom().toString());
+        values.put(KEY_CLIST_FIRST, fileDetail.getiFrom().toString());
+        values.put(KEY_CLIST_LAST, fileDetail.getiInto().toString());
+        values.put(KEY_CLIST_COUNT, fileDetail.getiCount());
+        values.put(KEY_CLIST_SIZE, fileDetail.getFileSize());
+        values.put(KEY_CLIST_MINT1, fileDetail.getMinT1());
+        values.put(KEY_CLIST_MAXT1, fileDetail.getMaxT1());
+        values.put(KEY_CLIST_MINT2, fileDetail.getMinT2());
+        values.put(KEY_CLIST_MAXT2, fileDetail.getMaxT2());
+        values.put(KEY_CLIST_MINT3, fileDetail.getMinT3());
+        values.put(KEY_CLIST_MAXT3, fileDetail.getMaxT3());
+        values.put(KEY_CLIST_MINHUM, fileDetail.getMinHum());
+        values.put(KEY_CLIST_MAXHUM, fileDetail.getMaxHum());
+
+        db.update(TABLE_CLIST, values, KEY_ID + " = ?", new String[]{String.valueOf(fileDetail.getId())});
+        db.close();
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    @SuppressLint("Range")
+    public FileDetail copyCursorToFileDetail(Cursor cursor)
+    {
+        FileDetail fileDetail = new FileDetail(cursor.getLong(cursor.getColumnIndex(KEY_ID)));
+        fileDetail.setName(cursor.getString(cursor.getColumnIndex(KEY_CLIST_NAME)));
+        fileDetail.setFull(cursor.getString(cursor.getColumnIndex(KEY_CLIST_URL)));
+        fileDetail.setFrom(LocalDateTime.parse(cursor.getString(cursor.getColumnIndex(KEY_CLIST_CREATED))));
+        fileDetail.setFrom(LocalDateTime.parse(cursor.getString(cursor.getColumnIndex(KEY_CLIST_FIRST))));
+        fileDetail.setInto(LocalDateTime.parse(cursor.getString(cursor.getColumnIndex(KEY_CLIST_LAST))));
+        fileDetail.setCount(cursor.getInt(cursor.getColumnIndex(KEY_CLIST_COUNT)));
+        fileDetail.setFileSize(cursor.getLong(cursor.getColumnIndex(KEY_CLIST_SIZE)));
+        fileDetail.setMinT1(cursor.getDouble(cursor.getColumnIndex(KEY_CLIST_MINT1)));
+        fileDetail.setMaxT1(cursor.getDouble(cursor.getColumnIndex(KEY_CLIST_MAXT1)));
+        fileDetail.setMinT2(cursor.getDouble(cursor.getColumnIndex(KEY_CLIST_MINT2)));
+        fileDetail.setMaxT2(cursor.getDouble(cursor.getColumnIndex(KEY_CLIST_MAXT2)));
+        fileDetail.setMinT3(cursor.getDouble(cursor.getColumnIndex(KEY_CLIST_MINT3)));
+        fileDetail.setMaxT3(cursor.getDouble(cursor.getColumnIndex(KEY_CLIST_MAXT3)));
+        fileDetail.setMinHum(cursor.getDouble(cursor.getColumnIndex(KEY_CLIST_MINHUM)));
+        fileDetail.setMaxHum(cursor.getDouble(cursor.getColumnIndex(KEY_CLIST_MAXHUM)));
+
+        // Populate the Location object with the data from the database
+        Location location = new Location("");
+        location.setLatitude(cursor.getDouble(cursor.getColumnIndex(KEY_LOCATION_LATITUDE)));
+        location.setLongitude(cursor.getDouble(cursor.getColumnIndex(KEY_LOCATION_LONGITUDE)));
+        location.setAltitude(cursor.getDouble(cursor.getColumnIndex(KEY_LOCATION_ALTITUDE)));
+        location.setSpeed(cursor.getFloat(cursor.getColumnIndex(KEY_LOCATION_SPEED)));
+        location.setAccuracy(cursor.getFloat(cursor.getColumnIndex(KEY_LOCATION_ACCURACY)));
+        location.setBearing(cursor.getFloat(cursor.getColumnIndex(KEY_LOCATION_BEARING)));
+        location.setTime(cursor.getLong(cursor.getColumnIndex(KEY_LOCATION_TIME)));
+        fileDetail.setLocation(location);
+        return fileDetail;
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    @SuppressLint("Range")
+    public FileDetail getFileDetail(String fileName) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        FileDetail fileDetail = null;
+
+        // Query the database for the file with the given name
+        Cursor cursor = db.query(TABLE_CLIST, null, KEY_CLIST_NAME + " = ?", new String[]{fileName}, null, null, null);
+        if (cursor != null && cursor.moveToFirst()) {
+            fileDetail = copyCursorToFileDetail(cursor);
+            cursor.close();
+        }
+        db.close();
+        return fileDetail;
+    }
+
+}

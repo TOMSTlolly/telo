@@ -2,14 +2,13 @@ package com.tomst.lolly.core;
 
 import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
 import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
-
+import static com.tomst.lolly.core.Constants.DEFAULT_SERIAL_NUMBER_VALUE;
+import static com.tomst.lolly.core.Constants.SERIAL_NUMBER_INDEX;
 import static com.tomst.lolly.core.Constants.fMicroInter;
 import static com.tomst.lolly.core.Constants.fMicroSlope;
 
 import android.os.Build;
-
 import androidx.annotation.RequiresApi;
-
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -17,6 +16,26 @@ import java.time.format.DateTimeFormatter;
 
 public class shared {
 
+
+    public static  String getSerialNumberFromFileName(String fileName) {
+        // filename should look like "data_92221411_2023_09_26_0.csv"
+        // serial number should be the second value. No other way to get the serial number
+        // if not in the title, just use a default value
+        String[] titleSplit = fileName.split("_");
+        String serialNumber;
+        if (titleSplit.length > SERIAL_NUMBER_INDEX) {
+            serialNumber = fileName.split("_")[SERIAL_NUMBER_INDEX];
+        }
+        else {
+            // could theoretically add a dataset count to the end of this unknown
+            // but then it becomes an issue when merging several unknown datasets together
+            // would end up looking like: unknown1, unknown2, unknown1
+            serialNumber = DEFAULT_SERIAL_NUMBER_VALUE;
+        }
+
+        return serialNumber;
+    }
+    
     public static String MeteoToString(TMeteo met){
         String ret = met.toString();
         if (ret.length()>0)

@@ -9,12 +9,14 @@ import static android.os.Environment.*;
 import static com.tomst.lolly.LollyApplication.DIRECTORY_TEMP;
 import static dagger.internal.Preconditions.checkNotNull;
 
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.location.Location;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -54,6 +56,7 @@ import com.tomst.lolly.LollyApplication;
 import com.tomst.lolly.R;
 import com.tomst.lolly.core.CSVReader;
 import com.tomst.lolly.core.Constants;
+import com.tomst.lolly.core.DatabaseHandler;
 import com.tomst.lolly.core.DmdViewModel;
 import com.tomst.lolly.core.FileOpener;
 import com.tomst.lolly.core.ZipFiles;
@@ -80,11 +83,15 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import android.os.storage.StorageManager;
 
 
 public class ListFragment extends Fragment
 {
+    private ExecutorService executor;
     public void SetFilePath(String path)
     {
         filePath = path;
@@ -202,6 +209,7 @@ public class ListFragment extends Fragment
     {
         //executor = new ScheduledThreadPoolExecutor(1);
         //fopen = new FileOpener(this);
+        executor = Executors.newSingleThreadExecutor();
     }
 
 
@@ -867,7 +875,6 @@ public class ListFragment extends Fragment
             }
         }
          */
-
         parent = folder.getParentFile();
         filePath = folder.getPath();
         Log.d(TAG, "ListItem "+filePath);
@@ -1123,7 +1130,8 @@ public class ListFragment extends Fragment
             if (null != file) {
                 Uri fileUri = Uri.fromFile(file);  // Convert File to Uri
                 try {
-                    fdet = reader.readFileContent(fileUri);
+                    //fdet = reader.readFileContent(fileUri);
+                    fdet = reader.FirstLast(fileUri);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -1157,14 +1165,25 @@ public class ListFragment extends Fragment
                     return f1.getName().compareToIgnoreCase(f2.getName());
                 }
             });
-
+            Context context = LollyApplication.getInstance().getApplicationContext();
+            DatabaseHandler db = new DatabaseHandler(context);
             FileDetail fdet = null;
             CSVReader reader = new CSVReader();
             for (DocumentFile file : files) {
                 try {
-                   fdet = reader.readFileContent(file.getUri());  // projdi soubor, najdi minima/maxima
-                   fdet.setName(file.getName());
-                   fdet.setFileSize((int) file.length());
+
+                    if (db.getFileDetail(file.getName()) != null)
+                    {
+                        fdet = db.getFileDetail(file.getName());
+                    }
+                    else
+                    {
+                        Location location =   LollyApplication.getInstance().getLocation();
+                        fdet = reader.readFileContent(file.getUri());
+                        fdet.setName(file.getName());
+                        fdet.setFileSize((int) file.length());
+                        db.addFile(fdet, location);;
+                    }
 
                 } catch (IOException e) {
                     throw new RuntimeException(e);
@@ -1176,7 +1195,7 @@ public class ListFragment extends Fragment
         ListView mListView = rootView.findViewById(R.id.listView);
         FileViewerAdapter friendsAdapter = new FileViewerAdapter(getContext(), fFriends);
         mListView.setAdapter(friendsAdapter);
-        mListView.animate();
+        //mListView.animate();
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             testMem(1000);
@@ -1243,10 +1262,15 @@ public class ListFragment extends Fragment
         Log.d("LIST", "Started...");
         super.onStart();
 
-       // DoLoadFiles();
+         DoLoadFil();
 
-        DoLoadFil();
+        // in async task we're gonna load files from the folder and setup the database
 
+        Log.d("LIST", "Started...");
+
+        executor.execute(() -> {
+                    DoLoadFiles();
+                });
         /*
         executor.execute(() -> {
             

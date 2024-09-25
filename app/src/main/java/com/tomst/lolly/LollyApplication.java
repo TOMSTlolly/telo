@@ -16,6 +16,8 @@ import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.UriPermission;
 import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -106,6 +108,15 @@ public class LollyApplication extends AppCompatActivity implements View.OnClickL
             bound = false;
         }
     };
+
+    // Request location
+    public Location getLocation() {
+        LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSION_REQUEST_CODE);
+        }
+        return locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+    }
 
 
     public boolean checkPermission(){
