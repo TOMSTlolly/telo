@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 
 public class DatabaseHandler extends SQLiteOpenHelper {
     private static final int DATABASE_VERSION = 1;
-    private static final String DATABASE_NAME = "lolly";
+    private static final String DATABASE_NAME = "lolly.db";
 
     //  tables
     private static final String TABLE_CLIST= "csvlist";
@@ -56,7 +56,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     private static final String KEY_LOCATION_BEARING = "bearing";
     private static final String KEY_LOCATION_TIME = "time";
     private static final String KEY_LOCATION_NUMBEROFSATELLITES = "number_of_satellites";
-    private static final String KEY_LOCATION_TYPE = "type";
+    private static final String KEY_LOCATION_TYPE = "loctype";
     private static final String KEY_LOCATION_NUMBEROFSATELLITESUSEDINFIX = "number_of_satellites_used_in_fix";
 
     public DatabaseHandler(Context context) {

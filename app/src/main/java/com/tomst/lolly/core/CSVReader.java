@@ -61,6 +61,7 @@ public class CSVReader extends Thread
     private static final int MINHM = 0;
 
     // pozice v csv radku
+    private static final byte iLine=0;
     private static final byte iT1=3;
     private static final byte iT2=4;
     private static final byte iT3=5;
@@ -653,6 +654,8 @@ public class CSVReader extends Thread
                     currDate = Mer.dtm;
                 }
 
+                Mer.idx = Integer.parseInt(str[iLine]);
+
                 // teploty
                 T1 = str[iT1].replace(',', '.');//replaces all occurrences of 'a' to 'e'
                 T2 = str[iT2].replace(',', '.');//replaces all occurrences of 'a' to 'e'
@@ -674,33 +677,6 @@ public class CSVReader extends Thread
             }
         }
     }
-
-    public  String readLastLine(DocumentFile documentFile) {
-        Uri uri = documentFile.getUri();
-        //this.context = LollyApplication.getInstance().getApplicationContext();
-        try (
-                InputStream inputStream = LollyApplication.getInstance().getContentResolver().openInputStream(uri);
-                BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
-
-            RandomAccessFile raf = new RandomAccessFile(new File(uri.getPath()), "r");
-            long fileLength = raf.length() - 1;
-            StringBuilder sb = new StringBuilder();
-
-            for (long pointer = fileLength; pointer >= 0; pointer--) {
-                raf.seek(pointer);
-                char c = (char) raf.read();
-                if (c == '\n' && sb.length() > 0) {
-                    break;
-                }
-                sb.append(c);
-            }
-            return sb.reverse().toString();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
-
 
     // nacte prvni a posledni radek ze souboru
     @RequiresApi(api = Build.VERSION_CODES.O)

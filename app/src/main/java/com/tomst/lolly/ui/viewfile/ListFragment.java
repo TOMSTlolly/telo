@@ -122,42 +122,23 @@ public class ListFragment extends Fragment
 
     List<FileDetail> fFriends = null;
 
-    private List<FileDetail> setFiles(String path)
+    // najde prvek ve fFriends podle jmena souboru
+    private FileDetail findFileName(String name)
     {
-        List<FileDetail> fil = new ArrayList<>();
-
-        File directory = new File(path);
-        File[] files = directory.listFiles();
-
-        for (File pathname : files)
+        for (FileDetail file : fFriends)
         {
-            System.out.println(pathname);
+            if (file.getName().equals(name))
+            {
+                return file;
+            }
         }
+        return null;
+    }
 
-        return fil;
-    };
-
-
-    private List<FileDetail> setFriends()
-    {
-        String[] names = getResources().getStringArray(R.array.friends);
-        int[] iconID = {
-                R.drawable.ic_mood_white_24dp,
-                R.drawable.ic_mood_bad_white_24dp,
-                R.drawable.ic_sentiment_neutral_white_24dp,
-                R.drawable.ic_sentiment_dissatisfied_white_24dp,
-                R.drawable.ic_sentiment_satisfied_white_24dp,
-                R.drawable.ic_sentiment_very_dissatisfied_white_24dp,
-                R.drawable.ic_sentiment_very_satisfied_white_24dp,
-        };
-        List<FileDetail> friends = new ArrayList<>();
-
-        for (int i = 0; i < names.length; i++)
-        {
-            friends.add(new FileDetail(names[i], iconID[i]));
-        }
-
-        return friends;
+    // prepise prvek ve fFriends
+    private void updateFriends(FileDetail source, FileDetail target){
+        int index = fFriends.indexOf(source);
+        fFriends.set(index, target);
     }
 
 
@@ -1130,7 +1111,6 @@ public class ListFragment extends Fragment
             if (null != file) {
                 Uri fileUri = Uri.fromFile(file);  // Convert File to Uri
                 try {
-                    //fdet = reader.readFileContent(fileUri);
                     fdet = reader.FirstLast(fileUri);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
@@ -1144,7 +1124,6 @@ public class ListFragment extends Fragment
         FileViewerAdapter friendsAdapter = new FileViewerAdapter(getContext(), fFriends);
         mListView.setAdapter(friendsAdapter);
         mListView.animate();
-
         }
 
     }
@@ -1153,104 +1132,51 @@ public class ListFragment extends Fragment
     @RequiresApi(api = Build.VERSION_CODES.O)
     public void DoLoadFiles()
     {
-      // fFriends = setFriends();
-       fFriends.clear();
-       if (sharedFolder != null)
-        {
-            List<DocumentFile> files = Arrays.asList(sharedFolder.listFiles());
-           //List<DocumentFile> files = Arrays.asList()
-            Collections.sort(files, new Comparator<DocumentFile>() {
-                @Override
-                public int compare(DocumentFile f1, DocumentFile f2) {
-                    return f1.getName().compareToIgnoreCase(f2.getName());
-                }
-            });
+       // fFriends = setFriends();
+       // fFriends.clear();
+
+        File cacheDir = new File(DIRECTORY_TEMP);
+        if (cacheDir.isDirectory()) {
+            File[] files = cacheDir.listFiles();
+            if (files == null || files.length == 0)
+                return;
+
             Context context = LollyApplication.getInstance().getApplicationContext();
-            DatabaseHandler db = new DatabaseHandler(context);
+            DatabaseHandler db = LollyApplication.getInstance().gpsDataBase;
+
             FileDetail fdet = null;
             CSVReader reader = new CSVReader();
-            for (DocumentFile file : files) {
+            for (File file : files) {
                 try {
 
-                    if (db.getFileDetail(file.getName()) != null)
-                    {
+                    // ve fdet se mi vraci info z db, pripadne z dlouheho runu radek po radku
+                    if (db.getFileDetail(file.getName()) != null) {
                         fdet = db.getFileDetail(file.getName());
-                    }
-                    else
-                    {
-                        Location location =   LollyApplication.getInstance().getLocation();
-                        fdet = reader.readFileContent(file.getUri());
+                    } else {
+                        Location location = LollyApplication.getInstance().getLocation();
+                        Uri fileUri = Uri.fromFile(file);
+                        fdet = reader.readFileContent(fileUri);
                         fdet.setName(file.getName());
                         fdet.setFileSize((int) file.length());
-                        db.addFile(fdet, location);;
+                        db.addFile(fdet, location);
                     }
 
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
-                fFriends.add(fdet);
-             }
-        }
 
-        ListView mListView = rootView.findViewById(R.id.listView);
-        FileViewerAdapter friendsAdapter = new FileViewerAdapter(getContext(), fFriends);
-        mListView.setAdapter(friendsAdapter);
-        //mListView.animate();
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            testMem(1000);
-        }
-       // loadAllFiles();
-       /*
-       boolean ret = isExternalStorageWriteble();
-       ret = isExternalStorageReadable();
-       File [] externalStorageVolumes = getContext().getExternalFilesDirs(null);
-       File primaryExternalStorage = externalStorageVolumes[0];
-       testMem(1000);
-       File file = new File(filePath);
-       if (!canListFiles(file))
-         {
-              file = getContext().getFilesDir();
-              filePath = file.getAbsolutePath();
-              //file.filePath = file.filePath + "/Documents";
-              //filePath = filePath + "/Documents";
-         }
-
-       File directory = new File(file.getParent());
-       File[] rootDirectories = directory.listFiles();
-       File rootDir = new File(filePath);
-        if (rootDir.isFile())
-        {
-            rootDir = rootDir.getParentFile();
-        }
-
-        //  setupDriveList(rootDirectories);
-
-        if (filePath != null)
-        {
-            if (checkPermission())
-            {
-                listItem(rootDir);
-            }
-        }
-        else
-        {
-            for (File folder : rootDirectories)
-            {
-                if (checkPermission())
-                {
-                    listItem(folder);
+                // vymeni rychlou statistiku za vylepsenou
+                FileDetail temp = findFileName(file.getName());  // najdi row podle jmena souboru
+                if (temp != null) {
+                    updateFriends(fdet, temp);
                 }
-
-                break;
             }
-        };
 
-
-//        loadFromStorage();
-        loadAllFiles();
-
-        */
+            ListView mListView = rootView.findViewById(R.id.listView);
+            FileViewerAdapter friendsAdapter = new FileViewerAdapter(getContext(), fFriends);
+            mListView.setAdapter(friendsAdapter);
+            //mListView.animate();
+        }
     }
 
 
@@ -1268,9 +1194,7 @@ public class ListFragment extends Fragment
 
         Log.d("LIST", "Started...");
 
-        executor.execute(() -> {
-                    DoLoadFiles();
-                });
+
         /*
         executor.execute(() -> {
             

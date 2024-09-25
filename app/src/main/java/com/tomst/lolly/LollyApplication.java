@@ -46,6 +46,7 @@ import com.google.android.material.snackbar.Snackbar;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.tomst.lolly.core.Constants;
+import com.tomst.lolly.core.DatabaseHandler;
 import com.tomst.lolly.core.FileOpener;
 import com.tomst.lolly.databinding.ActivityMainBinding;
 import com.tomst.lolly.core.DmdViewModel;
@@ -68,6 +69,8 @@ public class LollyApplication extends AppCompatActivity implements View.OnClickL
 
     // nastaveni preferovane cesty pro ukladani dat
     private String  prefExportFolder            = "";            // The folder for csv exportation
+    public DatabaseHandler gpsDataBase;
+
     public String getPrefExportFolder() {
         return prefExportFolder;                                 // The folder for csv exportation
     }
@@ -188,9 +191,7 @@ public class LollyApplication extends AppCompatActivity implements View.OnClickL
         } else {
             Toast.makeText(this, "Folder not created...", Toast.LENGTH_SHORT).show();
         }
-
     }
-
 
     private ActivityResultLauncher<Intent> storageActivityResultLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
@@ -325,7 +326,6 @@ public class LollyApplication extends AppCompatActivity implements View.OnClickL
         }
     }
 
-
     private void showMessageOKCancel(String message, DialogInterface.OnClickListener okListener) {
         new AlertDialog.Builder(LollyApplication.this)
                 .setMessage(message)
@@ -353,7 +353,6 @@ public class LollyApplication extends AppCompatActivity implements View.OnClickL
         super.onCreate(savedInstanceState);
 
         singleton = this;
-
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
         view = binding.getRoot();
@@ -386,6 +385,7 @@ public class LollyApplication extends AppCompatActivity implements View.OnClickL
         FILE_EMPTY_LOG = DIRECTORY_FILESDIR_TRACKS + "/empty.log";
 
         createPrivateFolders();
+        gpsDataBase = new DatabaseHandler(this);
 
         // vyrobim prazdny CSV
         File sd = new File(FILE_EMPTY_CSV);
