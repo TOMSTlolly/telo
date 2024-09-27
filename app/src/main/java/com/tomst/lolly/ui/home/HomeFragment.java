@@ -210,21 +210,6 @@ public class HomeFragment extends Fragment {
         Constants.showMicro = true;
 
         super.onStart();
-        /*
-        if (ContextCompat.checkSelfPermission(getContext(),
-                LollyService.PERMISSION_STRING)
-                != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(getActivity(),
-                    new String[]{LollyService.PERMISSION_STRING},
-                    PERMISSION_REQUEST_CODE);
-        } else {
-            Intent intent = new Intent(getContext(), LollyService.class);
-            getActivity().startService(intent);
-            getContext().bindService(intent, connection, Context.BIND_AUTO_CREATE);
-        }
-        */
-
-
 
         Intent intent = new Intent(getContext(), LollyService.class);
         //getActivity().startService(intent);
@@ -341,8 +326,8 @@ public class HomeFragment extends Fragment {
                 else
                     i++;
             }
-            txtFile = pickedDir.createFile("", locFile);
-            Log.w("myApp", "[#] HomeFragment.java - Export " + txtFile.getUri().toString());
+          //  txtFile = pickedDir.createFile("", locFile);
+         //   Log.w("myApp", "[#] HomeFragment.java - Export " + txtFile.getUri().toString());
 
 
         } catch (Exception e) {
@@ -425,14 +410,15 @@ public class HomeFragment extends Fragment {
                     break;
 
                 case tSerial:
-                    //String AFileName  = CompileFileName(ftTMS.SerialNumber);
                     serialNumber = info.msg;
                     binding.devser.setText(info.msg);
 
-                    // adresar
-                    //String AFileName  = CompileFileName(info.msg,lollyApp.getPrefExportFolder());  // cislo lizatka
-                   //  csv = new CSVReader(AFileName);   // novy, eventuelne otevru existujici soubor
-                    // csv.OpenForRead(AFileName);                                // stream otevru na zapis
+                    // nakompiluj jmeno souboru pro zapis, snazime se o unikatni nazev
+                   String  ADir = LollyApplication.getInstance().getCacheDirectoryPath();
+                   String AFileName = CompileFileName(info.msg,ADir);
+                   AFileName = ADir + "/" + AFileName;
+                    csv = new CSVReader(AFileName);
+                    csv.OpenForWrite();  // otevre vystupni stream pro addCsv vyse
                     break;
 
                 case tInfo:

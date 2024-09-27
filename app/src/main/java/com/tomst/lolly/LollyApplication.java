@@ -78,6 +78,13 @@ public class LollyApplication extends AppCompatActivity implements View.OnClickL
         this.prefExportFolder = prefExportFolder;                 // The folder for csv exportation
     }
 
+      public  String getCacheDirectoryPath() {
+            //File tempDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+             String ret =  getBaseContext() .getCacheDir() .getAbsolutePath()+ "/Tracks";
+            return ret;
+        }
+
+
     private View view;
     private ActivityMainBinding binding;
 

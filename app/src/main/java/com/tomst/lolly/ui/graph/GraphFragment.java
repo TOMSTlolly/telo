@@ -1,14 +1,12 @@
 package com.tomst.lolly.ui.graph;
 
 import static android.graphics.Color.RED;
-import static android.graphics.Color.red;
-
 import static com.tomst.lolly.core.Constants.HEADER_LINE_LENGTH;
-import static com.tomst.lolly.core.Constants.SERIAL_NUMBER_INDEX;
 import static com.tomst.lolly.core.shared.getSerialNumberFromFileName;
 
 import android.content.pm.ActivityInfo;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -29,12 +27,14 @@ import androidx.annotation.RequiresApi;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 
+import com.github.mikephil.charting.animation.Easing;
 import com.github.mikephil.charting.charts.CombinedChart;
 import com.github.mikephil.charting.components.AxisBase;
 import com.github.mikephil.charting.components.LegendEntry;
@@ -46,15 +46,19 @@ import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.formatter.ValueFormatter;
 import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
 import com.github.mikephil.charting.data.LineDataSet;
+import com.github.mikephil.charting.components.Legend;
 
 import com.github.mikephil.charting.utils.ColorTemplate;
 import com.tomst.lolly.R;
 import com.tomst.lolly.core.CSVFile;
+import com.tomst.lolly.core.OnProListener;
 import com.tomst.lolly.core.TDendroInfo;
 import com.tomst.lolly.core.TMereni;
 import com.tomst.lolly.core.TPhysValue;
 import com.tomst.lolly.databinding.FragmentGraphBinding;
 import com.tomst.lolly.core.DmdViewModel;
+import com.tomst.lolly.core.CSVReader;
+import com.tomst.lolly.fileview.FileDetail;
 
 
 @RequiresApi(api = Build.VERSION_CODES.O)
@@ -69,8 +73,6 @@ public class GraphFragment extends Fragment {
     private static final byte LATITUDE_INDEX = 2;
     private static final byte PICTURE_INDEX = 4;
 
-
-
     // constants for loading measurements
     private static final byte DATETIME_INDEX = 1;
     private static final byte TEMP1_INDEX = 3;
@@ -80,9 +82,8 @@ public class GraphFragment extends Fragment {
     private static final byte MVS_INDEX = 7;
     private final String TMD_DELIM = " ";
     private final String TAG = "GraphFragment";
-
     private static String fSerialNumber="";
-
+    private int MaxPos = 0;  // progress bar max value
 
     // CSV loading
     public int headerIndex = 0;
@@ -130,11 +131,8 @@ public class GraphFragment extends Fragment {
     };
 
     private FragmentGraphBinding binding;
-
     private DmdViewModel dmd;
-
     private Integer fIdx = 0;
-
 
     protected Handler handler = new Handler(Looper.getMainLooper()) {
         @Override
@@ -146,13 +144,11 @@ public class GraphFragment extends Fragment {
         }
     };
 
-
     @Override
     public void onDestroy() {
         super.onDestroy();
         //dmd.sendMessageToGraph("");
     }
-
 
     @Override
     public void onStop() {
@@ -160,6 +156,36 @@ public class GraphFragment extends Fragment {
         dmd.ClearMereni();
 
         super.onStop();
+    }
+
+    private void LoadDmdData(){
+        LineDataSet d = null;
+
+        // **** linearni graf
+        d = SetLine(dmd.getT1(),TPhysValue.vT1);
+        dataSets.add(d);
+        d = SetLine(dmd.getT2(),TPhysValue.vT2);
+        dataSets.add(d);
+        d = SetLine(dmd.getT3(),TPhysValue.vT3);
+        dataSets.add(d);
+        // humidita
+        d = SetLine(dmd.getHA(),TPhysValue.vHum);
+        dataSets.add(d);
+        LineData lines = new LineData(dataSets);
+        combinedData.setData(lines);
+
+        //
+        // combinedData.setData(generateBarData());
+        chart.setData(combinedData);
+        chart.getAxisLeft().setEnabled(true);
+        chart.getAxisRight().setEnabled(true);
+
+        // startup animation
+        chart.animateX(2000, Easing.EaseInCubic);
+
+        // sets view to start of graph and zooms into x axis by 7x
+        chart.zoomAndCenterAnimated(7f, 1f, 0, 0, chart.getAxisLeft().getAxisDependency(), 3000);
+
     }
 
 
@@ -255,7 +281,6 @@ public class GraphFragment extends Fragment {
         );
          */
 
-
         //chart.setKeepPositionOnRotation(true);
 
         //Default: Do Not Display T2 and T3
@@ -265,11 +290,10 @@ public class GraphFragment extends Fragment {
         headerIndex = ogHeaderIndex;
     }
 
-    private static float min(float a, float b, float c) {
+    private  float min(float a, float b, float c) {
         return Math.min(Math.min(a, b), c);
     }
-
-    private static float max(float a, float b, float c) {
+    private  float max(float a, float b, float c) {
         return Math.max(Math.max(a, b), c);
     }
 
@@ -285,6 +309,37 @@ public class GraphFragment extends Fragment {
         dendroInfos.get(0).vT2 = dmd.getT2();
         dendroInfos.get(0).vT3 = dmd.getT3();
         dendroInfos.get(0).vHA = dmd.getHA();
+    }
+
+
+    private boolean loadCSVFil(String uriPath)  {
+        Uri fileUri = Uri.parse(uriPath);
+        CSVReader csv = new CSVReader(fileUri.toString());
+        csv.SetHandler(handler);
+
+        //FileDetail fileDetail = null;
+        // progress bar
+        csv.SetBarListener(value -> {
+                 Log.d(TAG, "Bar: " + value);
+                if (value<0) {
+                    binding.proBar.setMax((int) -value); // posledni adresa
+                    MaxPos = -value;
+                    binding.proBar.setProgress(value);
+                }
+                else {  // progress
+                    binding.proBar.setProgress(value);
+                }
+        });
+        // konec vycitani
+        csv.SetFinListener(value -> {
+            Log.d(TAG,"Finished");
+            //DisplayData();
+            LoadDmdData();
+            //  binding.proBar.setProgress(0);
+        });
+
+        csv.start();
+        return true;
     }
 
     private boolean loadCSVFile(String fileName)
@@ -494,8 +549,78 @@ public class GraphFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
+
         // Set the orientation to landscape (90 degrees)
-        getActivity().setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+//        getActivity().setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+    }
+
+
+    private void setupGraph(){
+        getActivity().setTitle("Lolly 4");
+        chart = binding.chart1;
+
+        //chart.getDescription().setText(CsvFileName);
+        chart.setTouchEnabled(true);
+        chart.setDragDecelerationFrictionCoef(0.9f);
+
+        // enable scaling and dragging
+        chart.setDragEnabled(true);
+        chart.setScaleEnabled(true);
+        chart.setDrawGridBackground(false);
+        chart.setHighlightPerDragEnabled(true);
+
+        // set an alternative background color
+        // chart.setBackgroundColor(Color.WHITE);
+        chart.setViewPortOffsets(0f, 0f, 0f, 0f);
+
+        // if disabled, scaling can be done on x- and y-axis separately
+        chart.setPinchZoom(false);
+
+        // get the legend (only possible after setting data)
+        Legend l = chart.getLegend();
+        /*
+        l.setWordWrapEnabled(true);
+        l.setVerticalAlignment(Legend.LegendVerticalAlignment.BOTTOM);
+        l.setHorizontalAlignment(Legend.LegendHorizontalAlignment.CENTER);
+        l.setOrientation(Legend.LegendOrientation.HORIZONTAL);
+        l.setDrawInside(false);
+        l.setEnabled(false);
+        */
+
+        l.setForm(Legend.LegendForm.LINE);
+        //l.setTypeface(tfLight);
+        l.setTextSize(11f);
+        l.setTextColor(Color.BLACK);
+        l.setVerticalAlignment(Legend.LegendVerticalAlignment.BOTTOM);
+        l.setHorizontalAlignment(Legend.LegendHorizontalAlignment.LEFT);
+        l.setOrientation(Legend.LegendOrientation.HORIZONTAL);
+        l.setDrawInside(true);
+
+        // osa humidit
+        YAxis rightAxis = chart.getAxisRight();
+        rightAxis.setDrawGridLines(true);
+        rightAxis.setPosition(YAxis.YAxisLabelPosition.INSIDE_CHART);
+        //rightAxis.setAxisMinimum(0f); // this replaces setStartAtZero(true)
+        //rightAxis.setAxisMaximum(1000f);
+
+        // osa teplot
+        YAxis leftAxis = chart.getAxisLeft();
+        leftAxis.setDrawGridLines(false);
+        leftAxis.setPosition(YAxis.YAxisLabelPosition.INSIDE_CHART);
+        //leftAxis.setAxisMinimum(-10f); // this replaces setStartAtZero(true)
+        //leftAxis.setAxisMaximum(30f);
+
+        XAxis xAxis = chart.getXAxis();
+        xAxis.setPosition(XAxis.XAxisPosition.TOP_INSIDE);
+        xAxis.setTextSize(10f);
+        xAxis.setTextColor(Color.BLACK);
+        xAxis.setDrawAxisLine(true);
+        xAxis.setDrawGridLines(true);
+        xAxis.setTextColor(Color.rgb(255, 192, 56));
+        xAxis.setCenterAxisLabels(true);
+        xAxis.setGranularity(1f); // one hour
+
+        combinedData = new CombinedData();
     }
 
     public View onCreateView(
@@ -524,6 +649,8 @@ public class GraphFragment extends Fragment {
         root = inflater.inflate(R.layout.fragment_graph_land, container, false);
 
         binding = FragmentGraphBinding.bind(root);
+        setupGraph();
+
         dmd = new ViewModelProvider(getActivity()).get(DmdViewModel.class);
 
         // we have set two observers, one for physical data received from TMD adapter, second from the ListFragment viewer
@@ -536,55 +663,30 @@ public class GraphFragment extends Fragment {
                     Log.d("GRAPH", "Received: " + msg);
                     if (msg.split(TMD_DELIM)[0].equals("TMD"))
                     {
-                        // the data has been sent from TMSReader
-
-                        // setup dendrometer graph
+                        // the data has been sent by the TMD USB adapter using TMSReader
                         Log.d("GRAPH", "Setup dendrometer graph");
                         //CreateGraph();
                         fSerialNumber = msg.split(TMD_DELIM)[1];
-                        //setupDMDGraph(msg.split(TMD_DELIM)[1]); // send serial number to filler
-                        setupDMDGraph(fSerialNumber);
-                        DisplayData(); // create lines and send them to chart
+                        LoadDmdData();
+
+                        //setupDMDGraph(fSerialNumber);
+                        //DisplayData(); // create lines and send them to chart
                     }
                     else
                     {
-                        // the data has been sent from the ListFragment viewer
-                        String[] fileNames = msg.split(";");
+                         // the data has been sent from the ListFragment viewer
+                         String[] fileNames = msg.split(";");
+                         String  fileName = fileNames[0];
+                         if (fileName.length()<1)
+                             return;
 
-                        /*
-                        boolean hasData=false;
-                        if (fileNames.length > 1)
-                        {
-                            String mergedFileName = mergeCSVFiles(fileNames);
-                            Log.d(
-                                    "GRAPH",
-                                    "Merged file name = "
-                                            + mergedFileName
-                            );
-                            // merged data from multiple csv files
-                            hasData =  loadCSVFile(mergedFileName);
-                        }
-                        else
-                        {
-                            // single csv file
-                            hasData =  loadCSVFile(fileNames[0]);
-                        }
-
-                        if (hasData) {
-                            DisplayData();
-                            fSerialNumber = getSerialNumberFromFileName(fileNames[0]);
-                        }
-                        */
-
-                        // get the filename
-                        if (fileNames[0].length()>1) {
-                            if (loadCSVFile(fileNames[0]))
-                              fSerialNumber = getSerialNumberFromFileName(fileNames[0]);
-                        }
+                         if (loadCSVFil(fileName)){
+                                fSerialNumber = getSerialNumberFromFileName(fileNames[0]);
+                         }
 
                         // muzu mit fSerialNumber i z predchoziho behu
-                        if (fSerialNumber.length()>1)
-                            DisplayData();
+                        //   if (fSerialNumber.length()>1)
+                         //      DisplayData();
                     }
 
                     dmd.getMessageContainerToFragment()
@@ -618,12 +720,8 @@ public class GraphFragment extends Fragment {
 
         getActivity().setTitle("Lolly 4");
 
-
-
         return root;
     }
-
-
 
 
     private String mergeCSVFiles(String[] fileNames)

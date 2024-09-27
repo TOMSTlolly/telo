@@ -25,22 +25,15 @@ package com.tomst.lolly.core;
  import java.io.InputStreamReader;
  import java.io.RandomAccessFile;
  import java.time.format.DateTimeFormatter;
-
  import java.nio.file.Files;
  import java.nio.file.Path;
- import java.nio.file.Paths;
-
  import java.io.FileOutputStream;
-
  import java.time.LocalDateTime;
  import java.util.Locale;
 
  import com.tomst.lolly.BuildConfig;
  import com.tomst.lolly.LollyApplication;
  import com.tomst.lolly.fileview.FileDetail;
-import com.tomst.lolly.core.Constants;
-
- import org.apache.commons.io.input.RandomAccessFileInputStream;
 
 public class CSVReader extends Thread
 {
@@ -51,6 +44,8 @@ public class CSVReader extends Thread
 
     private FileOutputStream fNewCsv;
     private boolean writeTxf=false;
+
+    private int  oldPos=0;
 
     private int iline=0;
     private static String DMD_PATTERN = "yyyy.MM.dd HH:mm";
@@ -126,17 +121,6 @@ public class CSVReader extends Thread
                     outputStream.write(buffer, 0, length);
                 }
 
-                /*
-                public static ByteArrayInputStream readStreamToSeekableStream(InputStream inputStream) throws IOException {
-                    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-                    buffer = new byte[1024];
-                    int bytesRead;
-                    while ((bytesRead = inputStream.read(buffer)) != -1) {
-                        byteArrayOutputStream.write(buffer, 0, bytesRead);
-                    }
-                    return new ByteArrayInputStream(byteArrayOutputStream.toByteArray());
-                }
-                */
             }
             return tempFile;
         }
@@ -187,26 +171,6 @@ public class CSVReader extends Thread
         return filePath;
     }
 
-    public void readN(DocumentFile docFile, int n)
-    {
-        try {
-            Context context = LollyApplication.getInstance().getApplicationContext();
-            File tempFile = FileUtils.copyDocumentFileToTempFile(context, docFile);
-            RandomAccessFile randomAccessFile = new RandomAccessFile(tempFile, "r");
-
-            // Use the RandomAccessFile as needed
-            randomAccessFile.seek(100);
-            byte[] buffer = new byte[1024];
-            int bytesRead = randomAccessFile.read(buffer);
-            //System.out.write(buffer, 0, bytesRead);
-            Log.d(TAG, "readN: " + bytesRead);
-            randomAccessFile.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-
     public void OpenForRead(String AFileName){
         this.context = LollyApplication.getInstance().getApplicationContext();
        // String AFileName = this.FileName;
@@ -224,33 +188,30 @@ public class CSVReader extends Thread
                 privateDocumentDir = DocumentFile.fromFile(file);
             }
 
-            /*
-            InputStream fin;
-            try {
-                fin = LollyApplication.getInstance().getContentResolver().openInputStream(privateDocumentDir.getUri());
-            } catch (FileNotFoundException e) {
-                Log.w("myApp", "[#] CSVReader.java - FileNotFoundException");
-                return;
-            }
-             */
         }catch (Exception e) {
             e.printStackTrace();
             return ;
         }
+    }
 
-        /*
-        try
-        {
-            fNewCsv = new FileOutputStream(AFileName);
-        }
-        catch(Exception e)
-        {
-            System.out.println(e);
-        }
-        this.fout  = null;
-        Log.d(TAG,"New CSV file name = " +AFileName);
-        */
+    public void OpenForWrite(){
+        this.context = LollyApplication.getInstance().getApplicationContext();
+        String AFileName = this.FileName;
+        try {
+            if (AFileName.startsWith("content")) {
+                Uri uri = Uri.parse(AFileName);
+                documentFile = DocumentFile.fromSingleUri(this.context, uri);;
+                privateDocumentDir = DocumentFile.fromTreeUri(this.context, uri);
+            } else {
+               // fNewCsv = new FileOutputStream(AFileName);
+                 fNewCsv = new FileOutputStream(AFileName);
+                //privateDocumentDir = DocumentFile.fromFile(file);
+            }
 
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ;
+        }
     }
 
 
@@ -306,28 +267,6 @@ public class CSVReader extends Thread
     }
 
 
-    /*
-    public class RandomAccessFileExample {
-            File file = new File("path/to/your/file.txt");
-            try (RandomAccessFileInputStream rafis = new RandomAccessFileInputStream(file)) {
-                byte[] buffer = new byte[1024];
-                int bytesRead;
-
-                // Read the file content
-                while ((bytesRead = rafis.read(buffer)) != -1) {
-                    System.out.write(buffer, 0, bytesRead);
-                }
-
-                // Seek to a specific position
-                rafis.seek(100);
-                bytesRead = rafis.read(buffer);
-                System.out.write(buffer, 0, bytesRead);
-
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-*/
 
     public void readL(DocumentFile docFile)
     {
@@ -347,67 +286,12 @@ public class CSVReader extends Thread
             return;;
     }
 
-
-
-    // tohle pustim po startu
-    @RequiresApi(api = Build.VERSION_CODES.O)
-    @Override
-    public void run()
+    private void DoProgress(int pos)
     {
-        try
-        {
-            Looper.prepare();
-            if (this.FileName.contains(".csv") ){
-            openCsv(this.FileName);
-            }
-        }
-        catch (IOException e)
-        {
-            throw new RuntimeException(e);
-        }
-    }
+        if (oldPos == pos)
+            return;
+        oldPos = pos;
 
-    @RequiresApi(api = Build.VERSION_CODES.O)
-    private Uri openCsv(String full_file_name) throws IOException
-    {
-        File file = new File(full_file_name);
-
-        Log.e(TAG, full_file_name);
-
-        return FileProvider.getUriForFile(
-                this.context,
-                BuildConfig.APPLICATION_ID + ".provider",
-                file
-        );
-    }
-
-
-    public long getFileSize(String fileName)
-    {
-        Path path = null;
-        try
-        {
-            if (android.os.Build.VERSION.SDK_INT
-                    >= android.os.Build.VERSION_CODES.O)
-            {
-                path = Paths.get(fileName);
-
-                // size of a file (in bytes)
-                long bytes = Files.size(path);
-
-                return bytes;
-            }
-        }
-        catch (IOException e)
-        {
-            e.printStackTrace();
-        }
-
-        return 0;
-    }
-
-    private void DoProgress(long pos)
-    {
         progressBarHandler.post(new Runnable()
         {
             public void run()
@@ -420,14 +304,10 @@ public class CSVReader extends Thread
         });
     }
 
-    private void DoFinished(long pos)
-    {
-        progressBarHandler.post(new Runnable()
-        {
-            public void run()
-            {
-                if (mFinListener != null)
-                {
+    private void DoFinished(int pos) {
+        progressBarHandler.post(new Runnable() {
+            public void run() {
+                if (mFinListener != null) {
                     mFinListener.OnProEvent(pos);
                 }
             }
@@ -484,7 +364,6 @@ public class CSVReader extends Thread
                 "%d;%s;%d;%.4f;%.4f;%.4f;%d;%d;%d",
                 Mer.idx,dts,Mer.gtm,Mer.t1,Mer.t2,Mer.t3,Mer.hum,Mer.mvs,Mer.Err
         );
-
         return (line);
     }
 
@@ -715,14 +594,14 @@ public class CSVReader extends Thread
     @RequiresApi(api = Build.VERSION_CODES.O)
     public FileDetail readFileContent(Uri uri) throws IOException
     {
-        Integer idx = 0;
+        int  idx = 0;
 
         // Streamovane vycteni, zatim nejrychlejsi verze
         InputStream inputStream =
                 this.context.getContentResolver().openInputStream(uri);
         BufferedReader reader =
                 new BufferedReader(new InputStreamReader(inputStream));
-        Integer j = inputStream.available();  // pocet dostupnych bytu
+        Integer totalBytes = inputStream.available();  // pocet dostupnych bytu
         StringBuilder stringBuilder = new StringBuilder();
 
         currDay = 0;
@@ -731,21 +610,27 @@ public class CSVReader extends Thread
         // cas prvniho mereni
         FileDetail fileDetail = new FileDetail(uri.getLastPathSegment());
         String currentline = reader.readLine();
+        if (currentline == null)
+            return null;
+
         ProcessLine(currentline);
         fileDetail.setFrom(Mer.dtm);
 
+        DoProgress(-totalBytes);  // vynuluj progress bar
         while ((currentline = reader.readLine()) != null)
         {
             //  vysledek je v lokalni promenne Mer
             ProcessLine(currentline);
             Mer.idx = ++iline;
-            idx = j - inputStream.available();
+            idx = inputStream.available();
+            idx = (totalBytes - idx) ;
 
            // AppendStat(Mer);
             FindMinMax(Mer);
             sendMessage(Mer);
+
             if (progressBarHandler != null)
-                DoProgress(idx);
+                    DoProgress(idx);
 
             stringBuilder.append(currentline).append("\n");
         }
@@ -764,9 +649,31 @@ public class CSVReader extends Thread
         fileDetail.setMinHum(minHm);
 
         //return stringBuilder.toString();
+        DoProgress(-1);
         return fileDetail;
     }
 
+
+    // tohle pustim po startu
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    @Override
+    public void run()
+    {
+        Looper.prepare();
+        if (!this.FileName.contains(".csv") )
+            return;
+
+        Context context = LollyApplication.getInstance().getApplicationContext();
+        Uri uri = Uri.parse(this.FileName);
+        try {
+            FileDetail det = readFileContent(uri);
+
+        } catch (IOException e) {
+            // Handle error here
+            Log.d(TAG,e.toString());
+        }
+
+    }
 
 
 

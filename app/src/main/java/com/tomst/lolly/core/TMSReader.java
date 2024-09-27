@@ -865,7 +865,6 @@ public class TMSReader extends Thread
                     devState = TDevState.tInfo;
                     break;
 
-
                 case tInfo:
                     s = fHer.doCommand("W");
                     if (s.indexOf("@W.") ==-1)  // pockej az se domeri

@@ -1,37 +1,28 @@
 package com.tomst.lolly.ui.viewfile;
 
 
-import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
-import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 import static android.app.Activity.RESULT_CANCELED;
 import static android.os.Environment.*;
-
 import static com.tomst.lolly.LollyApplication.DIRECTORY_TEMP;
-import static dagger.internal.Preconditions.checkNotNull;
 
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
-import android.content.res.Resources;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.text.InputType;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.webkit.MimeTypeMap;
+import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -64,29 +55,15 @@ import com.tomst.lolly.databinding.FragmentViewerBinding;
 import com.tomst.lolly.fileview.FileDetail;
 import com.tomst.lolly.fileview.FileViewerAdapter;
 import com.tomst.lolly.core.PermissionManager;
-import com.tomst.lolly.core.SecondaryCardChannel;
-import com.tomst.lolly.core.TMereni;
-
 import com.tomst.lolly.BuildConfig;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.nio.ByteBuffer;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
-import android.os.storage.StorageManager;
 
 
 public class ListFragment extends Fragment
@@ -117,6 +94,7 @@ public class ListFragment extends Fragment
     private final String TAG = "TOMST";
     public FileOpener fopen;
     private  DmdViewModel dmd;
+    private String SelectedFileName= "";
 
     FirebaseFirestore db;
 
@@ -137,36 +115,10 @@ public class ListFragment extends Fragment
 
     // prepise prvek ve fFriends
     private void updateFriends(FileDetail source, FileDetail target){
-        int index = fFriends.indexOf(source);
-        fFriends.set(index, target);
+        int index = fFriends.indexOf(target);
+        fFriends.set(index, source);
     }
 
-
-    private void setupBitmaps()
-    {
-        mywidth = Resources.getSystem().getDisplayMetrics().widthPixels;
-        folderImage = BitmapFactory.decodeResource(
-                getResources(), R.drawable.folder
-        );
-        fileImage = BitmapFactory.decodeResource(
-                getResources(), R.drawable.file
-        );
-        archiveImage = BitmapFactory.decodeResource(
-                getResources(), R.drawable.archive
-        );
-        audioImage = BitmapFactory.decodeResource(
-                getResources(), R.drawable.audio
-        );
-        videoImage = BitmapFactory.decodeResource(
-                getResources(), R.drawable.video
-        );
-        pictureImage = BitmapFactory.decodeResource(
-                getResources(), R.drawable.picture
-        );
-        unknownImage = BitmapFactory.decodeResource(
-                getResources(), R.drawable.unknown
-        );
-    }
 
 
     @Override
@@ -208,7 +160,7 @@ public class ListFragment extends Fragment
         );
         rootView = binding.getRoot();
 
-        // nacti uri z shared preferences v hlavni aplikaci
+        //  cesty pro export do SAF
         String sharedPath = LollyApplication.getInstance().getPrefExportFolder();
         if (sharedPath.startsWith("content"))
             sharedFolder = DocumentFile.fromTreeUri(LollyApplication.getInstance(), Uri.parse(sharedPath));
@@ -218,8 +170,11 @@ public class ListFragment extends Fragment
         privateFolder = DocumentFile.fromFile(new File(privatePath));
 
 
+        // textova popiska k umisteni souboru
         TextView folderName = binding.tvFolderDest;
-        folderName.setText("Folder: " + sharedFolder.getUri().getPath());
+       //  folderName.setText("Folder: " + sharedFolder.getUri().getPath());
+        //folderName.setText("Folder: " + DIRECTORY_TEMP);
+        folderName.setText(LollyApplication.getInstance().getCacheDirectoryPath());
 
         // Saving folder destination
         Button btn_reload = binding.btnLoadFolder;
@@ -240,14 +195,20 @@ public class ListFragment extends Fragment
             {
                 ZipFiles zipFiles = new ZipFiles();
 
-                File dir = new File(Constants.FILEDIR);
+//                File dir = new File(Constants.FILEDIR);
                 String zipDirName = Constants.FILEDIR+"//tmp.zip";
+                File dir = new File(DIRECTORY_TEMP);
+                //String zipDirName = DIRECTORY_TEMP+"//tmp.zip";
+
+
                 zipFiles.zipDirectory(dir, zipDirName);
 
                 // Assume you have created a zip file called "my_project.zip" in your app's cache directory
                 File zipFile = new File(zipDirName);
 
                 // Get a content URI for the zip file using FileProvider
+                Context context = getContext();
+                context = context != null ? context : LollyApplication.getInstance().getApplicationContext();
                 Uri zipUri = FileProvider.getUriForFile(
                     getContext(),
                     BuildConfig.APPLICATION_ID + ".provider",
@@ -272,7 +233,6 @@ public class ListFragment extends Fragment
                 startActivity(sendIntent);
             }
         });
-
 
         // database stuff
         /*
@@ -299,77 +259,6 @@ public class ListFragment extends Fragment
             }
         });
 
-        /*
-        Button toSerialBtn = binding.toSerial;
-        Button toParallelBtn = binding.toParellel;
-        toSerialBtn.setOnClickListener(new View.OnClickListener()
-        {
-            @Override
-            public void onClick(View view)
-            {
-                String convertFiles = "";
-                FileViewerAdapter friendsAdapter = new FileViewerAdapter(
-                        getContext(), fFriends
-                );
-                ArrayList<String> fileNames = friendsAdapter.collectSelected();
-
-                int convert_res = 0;
-                final String LAST_OCCURENCE = ".*";
-                for (String fileName : fileNames)
-                {
-                    convert_res = CSVFile.toSerial(fileName);
-                    if (convert_res == 2)
-                    {
-                        Toast.makeText(
-                                getContext(),
-                                fileName.split(LAST_OCCURENCE)[1]
-                                        + " already exists!",
-                                Toast.LENGTH_SHORT
-                        ).show();
-                    }
-                }
-                Toast.makeText(
-                        getContext(),
-                        "Conversion complete!",
-                        Toast.LENGTH_SHORT
-                ).show();
-            }
-        });
-        toParallelBtn.setOnClickListener(new View.OnClickListener()
-        {
-            @Override
-            public void onClick(View view)
-            {
-                Toast.makeText(getContext(), "Converting to Parallel", Toast.LENGTH_LONG).show();
-                String convertFiles = "";
-                FileViewerAdapter friendsAdapter = new FileViewerAdapter(
-                        getContext(), fFriends
-                );
-                ArrayList<String> fileNames = friendsAdapter.collectSelected();
-
-                int convert_res = 0;
-                final String LAST_OCCURENCE = ".*";
-                for (String fileName : fileNames)
-                {
-                    convert_res = CSVFile.toParallel(fileName);
-                    if (convert_res == 2)
-                    {
-                        Toast.makeText(
-                                getContext(),
-                                fileName.split(LAST_OCCURENCE)[1]
-                                        + " already exists!",
-                                Toast.LENGTH_SHORT
-                        ).show();
-                    }
-                }
-                Toast.makeText(
-                        getContext(),
-                        "Conversion complete!",
-                        Toast.LENGTH_SHORT
-                ).show();
-            }
-        });
-         */
 
         dmd = new ViewModelProvider(getActivity()).get(DmdViewModel.class);
         dmd.sendMessageToFragment("");
@@ -378,6 +267,37 @@ public class ListFragment extends Fragment
         fopen = new FileOpener(getActivity());
 
         fFriends = new ArrayList<>();
+
+        ListView mListView = rootView.findViewById(R.id.listView);
+        FileViewerAdapter friendsAdapter = new FileViewerAdapter(getContext(), fFriends);
+        mListView.setAdapter(friendsAdapter);
+        mListView.animate();
+
+        mListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                FileDetail selectedItem = (FileDetail) parent.getItemAtPosition(position);
+//                SelectedFileName = selectedItem.getName();
+                SelectedFileName = selectedItem.getFull();
+                friendsAdapter.setSelectedPosition(position);
+            }
+        });
+
+        Button select_sets_btn = binding.selectSets;
+        select_sets_btn.setOnClickListener(new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View view) {
+                if (SelectedFileName != "")
+                {
+                    dmd.sendMessageToFragment(SelectedFileName);
+                    switchToGraphFragment();
+                }
+                // ArrayList<String> fileNames = friendsAdapter.collectSelected();
+                //for (String fileName : fileNames) {
+                //   fileNameMsg += fileName + ";";
+            }
+        });
 
         Intent intent = getActivity() != null ? getActivity().getIntent() : null;
         if (intent != null)
@@ -399,7 +319,7 @@ public class ListFragment extends Fragment
                     fopen.isRequestDocument = false;
             }
         }
-        setupBitmaps();
+        //setupBitmaps();
 
         return rootView;
     }
@@ -662,326 +582,6 @@ public class ListFragment extends Fragment
     }
 
 
-
-    private void setupDriveList(final File[] rootDirectories)
-    {
-        final LinearLayout list = rootView.findViewById(R.id.listView);
-        //final LinearLayout list = null;
-
-
-        if (list == null)
-        {
-            return;
-        }
-
-        list.removeAllViews();
-
-        for (File file : rootDirectories)
-        {
-            final Button entry = new Button(getContext());
-            entry.setLayoutParams(
-                    new LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.MATCH_PARENT,
-                            LinearLayout.LayoutParams.WRAP_CONTENT
-                    )
-            );
-            entry.setText(file.getPath());
-            entry.setOnClickListener(v ->
-            {
-                //executor.execute(() -> listItem(file));
-                //setViewVisibility(R.id.drive_list, View.GONE);
-            });
-            list.addView(entry);
-        }
-        list.setVisibility(View.GONE);
-    }
-
-
-    private boolean checkPermission()
-    {
-        permissionManager.getPermission(
-                READ_EXTERNAL_STORAGE,
-                "Storage access is required",
-                false
-        );
-        permissionManager.getPermission(
-                WRITE_EXTERNAL_STORAGE,
-                "Storage access is required",
-                false
-        );
-
-        return permissionManager
-                .havePermission(new String[] {
-                        READ_EXTERNAL_STORAGE,
-                        WRITE_EXTERNAL_STORAGE
-                });
-    }
-
-
-    private boolean folderAccessible(final File folder)
-    {
-        try
-        {
-            return folder.canRead();
-        }
-        catch (SecurityException e)
-        {
-            return false;
-        }
-    }
-
-
-    private void sort(final File[] items)
-    {
-        // for every item
-        for (int i = 0; i < items.length; i++)
-        {
-            // j = for every next item
-            for (int j = i + 1; j < items.length; j++)
-            {
-                // if larger than next
-                if (
-                    items[i].toString()
-                            .compareToIgnoreCase(items[j].toString()) > 0
-                ) {
-                    File temp = items[i];
-                    items[i] = items[j];
-                    items[j] = temp;
-                }
-            }
-        }
-    }
-
-
-    private void addDialog(final String dialog, final int textSize)
-    {
-        //addIdDialog(dialog, textSize, View.NO_ID);
-        Log.d(TAG,dialog);
-    }
-
-
-    private void addDirectory(final File folder)
-    {
-       // addItem(getImageView(folderImage), folder);
-        Log.d(TAG,folder.getName());
-
-    }
-
-
-    private void addItem(int iconID, File file)
-    {
-       // new Item(imageView, file);
-        String fName= file.getName();
-        if (fName.contains(".txf"))
-        {
-            iconID = 0;
-        }
-        fFriends.add(new FileDetail(
-            file.getName(),
-            file.getAbsolutePath(),
-            iconID
-        ));
-
-        Log.d(TAG, file.getName());
-    }
-
-
-    private void AddDirName(String DirName)
-    {
-        fFriends.add(new FileDetail(DirName,R.drawable.folder));
-    }
-
-
-
-    private void AddFileName(String FileName)
-    {
-        fFriends.add(new FileDetail(FileName,R.drawable.file));
-    }
-
-
-    private ImageView getImageView(final Bitmap bitmap)
-    {
-        final ImageView imageView = new ImageView(getContext());
-        imageView.setImageBitmap(bitmap);
-        final int width10 = mywidth / 8;
-        imageView.setAdjustViewBounds(true);
-        imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        imageView.setMinimumWidth(width10);
-        imageView.setMinimumHeight(width10);
-        imageView.setMaxWidth(width10);
-        imageView.setMaxHeight(width10);
-        return imageView;
-    }
-
-
-    public static String getFileType(File file)
-    {
-        final int lastDot = file.getName().lastIndexOf('.');
-        if (lastDot >= 0)
-        {
-            final String extension =
-                    file.getName().substring(lastDot + 1);
-            final String mime = MimeTypeMap
-                    .getSingleton()
-                    .getMimeTypeFromExtension(extension);
-            if (mime != null) return mime;
-        }
-        return "application/octet-stream";
-    }
-
-
-
-
-    private void listItem(final File folder)
-    {
-
-        String info = "Name: " + folder.getName() + "\n";
-
-        /*
-        if (Build.VERSION.SDK_INT >= 9)
-        {
-            StatFs stat = new StatFs(folder.getPath());
-            long bytesAvailable = Build.VERSION.SDK_INT >= 18 ?
-                    stat.getBlockSizeLong() * stat.getAvailableBlocksLong() :
-                    (long) stat.getBlockSize() * stat.getAvailableBlocks();
-            info += "Available size: "
-                    + FileOperation.getReadableMemorySize(bytesAvailable)
-                    + "\n";
-            if (Build.VERSION.SDK_INT >= 18)
-            {
-                bytesAvailable = stat.getTotalBytes();
-                info += "Capacity size: "
-                        + FileOperation.getReadableMemorySize(bytesAvailable)
-                        + "\n";
-            }
-        }
-         */
-        parent = folder.getParentFile();
-        filePath = folder.getPath();
-        Log.d(TAG, "ListItem "+filePath);
-        if (folderAccessible(folder))
-        {
-            final File[] items = folder.listFiles();
-            assert items != null;
-
-            sort(items);
-
-            if (items.length == 0)
-            {
-                addDialog("Empty folder!", 16);
-            }
-            else
-            {
-                String lastLetter = "";
-                boolean hasFolders = false;
-
-                for (File item : items)
-                {
-                    if (item.isDirectory())
-                    {
-                        if (!hasFolders)
-                        {
-                            addDialog("Folders:", 18);
-                            hasFolders = true;
-                        }
-                        if (
-                            item.getName()
-                                    .substring(0, 1)
-                                    .compareToIgnoreCase(lastLetter) > 0
-                        ) {
-                            lastLetter = item.getName()
-                                    .substring(0, 1).toUpperCase();
-                            addDialog(lastLetter, 16);
-                        }
-                        addDirectory(item);
-                        AddDirName(item.getName());
-                    }
-                }
-
-                lastLetter = "";
-                boolean hasFiles = false;
-                boolean showFile = false;
-
-                sort(items);
-
-                for (File item : items)
-                {
-                    if (item.isFile())
-                    {
-                        if (!hasFiles)
-                        {
-                            addDialog("Files:", 18);
-                            hasFiles = true;
-                        }
-                        if (item.getName()
-                                .substring(0, 1)
-                                .compareToIgnoreCase(lastLetter) > 0)
-                        {
-                            lastLetter = item.getName()
-                                    .substring(0, 1)
-                                    .toUpperCase();
-                            addDialog(lastLetter, 16);
-                        }
-
-                        showFile = item.getName()
-                                .contains(".csv"); //|| item.getName().contains(".zip");
-                        if (!showFile)
-                        {
-                            continue;
-                        }
-
-                        switch (getFileType(item).split("/")[0])
-                        {
-                            case "image":
-                                addItem(R.drawable.picture, item);
-                                break;//addItem(getImageView(pictureImage), item);
-                            case "video":
-                                addItem(R.drawable.video, item);
-                                break;   //addItem(getImageView(videoImage), item);
-                            case "audio":
-                                addItem(R.drawable.audio, item);
-                                break;   //addItem(getImageView(audioImage), item);
-                            case "application":
-                            {
-                                if (getFileType(item).contains("application/octet-stream"))
-                                    addItem(R.drawable.unknown, item);//addItem(getImageView(unknownImage), item);
-                                else
-                                    addItem(R.drawable.archive, item);//addItem(getImageView(archiveImage), item);
-                                break;
-                            }
-                            case "text":
-                            {
-                                // sem pujdou jenom csv soubory
-                                addItem(R.drawable.file, item);
-                                break;//addItem(getImageView(fileImage), item);
-                            }
-                            default:
-                                addItem(R.drawable.unknown, item);
-                                break; //addItem(getImageView(unknownImage), item);
-                        }
-                    }
-                }
-            }
-        }
-        else
-        {
-            if (
-                filePath.contains("Android/data")
-                || filePath.contains("Android/obb")
-            ) {
-                addDialog(
-                    "For android 11 or higher, Android/data and"
-                        + " Android/obb is refused access.\n",
-                    16
-                );
-            }
-            else
-            {
-                addDialog("Access Denied", 16);
-            }
-        }
-    }
-
     public static boolean canListFiles(File f) {
         boolean ret=false;
         if (f.canRead())
@@ -990,66 +590,7 @@ public class ListFragment extends Fragment
         return(ret);
     }
 
-    private boolean isExternalStorageWriteble()
-    {
-        String state = Environment.getExternalStorageState();
-        return Environment.MEDIA_MOUNTED.equals(state);
-    }
 
-    private boolean isExternalStorageReadable()
-    {
-        String state = Environment.getExternalStorageState();
-        return Environment.MEDIA_MOUNTED.equals(state) ||
-                Environment.MEDIA_MOUNTED_READ_ONLY.equals(state);
-    }
-
-    // App needs 10 MB within internal storage.
-    private boolean testMem(long totalBytes) {
-        long NUM_BYTES_NEEDED_FOR_MY_APP = 1024 * 1024 * 10L;
-
-        StorageManager storageManager =  getContext().getSystemService(StorageManager.class);
-
-        try {
-            UUID appSpecificInternalDirUuid = storageManager.getUuidForPath(getContext().getFilesDir());
-            long availableBytes = storageManager.getAllocatableBytes(appSpecificInternalDirUuid);
-            if (availableBytes >= NUM_BYTES_NEEDED_FOR_MY_APP) {
-                storageManager.allocateBytes(
-                        appSpecificInternalDirUuid, NUM_BYTES_NEEDED_FOR_MY_APP);
-            } else {
-                // To request that the user remove all app cache files instead, set
-                // "action" to ACTION_CLEAR_APP_CACHE.
-                Intent storageIntent = new Intent();
-                storageIntent.setAction(Intent.ACTION_OPEN_DOCUMENT_TREE);
-            }
-            //long availableBytes = storageManager.getFreeBytes(appSpecificInternalDirUuid);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return true;
-    }
-
-    /*
-    private void displayStorageInfo() {
-        StorageManager storageManager = (StorageManager) getContext().getSystemService(getContext().STORAGE_SERVICE);
-        File internalStorage = Environment.getDataDirectory();
-        StatFs statFs = new StatFs(internalStorage.getPath());
-
-        long totalBytes;
-        long availableBytes;
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            UUID appSpecificInternalDirUuid = storageManager.getUuidForPath(internalStorage);
-            totalBytes = storageManager.getTotalBytes(appSpecificInternalDirUuid);
-            availableBytes = storageManager.getAllocatableBytes(appSpecificInternalDirUuid);
-        } else {
-            totalBytes = (long) statFs.getBlockSize() * (long) statFs.getBlockCount();
-            availableBytes = (long) statFs.getBlockSize() * (long) statFs.getAvailableBlocks();
-        }
-
-        String storageInfo = "Total Storage: " + formatSize(totalBytes) + "\nAvailable Storage: " + formatSize(availableBytes);
-        //storageInfoTextView.setText(storageInfo);
-    }
-     */
 
 
     private String formatSize(long size) {
@@ -1074,26 +615,6 @@ public class ListFragment extends Fragment
         return resultBuffer.toString();
     }
 
-    //  otevre prvni a posledni radek csv, zjisti zacatek a konec dat.
-    @RequiresApi(api = Build.VERSION_CODES.O)
-    private void getCsvDetail( DocumentFile documentFile, FileDetail adet) {
-        // downloadCSVFile();
-        CSVReader reader = new CSVReader();
-        String AFileName = documentFile.getUri().getPath();
-        SecondaryCardChannel channel = new SecondaryCardChannel(documentFile.getUri(), getContext());
-        RandomAccessFile rac = channel.openLocalFile(documentFile.getUri());
-
-        try {
-            // Read data from the file
-            ByteBuffer readBuffer = ByteBuffer.allocate(2048);
-            int bytesRead = channel.readLast2048Bytes(readBuffer);
-            if (bytesRead != -1) {
-                readBuffer.flip();
-            }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     public void DoLoadFil()
@@ -1108,32 +629,31 @@ public class ListFragment extends Fragment
         FileDetail fdet = null;
         CSVReader reader = new CSVReader();
         for (File file : files) {
-            if (null != file) {
+            if (file != null) {
+                if (file.length() == 0) {
+                    Log.d(TAG, "File " + file.getName() + " is empty.");
+                    continue;
+                }
+
                 Uri fileUri = Uri.fromFile(file);  // Convert File to Uri
                 try {
                     fdet = reader.FirstLast(fileUri);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
+                fdet.setFull(fileUri.toString());
                 fdet.setName(file.getName());
                 fdet.setFileSize((int) file.length());
                 fFriends.add(fdet);
             }
         }
-        ListView mListView = rootView.findViewById(R.id.listView);
-        FileViewerAdapter friendsAdapter = new FileViewerAdapter(getContext(), fFriends);
-        mListView.setAdapter(friendsAdapter);
-        mListView.animate();
         }
-
     }
 
     //public void DoLoadFiles(String sharedPath, String privatePath)
     @RequiresApi(api = Build.VERSION_CODES.O)
     public void DoLoadFiles()
     {
-       // fFriends = setFriends();
-       // fFriends.clear();
 
         File cacheDir = new File(DIRECTORY_TEMP);
         if (cacheDir.isDirectory()) {
@@ -1148,16 +668,23 @@ public class ListFragment extends Fragment
             CSVReader reader = new CSVReader();
             for (File file : files) {
                 try {
-
                     // ve fdet se mi vraci info z db, pripadne z dlouheho runu radek po radku
                     if (db.getFileDetail(file.getName()) != null) {
                         fdet = db.getFileDetail(file.getName());
                     } else {
                         Location location = LollyApplication.getInstance().getLocation();
                         Uri fileUri = Uri.fromFile(file);
+
+                        if (!fileUri.toString().contains(".csv"))
+                            continue;
+
                         fdet = reader.readFileContent(fileUri);
+                        if (fdet==null)
+                            continue;
+
                         fdet.setName(file.getName());
                         fdet.setFileSize((int) file.length());
+                        fdet.setFull(fileUri.toString());
                         db.addFile(fdet, location);
                     }
 
@@ -1165,21 +692,21 @@ public class ListFragment extends Fragment
                     throw new RuntimeException(e);
                 }
 
-                // vymeni rychlou statistiku za vylepsenou
-                FileDetail temp = findFileName(file.getName());  // najdi row podle jmena souboru
+                // vymeni vizualni prvni
+                FileDetail temp = findFileName(file.getName());  // najdi existujici row podle jmena souboru
                 if (temp != null) {
                     updateFriends(fdet, temp);
                 }
             }
 
+            /*
             ListView mListView = rootView.findViewById(R.id.listView);
             FileViewerAdapter friendsAdapter = new FileViewerAdapter(getContext(), fFriends);
             mListView.setAdapter(friendsAdapter);
+            */
             //mListView.animate();
         }
     }
-
-
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
@@ -1190,25 +717,28 @@ public class ListFragment extends Fragment
 
          DoLoadFil();
 
-        // in async task we're gonna load files from the folder and setup the database
+         /*
+        ListView mListView = rootView.findViewById(R.id.listView);
+        FileViewerAdapter friendsAdapter = new FileViewerAdapter(getContext(), fFriends);
+        mListView.setAdapter(friendsAdapter);
+        mListView.animate();
 
-        Log.d("LIST", "Started...");
-
-
-        /*
-        executor.execute(() -> {
-            
-            if (filePath != null) {
-                if (checkPermission())
-                    listItem(new File(filePath));
-            } else {
-                for (File folder : rootDirectories) {
-                    if (checkPermission()) listItem(folder);
-                    break;
-                }
+        mListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                FileDetail selectedItem = (FileDetail) parent.getItemAtPosition(position);
+                String fileName = selectedItem.getName();
+                friendsAdapter.setSelectedPosition(position);
             }
         });
-        */
+       */
+        // in async task we're gonna load files from the folder and setup the database
+        Log.d("LIST", "Started...");
+        executor.execute(() -> {
+            DoLoadFiles();
+        });
+
+
     }
 
 

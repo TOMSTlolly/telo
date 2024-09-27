@@ -16,7 +16,7 @@ allprojects{
 }
 
 ext {
- simulateHardware = true
+ simulateHardware = false
 }
 
 android {
