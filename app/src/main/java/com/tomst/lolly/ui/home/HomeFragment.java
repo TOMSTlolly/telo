@@ -545,7 +545,7 @@ public class HomeFragment extends Fragment {
         // tady vybiram callbacky od jinych fragmentu a aplikace
         dmd.getMessageContainerToFragment().observe(getViewLifecycleOwner(), message -> {
              String exportPath = lollyApp.getPrefExportFolder();
-            binding.expPath.setText(exportPath);
+            //binding.expPath.setText(exportPath);
         });
 
         binding = FragmentHomeBinding.inflate(inflater, container, false);
@@ -557,7 +557,7 @@ public class HomeFragment extends Fragment {
             public void onClick(View view) {
                 lollyApp = LollyApplication.getInstance();
                 String exportPath = lollyApp.getPrefExportFolder();
-                binding.expPath.setText(exportPath);
+                //binding.expPath.setText(exportPath);
             }
         });
 
