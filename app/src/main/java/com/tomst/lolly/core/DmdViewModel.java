@@ -26,9 +26,15 @@ public class DmdViewModel extends ViewModel
     private ArrayList<Entry> valHA = new ArrayList<>();
 
 
-    public void SetDeviceType(TDeviceType val){
+    public void setDeviceType(TDeviceType val){
         fDevType = val;
+        assert(fDevType != TDeviceType.dUnknown);
     }
+
+    public TDeviceType GetDeviceType(){
+        return fDevType;
+    }
+
     // vrati data, ktera sem nahral TMD adapter pomoci AddMereni nize.
 
     public ArrayList<Entry> getT1(){

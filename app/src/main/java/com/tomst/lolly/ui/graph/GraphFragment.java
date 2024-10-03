@@ -2,6 +2,7 @@ package com.tomst.lolly.ui.graph;
 
 import static android.graphics.Color.RED;
 import static com.tomst.lolly.core.Constants.HEADER_LINE_LENGTH;
+import static com.tomst.lolly.core.TDeviceType.dLolly4;
 import static com.tomst.lolly.core.shared.getSerialNumberFromFileName;
 
 import android.content.pm.ActivityInfo;
@@ -27,7 +28,6 @@ import androidx.annotation.RequiresApi;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
-import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -49,17 +49,16 @@ import com.github.mikephil.charting.data.LineDataSet;
 import com.github.mikephil.charting.components.Legend;
 
 import com.github.mikephil.charting.utils.ColorTemplate;
+import com.tomst.lolly.LollyApplication;
 import com.tomst.lolly.R;
 import com.tomst.lolly.core.CSVFile;
-import com.tomst.lolly.core.OnProListener;
 import com.tomst.lolly.core.TDendroInfo;
+import com.tomst.lolly.core.TDeviceType;
 import com.tomst.lolly.core.TMereni;
 import com.tomst.lolly.core.TPhysValue;
 import com.tomst.lolly.databinding.FragmentGraphBinding;
 import com.tomst.lolly.core.DmdViewModel;
 import com.tomst.lolly.core.CSVReader;
-import com.tomst.lolly.fileview.FileDetail;
-
 
 @RequiresApi(api = Build.VERSION_CODES.O)
 public class GraphFragment extends Fragment {
@@ -103,7 +102,6 @@ public class GraphFragment extends Fragment {
         }
     }
 
-
     public GraphFragment() {
         // Required empty public constructor
         headerIndex = 0;
@@ -122,7 +120,6 @@ public class GraphFragment extends Fragment {
 
     private SeekBar seekBarX;
     private TextView tvX;
-
 
     private final int[] colors = new int[]{
             ColorTemplate.VORDIPLOM_COLORS[0],
@@ -551,7 +548,9 @@ public class GraphFragment extends Fragment {
         super.onResume();
 
         // Set the orientation to landscape (90 degrees)
-//        getActivity().setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+        if (LollyApplication.getInstance().getPrefRotateGraph()){
+            getActivity().setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+        }
     }
 
 
@@ -623,6 +622,40 @@ public class GraphFragment extends Fragment {
         combinedData = new CombinedData();
     }
 
+    // set the graph components  based on the device type
+    private void  setGraphLines()
+    {
+        // all off
+        binding.vT1.setChecked(false);
+        binding.vT2.setChecked(false);
+        binding.vT3.setChecked(false);
+        binding.vGrowth.setChecked(false);
+
+        switch (dmd.GetDeviceType())   {
+            case dLolly4:
+            case dLolly3:
+                binding.vT1.setChecked(true);
+                binding.vT2.setChecked(true);
+                binding.vT3.setChecked(true);
+                binding.vGrowth.setChecked(true);
+                break;
+
+            case dAdMicro:
+            case dAD:
+                binding.vT1.setChecked(true);
+                binding.vGrowth.setChecked(true);
+                break;
+
+            case  dTermoChron:
+                binding.vT1.setChecked(true);
+                break;
+
+            default:
+                throw new UnsupportedOperationException("Not yet implemented");
+        }
+
+    }
+
     public View onCreateView(
             @NonNull LayoutInflater inflater,
             ViewGroup container,
@@ -635,18 +668,7 @@ public class GraphFragment extends Fragment {
 
         // Check the device's orientation
         View root;
-        /*
-        int orientation = getResources().getConfiguration().orientation;
-        if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
-            // Inflate the landscape layout
-            root = inflater.inflate(R.layout.fragment_graph_land, container, false);
-        } else {
-            // Inflate the default layout
-            root = inflater.inflate(R.layout.fragment_graph, container, false);
-        }
-        */
-
-        root = inflater.inflate(R.layout.fragment_graph_land, container, false);
+        root = inflater.inflate(R.layout.fragment_graph, container, false);
 
         binding = FragmentGraphBinding.bind(root);
         setupGraph();
@@ -683,7 +705,6 @@ public class GraphFragment extends Fragment {
                          if (loadCSVFil(fileName)){
                                 fSerialNumber = getSerialNumberFromFileName(fileNames[0]);
                          }
-
                         // muzu mit fSerialNumber i z predchoziho behu
                         //   if (fSerialNumber.length()>1)
                          //      DisplayData();
@@ -693,30 +714,40 @@ public class GraphFragment extends Fragment {
                             .removeObservers(getViewLifecycleOwner());
                 });
 
+
+
+        // teplota 1
         CheckBox cbT1 = binding.vT1;
         cbT1.setOnClickListener(view ->
         {
             DoBtnClick(view);
         });
         cbT1.setChecked(true);
+
+        // teplota 2
         CheckBox cbT2 = binding.vT2;
         cbT2.setOnClickListener(view ->
         {
             DoBtnClick(view);
         });
         cbT2.setChecked(false);
+
+        // teplota 3
         CheckBox cbT3 = binding.vT3;
         cbT3.setOnClickListener(view ->
         {
             DoBtnClick(view);
         });
         cbT3.setChecked(false);
+
+        // humidita
         CheckBox cbHum = binding.vGrowth;
         cbHum.setOnClickListener(view ->
         {
             DoBtnClick(view);
         });
         cbHum.setChecked(true);
+
 
         getActivity().setTitle("Lolly 4");
 

@@ -1,5 +1,10 @@
 package com.tomst.lolly.core;
 
+import static com.tomst.lolly.core.shared.aft;
+import static com.tomst.lolly.core.shared.between;
+import com.ftdi.j2xx.D2xxManager;
+import com.ftdi.j2xx.FT_Device;
+
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.IntentFilter;
@@ -16,12 +21,7 @@ import android.os.SystemClock;
 import android.util.Log;
 import android.widget.Toast;
 import com.tomst.lolly.BuildConfig;
-
 import androidx.annotation.RequiresApi;
-
-import com.ftdi.j2xx.D2xxManager;
-import com.ftdi.j2xx.FT_Device;
-//import com.google.firebase.encoders.json.BuildConfig;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -39,8 +39,9 @@ public class TMSReader extends Thread
     public final int SPI_DOWNLOAD_NONE = 100;
     public final int SPI_DOWNLOAD_ALL = 0;
     public final int SPI_DOWNLOAD_BOOKMARK = 1;
-    public final int SPI_DOWNLOAD_DATE = 2;
-    public final int SPI_DOWNLOAD_PREVIEW=3;
+    public final int SPI_DOWNLOAD_BOOKMARK_DAYS = 2;
+    public final int SPI_DOWNLOAD_DATE = 3;
+    public final int SPI_DOWNLOAD_PREVIEW=4;
 
     private final int BOOKMARK_DAY_CONVERSION = 848;
 
@@ -190,10 +191,30 @@ public class TMSReader extends Thread
         info.t2 = mer.t2;
         info.t3 = mer.t3;
         info.humAd = mer.hum;
+        info.devType = mer.dev;
+
+        info.fw  = null;
+        message.obj = info;
+        handler.sendMessage(message);
+    }
+
+    private void SendMex(TDevState stat, TMereni mer, RFirmware fw){
+        Message message = handler.obtainMessage();
+
+        TInfo info = new TInfo();
+        info.stat  = stat;
+        info.msg   = "measure";
+        info.t1 = mer.t1;
+        info.t2 = mer.t2;
+        info.t3 = mer.t3;
+        info.humAd = mer.hum;
+        info.devType = mer.dev;
+
+        // podrobnosti v hlavicce
+        info.fw = fw;
 
         message.obj = info;
         handler.sendMessage(message);
-
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
@@ -227,23 +248,6 @@ public class TMSReader extends Thread
         devState = TDevState.tStart;
     };
 
-    public static String aft(String line, String splitChar){
-        if (line.length()<1)
-            return "";
-
-        String [] str = line.split(splitChar);
-        if (str.length >1)
-            return (str[1]);
-        return "";
-    }
-
-    public static String between(String line, String s1, String s2){
-        if ( (line.indexOf(s1) <0) ||  (line.indexOf(s2)<0)  )
-          return "";
-
-        String subStr = line.substring(line.indexOf(s1 ) + 1, line.indexOf(s2));
-        return subStr;
-    }
 
     public boolean ParseHeader(String line)
     {
@@ -283,25 +287,40 @@ public class TMSReader extends Thread
         if (i <1)
             return false;
 
-        //char c = line.charAt(line.length()-1);
+        //1                     2
+        //123456789012345678
+       // &93^03%01.82 TMS-A
+
+        // TODO : TMS-A, zkontroluj burta
+
+        // je za TMS pomlcka ?
+       // boolean ret = true;
+        rfir.Result = true;
         char c = line.charAt(i+3);
+        if (c == '-') {
+            c = line.charAt(i + 4);
+            switch (c){
+                case 'T':
+                    rfir.DeviceType = TDeviceType.dTermoChron;
+                    break;
+
+                case 'A':
+                    rfir.DeviceType = TDeviceType.dAD;
+                    break;
+
+                default:
+                    rfir.DeviceType = TDeviceType.dUnknown;
+                    rfir.Result = false;
+            }
+            return rfir.Result;
+        }
+
+        // ok bude to TMS3/TMS4
+        rfir.Result = true;
+        c = line.charAt(i+3);
         switch (c){
-            case 'T':
-                rfir.DeviceType = TDeviceType.dTermoChron;
-                break;
-
-            case 'A':
-                rfir.DeviceType = TDeviceType.dAD;
-                break;
-
             case '4':
-                rfir.DeviceType = TDeviceType.dLolly4;
-                break;
-
             case '2':
-                rfir.DeviceType = TDeviceType.dLolly4;
-                break;
-
             case '#':
                 rfir.DeviceType = TDeviceType.dLolly4;
                 break;
@@ -310,8 +329,10 @@ public class TMSReader extends Thread
                 rfir.DeviceType = TDeviceType.dLolly3;
                 break;
 
-            default:
+            default: {
                 rfir.DeviceType = TDeviceType.dUnknown;
+                rfir.Result = false;
+            }
         }
         return rfir.Result;
     }
@@ -775,8 +796,6 @@ public class TMSReader extends Thread
         String s = "";
         TInfo info;
         info = new TInfo();
-
-
         lollyTime = Instant.MIN;
 
         if (fHer==null)
@@ -836,14 +855,18 @@ public class TMSReader extends Thread
 
                 case tHead:
                     s = fHer.doCommand(" ");
-                    // rozeber hlavicku a nastav rfir
+                    // parse header and set rfir
 
                     if (s.length()<2)
                         break;
 
                     if (ParseHeader(s)) {
                         info.msg = String.format("%d.%d.%d",rfir.Hw,rfir.Fw,rfir.Sub);
-                        SendMeasure(TDevState.tHead,s);
+                        //SendMeasure(TDevState.tHead,s);
+                        mer.dev = rfir.DeviceType;
+
+                        // TMereni is copied to TInfo in SendMex
+                        SendMex(TDevState.tHead,mer,rfir);   // Hlavicka
                         devState = TDevState.tSerial;
                     }
                     else {
@@ -887,7 +910,7 @@ public class TMSReader extends Thread
                         // info.t2 = mer.t2;
                         // info.t3 = mer.t3;
 
-                        SendMex(TDevState.tInfo,mer);
+                        SendMex(TDevState.tInfo,mer);  // aktualni mereni
                     }
                     devState = TDevState.tGetTime;
 
@@ -1092,6 +1115,38 @@ public class TMSReader extends Thread
         return finalHexString;
     }
 
+    private String getHexValueFromRespond(int pValue){
+        String hexString = Integer.toHexString(pValue).toUpperCase();
+
+        // pad the beginning of the string with 0's if less than 6 characters
+        StringBuilder finalHexStringBuilder = new StringBuilder();
+        for (int i = 0; i < 6 - hexString.length(); i++) {
+            finalHexStringBuilder.append("0");
+        }
+        finalHexStringBuilder.append(hexString);
+        String finalHexString = finalHexStringBuilder.toString();
+
+        Log.d("Sendmessage", "Bookmark hex value: " + finalHexString);
+
+        return finalHexString;
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    private boolean ReadCommand(String AFileName){
+        String respond = "";
+        DecodeTmsFormat parser = new DecodeTmsFormat();
+        DecodeTmsFormat.SetHandler(datahandler);
+        DecodeTmsFormat.SetDeviceType(rfir.DeviceType);
+
+        SharedPreferences prefs = context.getSharedPreferences(
+                "save_options", Context.MODE_PRIVATE
+        );
+
+
+
+        return false;
+    }
+
     @RequiresApi(api = Build.VERSION_CODES.O)
     private boolean ReadData()
     {
@@ -1126,7 +1181,9 @@ public class TMSReader extends Thread
         DoProgress(-lastAddress);  // celkovy pocet bytu
 
         String sHexString = "";
+        String bHexString="";
 
+        // setup initial pointer to
         switch (readFromSpinnerIndex) {
             case SPI_DOWNLOAD_NONE:
             case SPI_DOWNLOAD_ALL:
@@ -1135,8 +1192,28 @@ public class TMSReader extends Thread
                 Log.d("Sendmessage", respond);
                 break;
             case SPI_DOWNLOAD_BOOKMARK:
+                // find last bookmark values and setup pointer to the correct address
+                respond = fHer.doCommand("B");
+                sHexString = aft(respond, "=");
+
+                // set and check pointer to the data before readin from flash
+                if (!fHer.doSACH(Integer.parseInt(sHexString)))
+                    return false;
+
+                /*
+                // controlled conversion back and forth between types just to check the value is valid
+                bHexString = getHexValueFromRespond(Integer.parseInt(sHexString, 16));
+                respond = fHer.doCommand("S=$"+bHexString);
+                respond = fHer.doCommand("S");
+                */
+
+                Log.d("SendMessage", respond);
+                SendMeasure(TDevState.tReadType, "read bookmark");
+                break;
+
+            case SPI_DOWNLOAD_BOOKMARK_DAYS:
                 // find hex value for bookmark based on days value
-                String bHexString = getHexValueFromBookmark(lastAddress, bookmarkDays);
+                bHexString = getHexValueFromBookmark(lastAddress, bookmarkDays);
                 SendMeasure(TDevState.tReadType, "read from bookmark");
 
                 // do B command to set bookmark
@@ -1183,17 +1260,13 @@ public class TMSReader extends Thread
                 // do S command with hex value
                 respond = fHer.doCommand("S=$" + sHexString);
                 Log.d("SendMessage", respond);
-
-
         }
 
         fAddr = 0;
-
         String ss = "";
         while ((fAddr < lastAddress) && (mRunning==true))
         {
             // performing operation
-
             respond = fHer.doCommand("D");
             if (respond.length()>1) {
                 ss = parser.dpacket(respond);
@@ -1207,7 +1280,6 @@ public class TMSReader extends Thread
                 fAddr = getaddr(respond);
 
             // Updating the progress bar
-
             DoProgress(fAddr);
         }
 

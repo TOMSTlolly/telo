@@ -229,13 +229,13 @@ public class OptionsFragment extends Fragment implements AdapterView.OnItemSelec
         int spiDownload = (int) binding.spiDownload.getSelectedItemId();
         editor.putInt("readFrom",spiDownload);
 
-
         // interval mezi merenima
         int spiInterval = (int) binding.spiInterval.getSelectedItemId();
         editor.putInt("mode",spiInterval);
 
 //        editor.putBoolean("bookmark",binding.bookmark.isChecked());
         editor.putBoolean("showgraph",binding.showgraph.isChecked());
+        editor.putBoolean("rotategraph",binding.rotategraph.isChecked());
         editor.putBoolean("noledlight",binding.noledlight.isChecked());
         editor.putBoolean("showmicro",binding.showmicro.isChecked());
         editor.putBoolean("settime",binding.settime.isChecked());
@@ -320,6 +320,7 @@ public class OptionsFragment extends Fragment implements AdapterView.OnItemSelec
 //        boolean b = sharedPref.getBoolean("bookmark",false);
 //        binding.bookmark.setChecked(b);
         binding.showgraph.setChecked(sharedPref.getBoolean("showgraph",false));
+        binding.rotategraph.setChecked(sharedPref.getBoolean("rotategraph",false));
         binding.noledlight.setChecked(sharedPref.getBoolean("noledlight",false));
         binding.showmicro.setChecked(sharedPref.getBoolean("showmicro",false));
         binding.settime.setChecked(sharedPref.getBoolean("settime",false));
@@ -472,7 +473,7 @@ public class OptionsFragment extends Fragment implements AdapterView.OnItemSelec
                         R.array.download_array,
                         android.R.layout.simple_spinner_item
                 );
-        adaDownload.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        //adaDownload.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         adaDownload.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spiDownload.setAdapter(adaDownload); // Apply the adapter to the spinner
         spiDownload.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -483,14 +484,14 @@ public class OptionsFragment extends Fragment implements AdapterView.OnItemSelec
 
                 switch (position) {
                     case SPI_DOWNLOAD_BOOKMARK:
-                        bookmarkLayout.setVisibility(View.VISIBLE);
+                        //bookmarkLayout.setVisibility(View.VISIBLE);
+                        bookmarkLayout.setVisibility(View.GONE);
                         fromDateLayout.setVisibility(View.GONE);
                         break;
 
                     case SPI_DOWNLOAD_DATE:
                         bookmarkLayout.setVisibility(View.GONE);
                         fromDateLayout.setVisibility(View.VISIBLE);
-
                         break;
 
                     case SPI_DOWNLOAD_NONE:

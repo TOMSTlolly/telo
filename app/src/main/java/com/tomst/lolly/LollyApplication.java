@@ -48,6 +48,7 @@ import com.google.firebase.auth.FirebaseUser;
 import com.tomst.lolly.core.Constants;
 import com.tomst.lolly.core.DatabaseHandler;
 import com.tomst.lolly.core.FileOpener;
+import com.tomst.lolly.core.TDeviceType;
 import com.tomst.lolly.databinding.ActivityMainBinding;
 import com.tomst.lolly.core.DmdViewModel;
 
@@ -58,14 +59,13 @@ import java.util.List;
 
 public class LollyApplication extends AppCompatActivity implements View.OnClickListener {
 
+    SharedPreferences sharedPref = null;
     private static final int PERMISSION_REQUEST_CODE = 200;
     private static final int STORAGE_PERMISSION_CODE = 100;
 
     public static String DIRECTORY_TEMP;                         // The directory to store temporary tracks = getCacheDir() + "/Tracks"
-    public static String DIRECTORY_FILESDIR_TRACKS;              // The directory that contains the empty gpx and kml file = getFilesDir() + "/URI"
-    public static String DIRECTORY_FILESDIR_LOGS;              // The directory that contains the empty gpx and kml file = getFilesDir() + "/URI"
-    public static String FILE_EMPTY_CSV;                         // The full path of a empty GPX file
-    public static String FILE_EMPTY_LOG;                         // The full path of a empty KML file
+    public static String DIRECTORY_URI;              // The directory that contains the empty gpx and kml file = getFilesDir() + "/URI"
+    public static String DIRECTORY_LOGS;              // The directory that contains the empty gpx and kml file = getFilesDir() + "/URI"
 
     // nastaveni preferovane cesty pro ukladani dat
     private String  prefExportFolder            = "";            // The folder for csv exportation
@@ -78,12 +78,32 @@ public class LollyApplication extends AppCompatActivity implements View.OnClickL
         this.prefExportFolder = prefExportFolder;                 // The folder for csv exportation
     }
 
-      public  String getCacheDirectoryPath() {
+    public  String getCacheDirectoryPath() {
             //File tempDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-             String ret =  getBaseContext() .getCacheDir() .getAbsolutePath()+ "/Tracks";
-            return ret;
+       // String ret =  getBaseContext() .getCacheDir() .getAbsolutePath()+ "/Tracks";
+        String ret= null;
+        try {
+            ret = getCacheDir().getCanonicalPath() + "/Tracks";
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
+        return ret;
+    }
 
+    public TDeviceType getDeviceType() {
+        return dmdViewModel.GetDeviceType();
+    }
+
+    private boolean prefShowGraph = true;                         // Show the graph in the main activity
+    public boolean getPrefShowGraph() {
+        prefShowGraph = sharedPref.getBoolean("showgraph", true);
+        return prefShowGraph;                                                   // Show the graph in the main activity
+    }
+    private boolean prefRotateGraph=true;                         // Rotate the graph in the main activity
+    public boolean getPrefRotateGraph() {
+        prefRotateGraph = sharedPref.getBoolean("rotategraph", true);
+        return prefRotateGraph;                                                  // Rotate the graph in the main activity
+    }
 
     private View view;
     private ActivityMainBinding binding;
@@ -252,23 +272,32 @@ public class LollyApplication extends AppCompatActivity implements View.OnClickL
 
 
     public void createPrivateFolders() {
+        // csv
         File sd = new File(DIRECTORY_TEMP);
         if (!sd.exists()) {
             if (sd.mkdir()) Log.w("myApp", "[#] GPSApplication.java - Folder created: " + sd.getAbsolutePath());
             else Log.w("myApp", "[#] GPSApplication.java - Unable to create the folder: " + sd.getAbsolutePath());
         } else Log.w("myApp", "[#] GPSApplication.java - Folder exists: " + sd.getAbsolutePath());
 
+        // male obrazky grafu ?
         sd = new File(getApplicationContext().getFilesDir() + "/Thumbnails");
         if (!sd.exists()) {
             if (sd.mkdir()) Log.w("myApp", "[#] GPSApplication.java - Folder created: " + sd.getAbsolutePath());
             else Log.w("myApp", "[#] GPSApplication.java - Unable to create the folder: " + sd.getAbsolutePath());
         } else Log.w("myApp", "[#] GPSApplication.java - Folder exists: " + sd.getAbsolutePath());
 
-        sd = new File(DIRECTORY_FILESDIR_TRACKS);
+        sd = new File(DIRECTORY_URI);
         if (!sd.exists()) {
             if (sd.mkdir()) Log.w("myApp", "[#] GPSApplication.java - Folder created: " + sd.getAbsolutePath());
             else Log.w("myApp", "[#] GPSApplication.java - Unable to create the folder: " + sd.getAbsolutePath());
         } else Log.w("myApp", "[#] GPSApplication.java - Folder exists: " + sd.getAbsolutePath());
+
+        sd = new File(DIRECTORY_LOGS);
+        if (!sd.exists()) {
+            if (sd.mkdir()) Log.w("myApp", "[#] GPSApplication.java - Folder created: " + sd.getAbsolutePath());
+            else Log.w("myApp", "[#] GPSApplication.java - Unable to create the folder: " + sd.getAbsolutePath());
+        } else Log.w("myApp", "[#] GPSApplication.java - Folder exists: " + sd.getAbsolutePath());
+
     }
 
     public boolean isExportFolderWritable() {
@@ -383,40 +412,16 @@ public class LollyApplication extends AppCompatActivity implements View.OnClickL
             manager.createNotificationChannel(channel);
         }
 
-//        TOAST_VERTICAL_OFFSET = (int)(75 * getResources().getDisplayMetrics().density);
-
+        //  TOAST_VERTICAL_OFFSET = (int)(75 * getResources().getDisplayMetrics().density);
         DIRECTORY_TEMP = getApplicationContext().getCacheDir() + "/Tracks";
-        DIRECTORY_FILESDIR_TRACKS = getApplicationContext().getFilesDir() + "/URI";
-        DIRECTORY_FILESDIR_LOGS   = getApplicationContext().getFilesDir() + "/Logs";
-        FILE_EMPTY_CSV = DIRECTORY_FILESDIR_TRACKS + "/empty.csv";
-        FILE_EMPTY_LOG = DIRECTORY_FILESDIR_TRACKS + "/empty.log";
+        DIRECTORY_URI = getApplicationContext().getCacheDir() + "/URI";
+        DIRECTORY_LOGS = getApplicationContext().getCacheDir() + "/Logs";
 
         createPrivateFolders();
         gpsDataBase = new DatabaseHandler(this);
 
-        // vyrobim prazdny CSV
-        File sd = new File(FILE_EMPTY_CSV);
-        if (!sd.exists()) {
-            try {
-                sd.createNewFile();
-            } catch (IOException e) {
-                e.printStackTrace();
-                Log.w("myApp", "[#] GPSApplication.java - Unable to create " + sd.getAbsolutePath());
-            }
-        }
-        // vyrobim prazdny CSV
-        sd = new File(FILE_EMPTY_LOG);
-        if (!sd.exists()) {
-            try {
-                sd.createNewFile();
-            } catch (IOException e) {
-                e.printStackTrace();
-                Log.w("myApp", "[#] GPSApplication.java - Unable to create " + sd.getAbsolutePath());
-            }
-        }
-
         Context context = getApplicationContext();
-        SharedPreferences sharedPref = context.getSharedPreferences(getString(R.string.save_options), context.MODE_PRIVATE);
+        sharedPref= context.getSharedPreferences(getString(R.string.save_options), context.MODE_PRIVATE);
         prefExportFolder = sharedPref.getString("prefExportFolder", "");
         if (!prefExportFolder.isEmpty()) {
             if (!isExportFolderWritable())
@@ -424,7 +429,8 @@ public class LollyApplication extends AppCompatActivity implements View.OnClickL
             //   prefExportFolder = "";  // pokud neexistuje, tak se nastavi na prazdny retezec (
             //prefExportFolder = Environment.DIRECTORY_DOWNLOADS;)
         }
-
+       prefShowGraph = sharedPref.getBoolean("prefShowGraph", true);
+       prefRotateGraph = sharedPref.getBoolean("prefRotateGraph", true);
        /*
         String sExportFolder = sharedPref.getString("prefExportFolder",",");
         File tsd = new File(sExportFolder);  // otevre adresar

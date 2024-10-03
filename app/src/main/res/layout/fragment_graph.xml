@@ -9,9 +9,15 @@
     android:paddingRight="16dp"
     tools:context=".ui.graph.GraphFragment">
 
+        <ProgressBar
+            android:id="@+id/proBar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
         <com.github.mikephil.charting.charts.CombinedChart
             android:id="@+id/chart1"
-            android:layout_width="380dp"
+            android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="20"
             android:textAlignment="center" />
@@ -20,24 +26,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_weight="0">
-
-                <CheckBox
-                    android:id="@+id/vGrowth"
-                    android:layout_width="wrap_content"
-                    android:layout_height="match_parent"
-                    android:layout_weight="9"
-                    android:checked="true"
-                    android:tag="4"
-
-                    android:text="Growth/Soil Moisture: ▬ ▬ ▬ ▬ ▬ ▬" />
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:paddingBottom="56dp">
 
                 <CheckBox
                     android:id="@+id/vT1"
@@ -46,7 +35,7 @@
                     android:layout_weight="9"
                     android:checked="true"
                     android:tag="1"
-                    android:text="Temp 1:          ▬▬▬▬▬" />
+                    android:text="T1:" />
 
                 <CheckBox
                     android:id="@+id/vT2"
@@ -55,7 +44,7 @@
                     android:layout_weight="9"
                     android:checked="true"
                     android:tag="2"
-                    android:text="Temp 2:          ━━━━━━━━" />
+                    android:text="T2:" />
 
                 <CheckBox
                     android:id="@+id/vT3"
@@ -64,17 +53,15 @@
                     android:layout_weight="9"
                     android:checked="true"
                     android:tag="3"
-                    android:text="Temp 3:          ⎯⎯⎯⎯⎯" />
+                    android:text="T3:" />
+                <CheckBox
+                    android:id="@+id/vGrowth"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:layout_weight="9"
+                    android:checked="true"
+                    android:tag="4"
+                    android:text="Growth/Soil Moisture:" />
 
         </LinearLayout>
-
-
-        <ProgressBar
-            android:id="@+id/proBar"
-            style="?android:attr/progressBarStyleHorizontal"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_gravity="bottom"
-            android:layout_marginBottom="20dp"
-            android:layout_weight="1" />
 </LinearLayout>

@@ -1,5 +1,6 @@
 package com.tomst.lolly.core;
 
+import static com.tomst.lolly.core.shared.aft;
 import static java.lang.System.currentTimeMillis;
 
 import android.os.Handler;
@@ -430,6 +431,20 @@ public class uHer extends Thread {
             }
 
         } while ((xst != twstate.xFINAL));
+        return (true);
+    }
+
+    // nastavim adresu prikazem S=$000001
+    // zkontroluju, ze se vraci spravne nastavena adresa
+    public boolean doSACH(int AValue){
+        String respond = doCommand("S=$"+String.format("%06X",AValue));
+        if (respond.isEmpty())
+            return(false);
+
+        String sHexString = aft(respond, "=");
+        if (AValue !=Integer.parseInt(sHexString, 16))
+            return(false);
+
         return (true);
     }
 

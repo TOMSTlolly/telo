@@ -195,11 +195,10 @@ public class ListFragment extends Fragment
             {
                 ZipFiles zipFiles = new ZipFiles();
 
-//                File dir = new File(Constants.FILEDIR);
+              //  File dir = new File(Constants.FILEDIR);
                 String zipDirName = Constants.FILEDIR+"//tmp.zip";
                 File dir = new File(DIRECTORY_TEMP);
                 //String zipDirName = DIRECTORY_TEMP+"//tmp.zip";
-
 
                 zipFiles.zipDirectory(dir, zipDirName);
 
@@ -654,7 +653,6 @@ public class ListFragment extends Fragment
     @RequiresApi(api = Build.VERSION_CODES.O)
     public void DoLoadFiles()
     {
-
         File cacheDir = new File(DIRECTORY_TEMP);
         if (cacheDir.isDirectory()) {
             File[] files = cacheDir.listFiles();

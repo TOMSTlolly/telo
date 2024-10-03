@@ -17,6 +17,26 @@ import java.time.format.DateTimeFormatter;
 public class shared {
 
 
+    public static String aft(String line, String splitChar){
+        if (line.length()<1)
+            return "";
+
+        String [] str = line.split(splitChar);
+        if (str.length >1)
+            return (str[1]);
+        return "";
+    }
+
+    public static String between(String line, String s1, String s2){
+        if ( (line.indexOf(s1) <0) ||  (line.indexOf(s2)<0)  )
+            return "";
+
+        String subStr = line.substring(line.indexOf(s1 ) + 1, line.indexOf(s2));
+        return subStr;
+    }
+
+
+
     public static  String getSerialNumberFromFileName(String fileName) {
         // filename should look like "data_92221411_2023_09_26_0.csv"
         // serial number should be the second value. No other way to get the serial number

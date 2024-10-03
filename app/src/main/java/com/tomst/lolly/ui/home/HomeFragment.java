@@ -40,15 +40,16 @@ import com.tomst.lolly.core.Constants;
 import com.tomst.lolly.core.DmdViewModel;
 import com.tomst.lolly.core.FileOperation;
 import com.tomst.lolly.core.PermissionManager;
+import com.tomst.lolly.core.RFirmware;
 import com.tomst.lolly.core.TDevState;
+import com.tomst.lolly.core.TDeviceType;
 import com.tomst.lolly.core.TInfo;
+import com.tomst.lolly.core.TMSSim;
 import com.tomst.lolly.core.TMereni;
 import com.tomst.lolly.core.TMeteo;
 import com.tomst.lolly.databinding.FragmentHomeBinding;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -371,6 +372,44 @@ public class HomeFragment extends Fragment {
         }
     }
 
+
+    private void setFirmwareInfo(RFirmware fw){
+        binding.devser.setText(fw.Serial);
+        /*
+        binding.devhw.setText(String.valueOf(rfir.Hw));
+        binding.devfw.setText(String.valueOf(rfir.Fw));
+        binding.devsub.setText(String.valueOf(rfir.Sub));
+        binding.devname.setText(rfir.DeviceName);
+        binding.devstriska.setText(rfir.Striska);
+        binding.devfile.setText(rfir.FirmwareFile);
+        binding.devpoznamka.setText(rfir.Poznamka);
+         */
+    }
+
+
+    private void  setDeviceImage(TDeviceType devType){
+        ImageView img = (ImageView)  getActivity().findViewById(R.id.devImage);
+        switch (devType){
+            case dLolly3:
+            case dLolly4:
+                img.setImageResource(R.drawable.dev_lolly);
+                break;
+
+            case dTermoChron:
+                img.setImageResource(R.drawable.dev_wurst);
+                break;
+
+            case dAD:
+            case dAdMicro:
+                img.setImageResource(R.drawable.dev_ad);
+                break;
+
+            default:
+                img.setImageResource(R.drawable.shape_circle);
+                break;
+        }
+    }
+
     @RequiresApi(api = Build.VERSION_CODES.O)
     private String FormatInstant(Instant value){
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern(Constants.DEVICE_FORMAT)
@@ -405,8 +444,14 @@ public class HomeFragment extends Fragment {
                     break;
 
                 case tHead:
-                    //binding.devser.setText(ftTMS.SerialNumber);
-                    //binding.devser.setText(info.msg); // zapis hw.fw firmware
+                    // nastav info o firmware v lizatku
+
+                    // nastav obrazek zarizeni
+                    setDeviceImage(info.fw.DeviceType);
+
+                    // nastav typ zarizeni do dmdViewModel a tim i LollyApplication
+                    dmd.setDeviceType(info.fw.DeviceType);
+
                     break;
 
                 case tSerial:
@@ -463,7 +508,7 @@ public class HomeFragment extends Fragment {
 
                 case tReadMeteo:
                     // show meteo mode and image
-                    ImageView img = (ImageView)  getActivity().findViewById(R.id.devImage);
+                    ImageView img = (ImageView)  getActivity().findViewById(R.id.modeImage);
                     setMeteoImage(img,info.meteo);
                     binding.devMode.setText(info.msg); // here is wordly description of mode
                     break;
@@ -561,8 +606,17 @@ public class HomeFragment extends Fragment {
             }
         });
 
-        //final TextView textView = binding.mShowCount;
-        //homeViewModel.getText().observe(getViewLifecycleOwner(), textView::setText);
+        Button genCommand=binding.genCommand;
+        genCommand.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View view) {
+                String ALogName = LollyApplication.getInstance().DIRECTORY_LOGS + "/command.csv.";
+                TMSSim sim = new TMSSim(ALogName);
+                //dmd.sendMessageToFragment("TMD");
+                //Message message = handler.obtainMessage();
+                //message.obj = "Hello from HomeFragment";
+                //handler.sendMessage(message);
+            }
+        });
 
         // Opravneni - jak je spravne navrstvit ...
         permissionManager = new PermissionManager(getActivity());
