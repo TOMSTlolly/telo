@@ -2,8 +2,8 @@ package com.tomst.lolly.core;
 
 import static com.tomst.lolly.LollyApplication.DIRECTORY_LOGS;
 import static com.tomst.lolly.core.shared.aft;
-import static com.tomst.lolly.core.shared.between;
-i
+
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.net.Uri;
 import android.util.Base64;
@@ -72,57 +72,65 @@ public class TMSSim {
 
 
 
+    @SuppressLint("NewApi")
     public boolean LoadCommand(Uri uri) throws IOException{
-            int  idx = 0;
+        int  idx = 0;
 
-            // Streamovane vycteni, zatim nejrychlejsi verze
-            InputStream inputStream =
-                    this.context.getContentResolver().openInputStream(uri);
-            BufferedReader reader =
-                    new BufferedReader(new InputStreamReader(inputStream));
-            Integer totalBytes = inputStream.available();  // pocet dostupnych bytu
-            StringBuilder stringBuilder = new StringBuilder();
+        // Streamovane vycteni, zatim nejrychlejsi verze
+        InputStream inputStream =
+                this.context.getContentResolver().openInputStream(uri);
+        BufferedReader reader =
+                new BufferedReader(new InputStreamReader(inputStream));
+        Integer totalBytes = inputStream.available();  // pocet dostupnych bytu
+        StringBuilder stringBuilder = new StringBuilder();
 
-            int  iline = 0;
-            // cas prvniho mereni
-            FileDetail fileDetail = new FileDetail(uri.getLastPathSegment());
-            String currentline = reader.readLine();
-            if (currentline == null)
-                return false;
+        int  iline = 0;
+        // cas prvniho mereni
+        FileDetail fileDetail = new FileDetail(uri.getLastPathSegment());
+        String currentline = reader.readLine();
+        if (currentline == null)
+            return false;
 
-            //DoProgress(-totalBytes);  // vynuluj progress bar
-            TMSRec rec = new TMSRec();
-            TSimState state = TSimState.tWfc;
-            while ((currentline = reader.readLine()) != null) {
+     String respond = "";
+     DecodeTmsFormat parser = new DecodeTmsFormat();
+     // DecodeTmsFormat.SetHandler(datahandler);
+     // DecodeTmsFormat.SetDeviceType(rfir.DeviceType);
+     //DoProgress(-totalBytes);  // vynuluj progress bar
+        String s = "";
+        TMSRec rec = new TMSRec();
+        TSimState state = TSimState.tWfc;
+        boolean pok = false;
+        while ((currentline = reader.readLine()) != null) {
 
-                //  je to smer dovnitr
-
-                else if (currentline.startsWith("<<@D")) {
-                   // vyber odpoved z D
-                   rec.sRsp  = between(currentline, "<< ", " <<").trim();
-                    state = TSimState.tRespond;
-                }
-
-                switch (state) {
-                    case tWfc:
-                        if (currentline.startsWith(">> D")) {
-                            state = TSimState.tCommand;
-                        }
-
-                    case tCommand:
-                        rec.sCmd = aft(currentline, ">> ").trim(); // nechci mezery
-                        // zpracuj prikaz
-                        break;
-                    case tRespond:
-                        // zpracuj odpoved
-                        break;
-                }
-
-                iline++;
-
-               // DoProgress(iline);
+            // odpoved z TMS
+            if (currentline.startsWith("<<@D")) {
+               // vyber odpoved z D
+               pok = parser.dpacket(currentline);
+               Log.e("TAG",Boolean.toString(pok));
+               // state = TSimState.tRespond;
             }
-        return true;
+            // hlidej si nastaveni adresy, pro kontrolu na konci bloku
+            // <<@S=$06D5D8
+            else if (currentline.startsWith("<<@S=")){
+              String pom  = aft(currentline,"@S=");
+
+              //DecodeTmsFormat.CheckAddress = Integer.parseInt(pom.substring(1),16);
+              int i = Integer.parseInt(pom.substring(1),16);
+              DecodeTmsFormat.SetSafeAddress(i);
+              // parser.CheckAddress =  Integer.parseInt(pom);
+            }
+
+            // tohle jsem posilal do TMS
+            // odvysilam do home formy teploty a vsechno co se da
+            else if (currentline.startsWith(">>")){
+               // state = TSimState.tWfc;
+            }
+
+            iline++;
+
+           // DoProgress(iline);
+        }
+    return true;
     }
 
 

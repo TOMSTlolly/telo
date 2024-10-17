@@ -1,5 +1,6 @@
 package com.tomst.lolly.core;
 
+import static com.tomst.lolly.core.shared.aft;
 import static com.tomst.lolly.core.shared.convToMicro;
 
 import android.os.Build;
@@ -25,12 +26,27 @@ public class DecodeTmsFormat {
     // static private double fMicroSlope = (8890.0 / ( 34000.0 - 1279.0));
     static private int tmpNan = -200;
 
+    static public void SetSafeAddress(int Val)
+    {
+        SafeAddress = Val;
+        fMereni.Address = Val;
+    }
+    static public int GetSafeAddress(){
+        return SafeAddress;
+    }
+
+    static private int SafeAddress = 0;  // pri vycitani paketu nastavuju start pro kontrolu, ze mi dosel cely paket
+
     private static String OFFPATTERN = "yyyy.MM.dd HH:mm";
     private static DateTimeFormatter dateTimeFormatter;
     public static Instant lastDateTrace;
     static private int fIdx =0;
 
     //private OnGeekEventListener mListener; // listener field
+    private static final byte ADR_INDEX = 0;
+    private static final byte CMD_INDEX = 1;
+    private static final byte PAR_INDEX = 2;
+
 
     private static Handler handler = null;
 
@@ -370,19 +386,27 @@ public class DecodeTmsFormat {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
-    public String dpacket(String reply)
+    public boolean dpacket(String reply)
     {
+        if (SafeAddress <0)
+            throw new UnsupportedOperationException("Please check that you've set start address before read");
+
+        int iCnt = 0;
         String str = "";
+        int StartAddr = fMereni.Address;
         try {
             int i = 0;
             for (String val : reply.split("@")) {
                 // prevedu z hexa
-                //System.out.println(val);
+                // System.out.println(val);
 
                 // schovavam posledni string
                 val = val.replaceAll("(\\r|\\n)", "");
                 if (val.length() > 1)
                     str = val;
+
+                if (val.startsWith("<<"))
+                    continue;
 
                 if (val.startsWith("D")) {
                     // je to datova stopa
@@ -415,13 +439,51 @@ public class DecodeTmsFormat {
                         sendMeasure(fMereni);
 
                         fIdx++;
+
                     }
-                } else {
-                    // tady zbyvaji udalosti z prohlizecky "E"
+                }
+                else {
+                    // disassemble primitive parser data
+
+                    // address
+                    String[] view = val.split(";");
+                    int AdrAfter = StrToHex(aft(view[ADR_INDEX],"="));
+
+                    // command
+                    char cmd = (view[CMD_INDEX]).charAt(0);
+
+                    // parameter
+                    switch(cmd){
+                        case 'M':
+                            break;
+                        case 'D':
+                            break;
+                        case 'C':
+                            break;
+                        case '&':
+                            break;
+                        case '?':
+                            break;
+                        default:
+                            break;
+                    }
+
+                    // otestuj konecnou adresu vs
+                    Log.d("DecodeTmsFormat",val);
+                    int iRet = 8 * (i+1) + StartAddr ;
+                    boolean ret = (iRet == AdrAfter);
+                    if (ret)
+                        fMereni.Address = AdrAfter;
+
+                    return ret;
+
+
+                    //E=$000010;M;01
+                    //E=$06D5F8;C;2023/10/20,09:14:49+04
+                    //E=$06E700;D;2023/10/26,00:00:00+04
+                    //E=$06D5D8;&;&93%01.80#94232790
 
                 }
-
-
                 i++;
             }
 
@@ -432,10 +494,21 @@ public class DecodeTmsFormat {
             Log.e("TAG",e.toString());
         };
 
-        return str;
+        return false;
     }
 
+    // prevede hexa "$AABBCC" na integer
+    private int StrToHex(String val)
+    {
+        return Integer.parseInt(val.substring(1),16);
+    }
+
+
+
     private void sendMeasure (TMereni mer) { // Handle sending message back to handler
+        if (handler == null)
+            return;
+
         Message message = handler.obtainMessage();
         message.obj = new TMereni(mer);
         handler.sendMessage(message);

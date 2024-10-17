@@ -18,6 +18,7 @@ public class TMereni {
     public TDeviceType dev;
     public LocalDateTime dtm;
     public String msg;
+    public int Address; // adresa udalosti
     public TMereni(){
         this.idx =-1;
     }

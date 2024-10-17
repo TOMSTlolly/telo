@@ -36,13 +36,20 @@ import java.util.regex.Pattern;
 
 public class TMSReader extends Thread
 {
+    private enum TReadState
+    {
+        rsStart,
+        rsReadPacket,
+        rsPacketOK,
+        rsPacketFalse,
+        rsFinal
+    }
     public final int SPI_DOWNLOAD_NONE = 100;
     public final int SPI_DOWNLOAD_ALL = 0;
     public final int SPI_DOWNLOAD_BOOKMARK = 1;
     public final int SPI_DOWNLOAD_BOOKMARK_DAYS = 2;
     public final int SPI_DOWNLOAD_DATE = 3;
     public final int SPI_DOWNLOAD_PREVIEW=4;
-
     private final int BOOKMARK_DAY_CONVERSION = 848;
 
    // public static final TDevState devState = TDevState.tStart;
@@ -59,14 +66,14 @@ public class TMSReader extends Thread
     private int currentIndex = -1;
     private final int openIndex = 0;
     private boolean uart_configured = true;
-    private static Handler progressBarHandler = new Handler(Looper.getMainLooper());  // handler pro vysilani z Threadu
+    private static final Handler progressBarHandler = new Handler(Looper.getMainLooper());  // handler pro vysilani z Threadu
     public OnProListener mBarListener; // listener field
-    private int progressBarStatus=0;
+    private final int progressBarStatus=0;
     public TMereni mer ;
     public String sMeteo;
     public TMeteo meteo;
     private int fAddr;
-    private int TmpNan = -200;
+    private final int TmpNan = -200;
     private final String TAG = "TOMST";
     public String SerialNumber;
     public String AdapterNumber;
@@ -93,18 +100,19 @@ public class TMSReader extends Thread
     //private static Handler finalhandler = null;
     private static uHer fHer;
     private int DevCount;
-    private boolean bReadThreadGoing;
+    private final boolean bReadThreadGoing;
     public boolean mRunning;
 
     public void SetHer(uHer her){
-        this.fHer = her;
+        fHer = her;
     }
-    public void SetHandler(Handler han){  this.handler = han; }
+    public void SetHandler(Handler han){  handler = han; }
 
     public void SetBarListener(OnProListener AListener){
         this.mBarListener = AListener;
     }
-    public void SetDataHandler(Handler han) {this.datahandler= han;}
+    public void SetDataHandler(Handler han) {
+        datahandler= han;}
 
     public void SetFilePath(String AFileDir)
     {
@@ -246,7 +254,7 @@ public class TMSReader extends Thread
     public void SetRunning(boolean running){
         mRunning = running;
         devState = TDevState.tStart;
-    };
+    }
 
 
     public boolean ParseHeader(String line)
@@ -256,7 +264,7 @@ public class TMSReader extends Thread
         boolean result = false;
         line = aft(line,"=");
         rfir.Result = line.length()>0;
-        if (rfir.Result == false)
+        if (!rfir.Result)
             return (false);
 
         // hardware
@@ -488,7 +496,7 @@ public class TMSReader extends Thread
         if (ftDev == null)
             return;
 
-        if (ftDev.isOpen() == false) {
+        if (!ftDev.isOpen()) {
             Log.e("j2xx", "SetConfig: device not open");
             return;
         }
@@ -597,11 +605,11 @@ public class TMSReader extends Thread
                 return false;
             }
 
-            if (true == ftDev.isOpen()) {
+            if (ftDev.isOpen()) {
                 currentIndex = openIndex;
                 //Toast.makeText(DeviceUARTContext, "open device port(" + tmpProtNumber + ") OK", Toast.LENGTH_SHORT).show();
 
-                if (false == bReadThreadGoing) {
+                if (!bReadThreadGoing) {
                     //read_thread = new readThread(handler);
                     fHer = new uHer(handler);
                     fHer.ftDev = ftDev;
@@ -807,7 +815,7 @@ public class TMSReader extends Thread
 
         while (( devState != TDevState.tFinal )
                 && (devState != TDevState.tError)
-                && (mRunning==true))
+                && (mRunning))
         {
             // devState
             Log.e(TAG, devState.toString());
@@ -903,7 +911,7 @@ public class TMSReader extends Thread
                     }
                     // ted bych tu mel mit neco jako
                     // '00F;ADC;FF3;1A7;2'  -> 'Tx=26.4, ADC=255'
-                    if (convertMereni(s) == true)
+                    if (convertMereni(s))
                     {
                         // nakompiluj vysledky mereni do stringu a odesli
                         // info.t1 = mer.t1;
@@ -1059,7 +1067,7 @@ public class TMSReader extends Thread
             return false;
         }
 
-        if (ftDev.isOpen() == false) {
+        if (!ftDev.isOpen()) {
             Log.e("j2xx", "SendMessage: device not open");
             return false;
         }
@@ -1115,7 +1123,7 @@ public class TMSReader extends Thread
         return finalHexString;
     }
 
-    private String getHexValueFromRespond(int pValue){
+    private String LineUpHexa(int pValue){
         String hexString = Integer.toHexString(pValue).toUpperCase();
 
         // pad the beginning of the string with 0's if less than 6 characters
@@ -1150,6 +1158,7 @@ public class TMSReader extends Thread
     @RequiresApi(api = Build.VERSION_CODES.O)
     private boolean ReadData()
     {
+
         String respond = "";
         DecodeTmsFormat parser = new DecodeTmsFormat();
         DecodeTmsFormat.SetHandler(datahandler);
@@ -1262,16 +1271,65 @@ public class TMSReader extends Thread
                 Log.d("SendMessage", respond);
         }
 
-        fAddr = 0;
+        fAddr   = 0;
+        int AdrTest = 0 ;
         String ss = "";
-        while ((fAddr < lastAddress) && (mRunning==true))
+        boolean ret = false;
+        TReadState rState = TReadState.rsStart;
+
+        while (rState != TReadState.rsFinal){
+            switch (rState) {
+                case rsStart:
+                    // sem presunu nastaveni ukazatelu
+
+                    // zjistim aktualni adresu
+                    respond = fHer.doCommand("S");
+                    if (respond.length()>1)
+                        fAddr = getaddr(respond);
+                    rState = TReadState.rsReadPacket;
+                    break;
+
+                case rsReadPacket:
+                    // data odebiram v callbacku v hlavni forme
+                    rState = TReadState.rsPacketFalse;
+                    respond = fHer.doCommand("D");
+                    if (respond.length()>1) {
+                        ret = parser.dpacket(respond);
+                        if (ret) {
+                            fAddr  = DecodeTmsFormat.GetSafeAddress();
+                            rState = TReadState.rsPacketOK;
+                        }
+                    }
+                    break;
+
+                case rsPacketOK:
+                    // zkontroluj, jestli jsem nepretekl s adresou na konci
+                    if (fAddr<lastAddress)
+                        rState = TReadState.rsReadPacket;
+                    else
+                        rState = TReadState.rsFinal;
+                    break;
+
+                case rsPacketFalse:
+                    // prenastavim adresu
+                    ss = "S=$"+LineUpHexa(fAddr);
+                    respond = fHer.doCommand(ss);
+                    ss = aft(respond,"=");
+                    break;
+
+                default:
+                    break;
+            }
+        }
+
+        while ((fAddr < lastAddress) && (mRunning))
         {
             // performing operation
             respond = fHer.doCommand("D");
             if (respond.length()>1) {
-                ss = parser.dpacket(respond);
-                Log.i(TAG,respond);
-            };
+                ret = parser.dpacket(respond);
+
+            }
 
             // jakou mam aktualne adresu
             respond = fHer.doCommand("S");
@@ -1287,7 +1345,7 @@ public class TMSReader extends Thread
         {
             mRunning=true;
             return false;
-        };
+        }
 
         return true;
     }
@@ -1349,7 +1407,7 @@ public class TMSReader extends Thread
         int sec = tz.getRules().getStandardOffset(Instant.now()).getTotalSeconds();
 
         // vypis offset
-        String str[] = offsetId.split(":");
+        String[] str = offsetId.split(":");
         //System.out.println(str[0]);
         //System.out.println(str[1]);
         //System.out.print(sec);
@@ -1366,7 +1424,7 @@ public class TMSReader extends Thread
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd,HH:mm:ss").withZone(ZoneId.of("UTC"));
         final ZonedDateTime jobStartDateTimeZ = ZonedDateTime.now();
         Instant startTime = jobStartDateTimeZ.toInstant();
-        String command =  formatter.format(startTime) + "+"+gmts;;
+        String command =  formatter.format(startTime) + "+"+gmts;
         // System.out.println(command);
 
         return command;
@@ -1425,7 +1483,7 @@ public class TMSReader extends Thread
         line = stringAfter(line, "@C=");
         Matcher m = p.matcher(line);
         Boolean res =  m.find();
-        if (res==false){
+        if (!res){
             return (null);
         }
 
@@ -1440,7 +1498,6 @@ public class TMSReader extends Thread
         if (zonedDateTime == null) {
             return (null);
         }
-        ;
 
         Instant startTime = zonedDateTime.toInstant();
         lollyTimeString = zonedDateTime.format(DateTimeFormatter.ofPattern(Constants.DEVICE_FORMAT))+" "+zof+")";
