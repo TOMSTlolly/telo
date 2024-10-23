@@ -101,7 +101,6 @@ public class TMSSim {
         TSimState state = TSimState.tWfc;
         boolean pok = false;
         while ((currentline = reader.readLine()) != null) {
-
             // odpoved z TMS
             if (currentline.startsWith("<<@D")) {
                // vyber odpoved z D
