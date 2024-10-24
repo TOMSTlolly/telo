@@ -393,30 +393,32 @@ public class DecodeTmsFormat {
 
         int iCnt = 0;
         String str = "";
+        reply =reply.replaceAll("(\\r|\\n)", "");
+
         int StartAddr = fMereni.Address;
         try {
             int i = 0;
             for (String val : reply.split("@")) {
-                // prevedu z hexa
-                // System.out.println(val);
-
                 // schovavam posledni string
-                val = val.replaceAll("(\\r|\\n)", "");
-                if (val.length() > 1)
-                    str = val;
+              //   if (val.length() > 1)
+               //     str = val;
 
+                if (val.length() == 0)
+                    continue;
+
+                // ignoruj echo
                 if (val.startsWith("<<"))
                     continue;
 
                 if (val.startsWith("D")) {
-                    // je to datova stopa
+                    // return from "D" command, we could probably omit the test above
+
                     if (val.startsWith("DD")) {
-                        // nabij struct TMereni
+                        // je to datum
                         disassembleDate(val, fMereni);
 
                         if (fMereni.dtm != null)
                           lastDateTrace = fMereni.dtm.toInstant(ZoneOffset.UTC);
-
                         // preved na datetime
                         // OffsetDateTime odtUtc = odt.withOffsetSameInstant( ZoneOffSet.UTC ) ;
                     } else {
@@ -461,6 +463,8 @@ public class DecodeTmsFormat {
                         case 'C':
                             break;
                         case '&':
+                            // hacking wrong address increase for  @E=$000000;&;&93%01.50#92201235 packet
+                            i = -1;
                             break;
                         case '?':
                             break;
@@ -472,11 +476,11 @@ public class DecodeTmsFormat {
                     Log.d("DecodeTmsFormat",val);
                     int iRet = 8 * (i+1) + StartAddr ;
                     boolean ret = (iRet == AdrAfter);
-                    if (ret)
+                    if (ret) {
+                        SafeAddress = AdrAfter;
                         fMereni.Address = AdrAfter;
-
+                    }
                     return ret;
-
 
                     //E=$000010;M;01
                     //E=$06D5F8;C;2023/10/20,09:14:49+04

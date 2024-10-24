@@ -589,9 +589,6 @@ public class ListFragment extends Fragment
         return(ret);
     }
 
-
-
-
     private String formatSize(long size) {
         String suffix = null;
         float fSize = size;

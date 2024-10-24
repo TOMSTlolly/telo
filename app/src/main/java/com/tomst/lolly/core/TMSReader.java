@@ -141,30 +141,6 @@ public class TMSReader extends Thread
         bReadThreadGoing = false;
     }
 
-    /*
-    public void setCsvFileName(String AFileName){
-        this.CsvFileName = AFileName;
-
-        if (AFileName.contains(".txf")){
-            this.writeTxf = false;
-            return;
-        }
-    }
-     */
-
-     /*
-    private void DoProgress(long pos){
-        //progressBarHandler.sendEmptyMessage( (int)pos);
-        progressBarHandler.post(new Runnable() {
-            public void run() {
-                if (mBarListener != null){
-                    mBarListener.OnProEvent(pos);
-                }
-            }
-        });
-    }
-     */
-
     @RequiresApi(api = Build.VERSION_CODES.O)
     private void DoProgress(int pos){
         Message message = handler.obtainMessage();
@@ -1149,15 +1125,11 @@ public class TMSReader extends Thread
         SharedPreferences prefs = context.getSharedPreferences(
                 "save_options", Context.MODE_PRIVATE
         );
-
-
-
         return false;
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
-    private boolean ReadData()
-    {
+    private boolean ReadData() {
 
         String respond = "";
         DecodeTmsFormat parser = new DecodeTmsFormat();
@@ -1171,15 +1143,13 @@ public class TMSReader extends Thread
         int bookmarkDays = prefs.getInt("bookmarkVal", 0);
         String readFromDate = prefs.getString("fromDate", "");
 
-        if (ftDev == null)
-        {
-            Log.e("j2xx","SendMessage : d2xx device doesnt exist");
+        if (ftDev == null) {
+            Log.e("j2xx", "SendMessage : d2xx device doesnt exist");
             //LogMsg("Device doesnt exist. Check USB port");
             return false;
         }
 
-        if (!ftDev.isOpen())
-        {
+        if (!ftDev.isOpen()) {
             Log.e("j2xx", "SendMessage: device not open");
             return false;
         }
@@ -1190,7 +1160,7 @@ public class TMSReader extends Thread
         DoProgress(-lastAddress);  // celkovy pocet bytu
 
         String sHexString = "";
-        String bHexString="";
+        String bHexString = "";
 
         // setup initial pointer to
         switch (readFromSpinnerIndex) {
@@ -1271,32 +1241,31 @@ public class TMSReader extends Thread
                 Log.d("SendMessage", respond);
         }
 
-        fAddr   = 0;
-        int AdrTest = 0 ;
+        fAddr = 0;
+        int AdrTest = 0;
         String ss = "";
         boolean ret = false;
         TReadState rState = TReadState.rsStart;
 
-        while (rState != TReadState.rsFinal){
+        while (rState != TReadState.rsFinal) {
             switch (rState) {
                 case rsStart:
-                    // sem presunu nastaveni ukazatelu
-
                     // zjistim aktualni adresu
                     respond = fHer.doCommand("S");
-                    if (respond.length()>1)
+                    if (respond.length() > 1)
                         fAddr = getaddr(respond);
                     rState = TReadState.rsReadPacket;
                     break;
 
                 case rsReadPacket:
                     // data odebiram v callbacku v hlavni forme
-                    rState = TReadState.rsPacketFalse;
+                    //rState = TReadState.rsPacketFalse;
                     respond = fHer.doCommand("D");
-                    if (respond.length()>1) {
+                    if (respond.length() > 1) {
                         ret = parser.dpacket(respond);
+                        rState = TReadState.rsPacketFalse;
                         if (ret) {
-                            fAddr  = DecodeTmsFormat.GetSafeAddress();
+                            fAddr = DecodeTmsFormat.GetSafeAddress();
                             rState = TReadState.rsPacketOK;
                         }
                     }
@@ -1304,51 +1273,64 @@ public class TMSReader extends Thread
 
                 case rsPacketOK:
                     // zkontroluj, jestli jsem nepretekl s adresou na konci
-                    if (fAddr<lastAddress)
+                    if (fAddr < lastAddress)
                         rState = TReadState.rsReadPacket;
                     else
                         rState = TReadState.rsFinal;
                     break;
 
                 case rsPacketFalse:
-                    // prenastavim adresu
-                    ss = "S=$"+LineUpHexa(fAddr);
-                    respond = fHer.doCommand(ss);
-                    ss = aft(respond,"=");
+                    // prenastavim adresu a zkontroluju, jestli se prenastavila
+                    respond = fHer.doCommand("S");
+                    if (respond.length() > 1) {
+                        AdrTest = getaddr(respond);
+                        if (AdrTest == fAddr)
+                            rState = TReadState.rsReadPacket;
+                        else
+                            rState = TReadState.rsStart;
+                    }
                     break;
 
                 default:
                     break;
             }
+
+            DoProgress(fAddr);  // celkovy pocet bytu
+
+            // vyskoc pri signalu z aplikace
+            if (!mRunning) {
+                mRunning = true;
+                return false;
+            }
+
         }
 
+        return true;
+    }
+        /*
         while ((fAddr < lastAddress) && (mRunning))
         {
             // performing operation
             respond = fHer.doCommand("D");
             if (respond.length()>1) {
                 ret = parser.dpacket(respond);
-
             }
-
             // jakou mam aktualne adresu
             respond = fHer.doCommand("S");
 
             if (respond.length()>1)
                 fAddr = getaddr(respond);
-
             // Updating the progress bar
             DoProgress(fAddr);
         }
-
         if (!mRunning)
         {
             mRunning=true;
             return false;
         }
-
         return true;
     }
+  */
 
    /*
     private String MeteoToString(TMeteo met){
