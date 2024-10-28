@@ -18,6 +18,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
+import java.util.List;
 
 public class DecodeTmsFormat {
     static private byte[] fBuf ;
@@ -49,7 +50,6 @@ public class DecodeTmsFormat {
 
 
     private static Handler handler = null;
-
     public static void SetHandler(Handler han){
         handler = han;
     }
@@ -63,11 +63,20 @@ public class DecodeTmsFormat {
         fMereni.dev = dev;
     }
 
-    //@Struct
+
+    //@ struct
     static private TMereni fMereni;
     static {
         fMereni = new TMereni();
     }
+
+     static {
+        //fMereni = new TMereni();
+        fMereniList = new java.util.ArrayList<TMereni>();
+    }
+
+     //  mezibuffer pro vyparsovane data, odeslu, az kdyz mi sedi napoctena adresa na konci
+    private static List<TMereni> fMereniList;
 
     private static String getDateTime() {
         DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
@@ -396,12 +405,13 @@ public class DecodeTmsFormat {
         reply =reply.replaceAll("(\\r|\\n)", "");
 
         int StartAddr = fMereni.Address;
+        StartAddr = SafeAddress;
+        fMereniList.clear();
+
         try {
             int i = 0;
             for (String val : reply.split("@")) {
                 // schovavam posledni string
-              //   if (val.length() > 1)
-               //     str = val;
 
                 if (val.length() == 0)
                     continue;
@@ -419,17 +429,9 @@ public class DecodeTmsFormat {
 
                         if (fMereni.dtm != null)
                           lastDateTrace = fMereni.dtm.toInstant(ZoneOffset.UTC);
-                        // preved na datetime
-                        // OffsetDateTime odtUtc = odt.withOffsetSameInstant( ZoneOffSet.UTC ) ;
                     } else {
                         disassembleData(val, fMereni);
-                        //System.out.printf("%s %02d.%02d.%02d %02d:%02d t1=%2.1f hum=%d \r\n",val,fMereni.year,fMereni.month,fMereni.day, fMereni.hh,fMereni.mm,fMereni.t1,fMereni.hum);
-                        //str = str + String.format("%s %02d.%02d.%02d %02d:%02d t1=%2.1f hum=%d \r\n",val,fMereni.year,fMereni.month,fMereni.day, fMereni.hh,fMereni.mm,fMereni.t1,fMereni.hum);
-                        // String off = String.valueOf(fMereni.gtm / 4);
 
-                        // need to check if date has been read in yet. If not, skip over D command
-                        // this is so when reading from a bookmark it will read all the D commands until
-                        // it finds the first date (DD command) around the given bookmark period
                         if (fMereni.month == 0) {
                             continue;
                         }
@@ -438,15 +440,15 @@ public class DecodeTmsFormat {
                         }
                         fMereni.idx = fIdx;
 
-                        sendMeasure(fMereni);
+                        //  append  parsed measure into queue
+                        //sendMeasure(fMereni);
+                        fMereniList.add(fMereni);
 
                         fIdx++;
 
                     }
                 }
                 else {
-                    // disassemble primitive parser data
-
                     // address
                     String[] view = val.split(";");
                     int AdrAfter = StrToHex(aft(view[ADR_INDEX],"="));
@@ -457,6 +459,7 @@ public class DecodeTmsFormat {
                     // parameter
                     switch(cmd){
                         case 'M':
+                            //i = -1;
                             break;
                         case 'D':
                             break;
@@ -464,33 +467,36 @@ public class DecodeTmsFormat {
                             break;
                         case '&':
                             // hacking wrong address increase for  @E=$000000;&;&93%01.50#92201235 packet
-                            i = -1;
+                            if  ((SafeAddress >=0) && (i ==0))
+                                i = 0;
                             break;
                         case '?':
                             break;
                         default:
                             break;
                     }
-
-                    // otestuj konecnou adresu vs
-                    Log.d("DecodeTmsFormat",val);
-                    int iRet = 8 * (i+1) + StartAddr ;
-                    boolean ret = (iRet == AdrAfter);
-                    if (ret) {
+                    // pro vystup z vystup z prohlizecky bez dat kaslu na kontrolu adresy
+                    // mezi dvouma vystupama ze ctecky nevim, jestli je  offset +1 * 8
+                    boolean ret = (i==0);
+                    if (!ret) {
+                        // ukazali se mi nejake  udalosti s @D na zacatku
+                        int FinComp= (8 * (i + 1) + StartAddr) ;
+                        ret = (AdrAfter == FinComp);
+                        if (ret)
+                            sendWholePacket();
+                    }
+                   if (ret){
                         SafeAddress = AdrAfter;
                         fMereni.Address = AdrAfter;
                     }
                     return ret;
-
                     //E=$000010;M;01
                     //E=$06D5F8;C;2023/10/20,09:14:49+04
                     //E=$06E700;D;2023/10/26,00:00:00+04
                     //E=$06D5D8;&;&93%01.80#94232790
-
                 }
                 i++;
             }
-
             //return (str);
          }
 
@@ -500,6 +506,16 @@ public class DecodeTmsFormat {
 
         return false;
     }
+
+   private void sendWholePacket(){
+        if (handler == null)
+            return;
+
+        for (TMereni mer : fMereniList) {
+            sendMeasure(mer);
+        }
+    }
+
 
     // prevede hexa "$AABBCC" na integer
     private int StrToHex(String val)

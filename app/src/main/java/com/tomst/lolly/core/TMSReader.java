@@ -1281,7 +1281,8 @@ public class TMSReader extends Thread
 
                 case rsPacketFalse:
                     // prenastavim adresu a zkontroluju, jestli se prenastavila
-                    respond = fHer.doCommand("S");
+                    ss = "S=$" + LineUpHexa(fAddr+8);
+                    respond = fHer.doCommand(ss);
                     if (respond.length() > 1) {
                         AdrTest = getaddr(respond);
                         if (AdrTest == fAddr)
