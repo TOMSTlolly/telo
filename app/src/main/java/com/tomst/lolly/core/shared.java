@@ -7,14 +7,76 @@ import static com.tomst.lolly.core.Constants.SERIAL_NUMBER_INDEX;
 import static com.tomst.lolly.core.Constants.fMicroInter;
 import static com.tomst.lolly.core.Constants.fMicroSlope;
 
+import android.net.Uri;
 import android.os.Build;
+import android.util.Log;
+
 import androidx.annotation.RequiresApi;
+import androidx.documentfile.provider.DocumentFile;
+
+import com.tomst.lolly.LollyApplication;
+
+import java.io.File;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 
 public class shared {
+
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    public static  String CompileFileName(String Prefix,String Serial, String ADir){
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy_MM_dd").withZone(ZoneId.of("UTC"));
+        LocalDateTime localDateTime = LocalDateTime.now();
+
+        int idx=0;
+        boolean filex = true;
+        String locFile = null;
+        String fmtdate = localDateTime.format(formatter);
+        DocumentFile txtFile;
+
+        // test
+
+        //CreateTestFile(ADir);
+        try {
+            DocumentFile pickedDir;
+            if (ADir.startsWith("content")) {
+                Uri uri = Uri.parse(ADir);
+                pickedDir = DocumentFile.fromTreeUri(LollyApplication.getInstance().getApplicationContext(), uri);
+            } else {
+                pickedDir = DocumentFile.fromFile(new File(ADir));
+            }
+
+            // katastrofa, nemuzu vytvorit adresar
+            if (!pickedDir.exists()) {
+                Log.w("myApp", "[#] Exporter.java - UNABLE TO CREATE THE FOLDER");
+                //exportingTask.setStatus(ExportingTask.STATUS_ENDED_FAILED);
+                return null;
+            }
+
+            //String fName = "testfile";
+            filex = true;
+            Integer i = 0;
+            while ((filex == true) && (i<100)) {
+                locFile = Prefix+Serial+"_"+fmtdate+"_"+Integer.valueOf(i)+".csv";
+                txtFile = pickedDir.findFile(locFile);
+                // soubor uz existuje, neprepisuju, ale pridam index na konci souboru
+
+                if ((txtFile ==null) || (!txtFile.exists()))
+                    filex = false;
+                else
+                    i++;
+            }
+
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+        return locFile;
+    }
 
 
     public static String aft(String line, String splitChar){
@@ -26,6 +88,18 @@ public class shared {
             return (str[1]);
         return "";
     }
+
+    public static String bef(String line, String splitChar){
+        if (line.length()<1)
+            return "";
+
+        String [] str = line.split(splitChar);
+        if (str.length >1)
+            return (str[0]);
+        return "";
+    }
+
+
 
     public static String between(String line, String s1, String s2){
         if ( (line.indexOf(s1) <0) ||  (line.indexOf(s2)<0)  )

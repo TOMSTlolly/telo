@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+xmlns:app="http://schemas.android.com/apk/res-auto"
+xmlns:tools="http://schemas.android.com/tools"
+android:id="@+id/id_main_menu"
+tools:context="com.tomst.lolly.LollyApplication">
+<item
+    android:id="@+id/action_settings"
+    android:orderInCategory="100"
+    android:title="@string/menu_settings"
+    app:showAsAction="never" />
+<item
+    android:id="@+id/action_about"
+    android:orderInCategory="101"
+    android:title="@string/menu_about"
+    app:showAsAction="never" />
+<item
+    android:id="@+id/action_online_help"
+    android:orderInCategory="102"
+    android:title="@string/menu_online_help"
+    app:showAsAction="never" />
+<item
+    android:id="@+id/action_shutdown"
+    android:orderInCategory="103"
+    android:title="@string/menu_shutdown"
+    app:showAsAction="never" />
+</menu>

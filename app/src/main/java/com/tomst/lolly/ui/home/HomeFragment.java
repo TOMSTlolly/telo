@@ -1,5 +1,7 @@
 package com.tomst.lolly.ui.home;
 
+import static com.tomst.lolly.core.shared.CompileFileName;
+
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -44,133 +46,106 @@ import com.tomst.lolly.core.RFirmware;
 import com.tomst.lolly.core.TDevState;
 import com.tomst.lolly.core.TDeviceType;
 import com.tomst.lolly.core.TInfo;
+import com.tomst.lolly.core.TMSRec;
 import com.tomst.lolly.core.TMSSim;
 import com.tomst.lolly.core.TMereni;
 import com.tomst.lolly.core.TMeteo;
 import com.tomst.lolly.databinding.FragmentHomeBinding;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 
 public class HomeFragment extends Fragment {
     LollyApplication lollyApp = LollyApplication.getInstance();
 
     static final byte MIN_ADANUMBER = 5;  // pozaduju, aby mel adapter minimalne 5 znaku
     private FragmentHomeBinding binding;
-    private long MaxPos;
 
+    private  DmdViewModel dmd;
+    private final int PERMISSION_REQUEST_CODE = 698;
+    private final int NOTIFICATION_ID = 423;
+    private PermissionManager permissionManager;
+    private boolean bound = false;
+    private LollyService odometer;
+    // load native C library
+    static {
+        //   System.loadLibrary("lolly-backend-lib");
+    }
     private DocumentFile kmlFile;
     private DocumentFile gpxFile;
     private DocumentFile txtFile;
     private CSVReader csv;
-
     private int heartIdx = 0;
-    private char cHeart = '-';
-    private int DevCount =-1;
-    private boolean uart_configured = false;
-
-    private int currentIndex = -1;
-
     private String serialNumber = "Unknown";
+    private boolean readWasFinished=false;
 
-    private final int openIndex = 0;
+    //private Handler progressBarHandler = new Handler(Looper.getMainLooper());
+    private TMereni merold =null;
 
-    private boolean bReadThreadGoing=false;
+    private List<TMSRec> logs;  // logy, ktere mi lezou z UARTU
 
-    public com.tomst.lolly.core.uHer fHer;
-
-    private Handler progressBarHandler = new Handler(Looper.getMainLooper());
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    private  long calculateSecondsBetween(LocalDateTime start, LocalDateTime end) {
+        Duration duration = Duration.between(start, end);
+        return duration.getSeconds();
+    }
 
     protected Handler datahandler = new Handler(Looper.getMainLooper()) {
         @RequiresApi(api = Build.VERSION_CODES.O)
         @Override
         public void handleMessage(Message msg) {
+            // zkontroluj odstup od posledniho mereni
+
             TMereni mer = (TMereni) msg.obj;
+            if (mer != null && merold != null) {
+               long delta = calculateSecondsBetween(merold.dtm, mer.dtm);
+               if (delta>Constants.MAX_DELTA) {
+                   // zobraz chybu
+                   DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+                   // Format the dates
+                   String meroFormatted = merold.dtm.format(formatter);
+                   String merFormatted = mer.dtm.format(formatter);
+                   // Display the error with formatted dates
+                   String ss = String.format("Between messages >%d seconds (from %s to %s)", delta, meroFormatted, merFormatted);
+
+                   binding.proMessage.setText(ss);
+               }
+            }
+            merold = mer;
             dmd.AddMereni(mer);   // array of values for graph
             csv.AddMerToCsv(mer); // add to csv file
             //csv.AppendStat(mer);  // statistics, we'll omit this in the next version
         }
     };
 
-    private int fAddr;
-    private int progressBarStatus=0;
+    // logovani do souboru
+    protected Handler loghandler = new Handler(Looper.getMainLooper()) {
+        @RequiresApi(api = Build.VERSION_CODES.O)
+        @Override
+        public void handleMessage(Message msg) {
+            // vstupy a vystupy z hardware v uHer.java
+            TMSRec log = (TMSRec) msg.obj;
+            logs.add(log);
 
-    private  DmdViewModel dmd;
-
-    private final int PERMISSION_REQUEST_CODE = 698;
-    private final int NOTIFICATION_ID = 423;
-    private PermissionManager permissionManager;
-
-    private boolean bound = false;
-    private LollyService odometer;
-
-    private FirebaseFirestore db;
-    private TextView dataTextView;
-    private Button viewDataButton;
-    private void getData()
-    {
-        // initialize instance of cloud firestore
-        db = FirebaseFirestore.getInstance();
-
-        // get user data
-        db.collection("users").get()
-                .addOnCompleteListener(getActivity(), new OnCompleteListener<QuerySnapshot>() {
-                    @Override
-                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
-                        // check if getting data was successful
-                        if (task.isSuccessful())
-                        {
-                            // create a string builder
-                            StringBuilder userData = new StringBuilder();
-
-                            // loop through all the data
-                            for (QueryDocumentSnapshot document: task.getResult())
-                            {
-                                // get user data
-                                String userName = document.getString("name");
-                                Long userSalary = document.getLong("salary");
-
-                                // create user data list
-                                if (userName != null && userSalary != null)
-                                {
-                                    userData.append("Name: ").append(userName)
-                                            .append(", Salary: ").append(userSalary)
-                                            .append("\n");
-                                }
-
-                                Log.d("dbUsers", "onComplete: " + document.getData());
-                            }
-
-                            // display the name for each user
-                            dataTextView.setText(userData.toString());
-                        }
-                        else
-                        {
-                            // display error
-                            dataTextView.setText("Error getting data: " + task.getException().getMessage( ));
-                            Log.d("dbUsers", "onComplete: " + task.getException().getMessage());
-                        }
-                    }
-                });
-    }
-
-    // load native C library
-    static {
-        System.loadLibrary("lolly-backend-lib");
-    }
-
-    public native String getExampleStringJNI();
+            //binding.proMessage.setText(log);
+        }
+    };
 
     @Override
     public void onCreate(Bundle savedInstanceState){
         super.onCreate(savedInstanceState);
         Log.i("| DEBUG |", "Home Fragment, right above jni string");
-
-        Log.i("| DEBUG |", getExampleStringJNI());
-    }
+  }
 
     private ServiceConnection connection = new ServiceConnection() {
        @Override
@@ -178,8 +153,9 @@ public class HomeFragment extends Fragment {
            LollyService.LollyBinder odometerBinder =
                    (LollyService.LollyBinder) iBinder;
            odometer = odometerBinder.getOdometer();
-           odometer.SetHandler(handler);
+           odometer.SetHandler(handler);                      // info o pozici ve stavovem stroji
            odometer.SetDataHandler(datahandler);   // do tohoto handleru posilam naparsovane data
+           odometer.SetLogHandler(loghandler);
            odometer.SetContext(getContext());      // az tady muze startovat hardware
            odometer.startBindService();
            bound = true;
@@ -285,58 +261,7 @@ public class HomeFragment extends Fragment {
     }
 
     // 2024-04-24_92225141_0.csv
-    @RequiresApi(api = Build.VERSION_CODES.O)
-    private String CompileFileName(String Serial, String ADir){
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy_MM_dd").withZone(ZoneId.of("UTC"));
-        LocalDateTime localDateTime = LocalDateTime.now();
 
-        int idx=0;
-        boolean filex = true;
-        String locFile = null;
-        String fmtdate = localDateTime.format(formatter);
-
-        //CreateTestFile(ADir);
-
-        try {
-            DocumentFile pickedDir;
-            if (ADir.startsWith("content")) {
-                Uri uri = Uri.parse(ADir);
-                pickedDir = DocumentFile.fromTreeUri(getContext(), uri);
-            } else {
-                pickedDir = DocumentFile.fromFile(new File(ADir));
-            }
-
-            // katastrofa, nemuzu vytvorit adresar
-            if (!pickedDir.exists()) {
-                Log.w("myApp", "[#] Exporter.java - UNABLE TO CREATE THE FOLDER");
-                //exportingTask.setStatus(ExportingTask.STATUS_ENDED_FAILED);
-                return null;
-            }
-
-            //String fName = "testfile";
-            filex = true;
-            Integer i = 0;
-            while ((filex == true) && (i<100)) {
-                //locFile = ADir + "//data_"+Serial+"_"+fmtdate+"_"+ Integer.valueOf(i)+".csv";
-                locFile = "data_"+Serial+"_"+fmtdate+"_"+Integer.valueOf(i)+".csv";
-                txtFile = pickedDir.findFile(locFile);
-                // soubor uz existuje, neprepisuju, ale pridam index na konci souboru
-
-                if ((txtFile ==null) || (!txtFile.exists()))
-                    filex = false;
-                else
-                    i++;
-            }
-          //  txtFile = pickedDir.createFile("", locFile);
-         //   Log.w("myApp", "[#] HomeFragment.java - Export " + txtFile.getUri().toString());
-
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
-        return locFile;
-    }
 
     private void setMeteoImage(ImageView img, TMeteo met)
     {
@@ -430,6 +355,7 @@ public class HomeFragment extends Fragment {
 
             TInfo info = (TInfo) msg.obj;
             Log.d(Constants.TAG,String.valueOf(info.idx)+' '+info.msg);
+            String  ADir=null;
 
             // tady rozebiram vystupy ze stavu v threadu
             switch(info.stat){
@@ -458,12 +384,15 @@ public class HomeFragment extends Fragment {
                     serialNumber = info.msg;
                     binding.devser.setText(info.msg);
 
-                    // nakompiluj jmeno souboru pro zapis, snazime se o unikatni nazev
-                   String  ADir = LollyApplication.getInstance().getCacheDirectoryPath();
-                   String AFileName = CompileFileName(info.msg,ADir);
-                   AFileName = ADir + "/" + AFileName;
-                    csv = new CSVReader(AFileName);
+                    // csv file output, it should be unique for each device and each download
+                    LollyApplication.getInstance().setSerialNumber(serialNumber);
+
+                    ADir = LollyApplication.getInstance().getCacheCsvPath();
+                    String ACsvFileName =   CompileFileName("data_",serialNumber,ADir);
+                    ACsvFileName = ADir + "/" + ACsvFileName;
+                    csv = new CSVReader(ACsvFileName);
                     csv.OpenForWrite();  // otevre vystupni stream pro addCsv vyse
+
                     break;
 
                 case tInfo:
@@ -547,6 +476,14 @@ public class HomeFragment extends Fragment {
 
                 case tFinishedData:
                     csv.CloseExternalCsv();
+                    readWasFinished = true;
+
+                    /*
+                    ADir= LollyApplication.getInstance().getCacheLogPath();
+                    String ALogFileName =  ADir+"/"+  CompileFileName("logs_",serialNumber,ADir);
+                    saveLogs(ALogFileName);
+                    */
+                    saveLog();
 
                     // get option for showing graph
                     boolean showGraph = getContext()
@@ -570,6 +507,29 @@ public class HomeFragment extends Fragment {
     };
 
 
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    private void saveLog()
+    {
+        String ADir= LollyApplication.getInstance().getCacheLogPath();
+        String ALogFileName =  ADir+"/"+  CompileFileName("logs_",serialNumber,ADir);
+        saveLogs(ALogFileName);
+    }
+
+    private void saveLogs(String ALogFileName){
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(ALogFileName))) {
+                for (TMSRec log : logs) {
+                    writer.write("<<"+log.sCmd);
+                    writer.newLine();
+                    writer.write(">>"+log.sRsp);
+                    writer.newLine();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            logs.clear();
+    }
+
+
     @Override
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
@@ -586,6 +546,9 @@ public class HomeFragment extends Fragment {
         // sdileny datovy model
         dmd = new ViewModelProvider(getActivity()).get(DmdViewModel.class);
         dmd.ClearMereni();
+
+        logs  = new ArrayList<>();
+
 
         // tady vybiram callbacky od jinych fragmentu a aplikace
         dmd.getMessageContainerToFragment().observe(getViewLifecycleOwner(), message -> {
@@ -611,10 +574,10 @@ public class HomeFragment extends Fragment {
             public void onClick(View view) {
                 String ALogName = LollyApplication.getInstance().DIRECTORY_LOGS + "/command.csv.";
                 TMSSim sim = new TMSSim(ALogName);
-                //dmd.sendMessageToFragment("TMD");
-                //Message message = handler.obtainMessage();
-                //message.obj = "Hello from HomeFragment";
-                //handler.sendMessage(message);
+                //  dmd.sendMessageToFragment("TMD");
+                // Message message = handler.obtainMessage();
+                // message.obj = "Hello from HomeFragment";
+                // handler.sendMessage(message);
             }
         });
 
@@ -635,60 +598,64 @@ public class HomeFragment extends Fragment {
         Button sendSerial =binding.genSerial;
         sendSerial.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
-                odometer.SetState(TDevState.tSerial);
+                saveLog();
+                //odometer.SetState(TDevState.tSerial);
                 // dmd.sendMessageToFragment("TSN");
-                //Message message = handler.obtainMessage();//odometer.obtainMessage();
-                //TInfo info = (TInfo) msg.obj;
-                //message.obj = "Hello from HomeFragment";
-                //handler.sendMessage(message);
             }
         });
 
-        /*
-        ftTMS = new TMSReader(mContext);
-        ftTMS.ConnectDevice();
-        ftTMS.SetHandler(handler);
-        ftTMS.SetDataHandler(datahandler);
-        ftTMS.SetBarListener(new OnProListener() {
-            @Override
-            public void OnProEvent(long Pos) {
-                if (binding == null)
-                    return;
-
-                if (Pos < 0) {
-                    binding.proBar.setMax((int) -Pos); // posledni adresa
-                    MaxPos = -Pos;
-
-                } else
-                {
-                    binding.proBar.setProgress((int) Pos);
-                    int j = (int)(Pos/(double) MaxPos * 100);
-                    String s = String.format("%d %%",j);
-                    binding.tvStatus.setText(s);
-                    HandleHeartbeat();  // otoci vrtuli
-                }
-            }
-        });
-        ftTMS.start();
-        binding.mShowCount.setText("downloading");
-        dmd.sendMessageToGraph("TMD"); // observer v GraphFragment vi, ze data byla vyctena pomoci TMD
-        */
-
-        // initialize UI elements
-        //dataTextView = binding.getRoot().findViewById(R.id.dataTextView);
-        //viewDataButton = binding.getRoot().findViewById(R.id.btnViewData);
-
-        // set onclick listener for the button
-        /*
-        viewDataButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                getData();
-            }
-        });
-         */
 
         return root;
+    }
+
+    private FirebaseFirestore db;
+    private TextView dataTextView;
+    private Button viewDataButton;
+    private void getData()
+    {
+        // initialize instance of cloud firestore
+        db = FirebaseFirestore.getInstance();
+
+        // get user data
+        db.collection("users").get()
+                .addOnCompleteListener(getActivity(), new OnCompleteListener<QuerySnapshot>() {
+                    @Override
+                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                        // check if getting data was successful
+                        if (task.isSuccessful())
+                        {
+                            // create a string builder
+                            StringBuilder userData = new StringBuilder();
+
+                            // loop through all the data
+                            for (QueryDocumentSnapshot document: task.getResult())
+                            {
+                                // get user data
+                                String userName = document.getString("name");
+                                Long userSalary = document.getLong("salary");
+
+                                // create user data list
+                                if (userName != null && userSalary != null)
+                                {
+                                    userData.append("Name: ").append(userName)
+                                            .append(", Salary: ").append(userSalary)
+                                            .append("\n");
+                                }
+
+                                Log.d("dbUsers", "onComplete: " + document.getData());
+                            }
+
+                            // display the name for each user
+                            dataTextView.setText(userData.toString());
+                        }
+                        else
+                        {
+                            // display error
+                            dataTextView.setText("Error getting data: " + task.getException().getMessage( ));
+                            Log.d("dbUsers", "onComplete: " + task.getException().getMessage());
+                        }
+                    }
+                });
     }
 
     public void onViewDataButtonClick(View view) {
@@ -721,10 +688,11 @@ public class HomeFragment extends Fragment {
        }
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
     public void onDestroyView() {
         //odometer.SetRunning(false);
-
+        saveLog();
         super.onDestroyView();
 
         binding = null;

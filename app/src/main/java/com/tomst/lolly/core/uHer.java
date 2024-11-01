@@ -4,9 +4,16 @@ import static com.tomst.lolly.core.shared.aft;
 import static java.lang.System.currentTimeMillis;
 
 import android.os.Handler;
+import android.os.Message;
 
 import com.ftdi.j2xx.D2xxManager;
 import com.ftdi.j2xx.FT_Device;
+import com.tomst.lolly.LollyApplication;
+
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 
 //import java.nio.charset.StandardCharsets;
 
@@ -19,6 +26,8 @@ public class uHer extends Thread {
     static private int k =0; // pozice pri cteni textovych dat
     static private StringBuilder ous = new StringBuilder();
 
+    private String ALogName = LollyApplication.getInstance().DIRECTORY_LOGS + "/command.csv.";
+
     public FT_Device ftDev = null;  // ukazatel na hardware
     public boolean bReadThreadGoing = false;
     public int iavailable = 0;
@@ -28,12 +37,19 @@ public class uHer extends Thread {
     private byte[] readData = new byte[readLength]; // vyctene data
     private StringBuilder sb = new StringBuilder();
 
-    Handler mHandler;               // timhle vysilam ven z tridy
+    Handler logHandler;               // timhle vysilam ven z tridy
 
     public uHer(Handler h) {
         fBuf = new byte[INBUF];
-        mHandler = h;
+        logHandler = h;
         this.setPriority(Thread.MIN_PRIORITY);
+//        File dir = new File(DIRECTORY_TEMP);
+    }
+
+    // jmeno log souboru
+    public void setLogName(String ALogX){
+        this.ALogName = LollyApplication.getInstance().DIRECTORY_LOGS + "/"+ALogX;
+        File log = new File(this.ALogName);
     }
 
     public int getPigCnt(){
@@ -448,6 +464,16 @@ public class uHer extends Thread {
         return (true);
     }
 
+    private void doLog(String cmd, String resp){
+        String s="<<"+cmd;
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(ALogName, true))) {
+            writer.write( cmd + "\n");
+            writer.write(">>"+resp + "\n");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     // cmd prevedu na array of char a predradim TK magicke znaky
     public String doCommand(String cmd){
         byte[] chr = new byte[cmd.length()+4]; // delka + ridici znaky + pocet znaku na zacatku
@@ -458,7 +484,6 @@ public class uHer extends Thread {
             chr[i+3] = (byte) cmd.charAt(i);
         }
         chr[3+cmd.length()] = (byte)0x0D;
-
         // poskladam do stringu
         String command = "";
         for (int i=0;i<chr.length;i++)
@@ -468,7 +493,6 @@ public class uHer extends Thread {
         boolean ret = pigCommand(command,ou);
         if (!ret)
             return("command ERROR\n");
-
 
         ous.setLength(0);
         int i=0;
@@ -480,11 +504,27 @@ public class uHer extends Thread {
             i++;
         } while (ou[i] !=0);
 
-
        String rts = ous.toString();
+       //doLog(cmd,rts);
 
-       return(rts);
+        SendLog(cmd,rts);
+
+        return(rts);
        //return(ous.toString());
+    }
+
+    private String trimFormattingChars(String input){
+        return input.replaceAll("[\\s\\t\\n\\r\u007F]+", " ").trim();
+    }
+
+    private void SendLog(String cmd, String resp){
+        Message msg = logHandler.obtainMessage();
+
+        TMSRec info = new TMSRec();
+        info.sCmd = trimFormattingChars(cmd); // prikaz
+        info.sRsp   = trimFormattingChars(resp);            // pozice progress baru
+        msg.obj = info;
+        logHandler.sendMessage(msg);
     }
 
 

@@ -468,7 +468,7 @@
 
             <Button
                 android:id="@+id/genSerial"
-                android:text="t.Serial"
+                android:text="t.SaveLog"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:backgroundTint="#f1a833"
@@ -476,7 +476,7 @@
 
             <Button
                 android:id="@+id/genCommand"
-                android:text="t.Command"
+                android:text="t.Cmnd"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:backgroundTint="#f1a033"

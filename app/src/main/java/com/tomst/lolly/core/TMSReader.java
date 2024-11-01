@@ -94,8 +94,9 @@ public class TMSReader extends Thread
     private String fileDir;
 
     // handler pro vystup dat ven z tridy
-    private static Handler handler = null;
-    private static Handler datahandler = null;
+    private static Handler handler = null;            // info ze stavoveho stroje
+    private static Handler datahandler = null;   // rozebrane data
+    private static Handler loghandler = null;     // logovani z uHer.java
 
     //private static Handler finalhandler = null;
     private static uHer fHer;
@@ -108,12 +109,16 @@ public class TMSReader extends Thread
     }
     public void SetHandler(Handler han){  handler = han; }
 
-    public void SetBarListener(OnProListener AListener){
-        this.mBarListener = AListener;
-    }
     public void SetDataHandler(Handler han) {
         datahandler= han;}
 
+    public void SetLogHandler(Handler han) {
+        loghandler= han;
+    }
+
+    public void SetBarListener(OnProListener AListener){
+        this.mBarListener = AListener;
+    }
     public void SetFilePath(String AFileDir)
     {
         this.fileDir = AFileDir;
@@ -587,10 +592,9 @@ public class TMSReader extends Thread
 
                 if (!bReadThreadGoing) {
                     //read_thread = new readThread(handler);
-                    fHer = new uHer(handler);
+                    fHer = new uHer(loghandler);
                     fHer.ftDev = ftDev;
                     fHer.bReadThreadGoing = false;
-
                 }
             } else {
                 //Toast.makeText(DeviceUARTContext, "open device port(" + tmpProtNumber + ") NG", Toast.LENGTH_LONG).show();
@@ -865,9 +869,16 @@ public class TMSReader extends Thread
                         devState = TDevState.tFinal;
                         break;
                     }
+
+                    // zkontroluj seriove cislo, meli by byt jenom cisla
                     SerialNumber = aft(s,"=");
                     SerialNumber = SerialNumber.replaceAll("(\\r|\\n)", "");
+                    if (!SerialNumber.matches("\\d+"))
+                        break;
+
                     mer.Serial = SerialNumber;
+                    fHer.setLogName(SerialNumber+"_");
+
                     SendMeasure(TDevState.tSerial,SerialNumber);
                     devState = TDevState.tInfo;
                     break;
@@ -1167,7 +1178,9 @@ public class TMSReader extends Thread
             case SPI_DOWNLOAD_NONE:
             case SPI_DOWNLOAD_ALL:
                 respond = fHer.doCommand("S=$000000");
-                SendMeasure(TDevState.tReadType, "read all");
+
+               // respond = fHer.doCommand("S=$120C60");
+                SendMeasure(TDevState.tReadType, "read  wurst from reset flash!!!");
                 Log.d("Sendmessage", respond);
                 break;
             case SPI_DOWNLOAD_BOOKMARK:
@@ -1178,14 +1191,12 @@ public class TMSReader extends Thread
                 // set and check pointer to the data before readin from flash
                 if (!fHer.doSACH(Integer.parseInt(sHexString)))
                     return false;
-
                 /*
                 // controlled conversion back and forth between types just to check the value is valid
                 bHexString = getHexValueFromRespond(Integer.parseInt(sHexString, 16));
                 respond = fHer.doCommand("S=$"+bHexString);
                 respond = fHer.doCommand("S");
                 */
-
                 Log.d("SendMessage", respond);
                 SendMeasure(TDevState.tReadType, "read bookmark");
                 break;
@@ -1211,9 +1222,7 @@ public class TMSReader extends Thread
                     // find how many days from now to the read from date is
                     LocalDate fromDate = LocalDate.parse(readFromDate);
                     LocalDate todaysDate = LocalDate.now();
-
                     daysBetween = (int) Math.abs(ChronoUnit.DAYS.between(fromDate, todaysDate));
-
                     SendMeasure(TDevState.tReadType, String.format("read from : %s", readFromDate));
                 }
 
@@ -1241,7 +1250,7 @@ public class TMSReader extends Thread
                 Log.d("SendMessage", respond);
         }
 
-        fAddr = 0;
+       fAddr = -10000;
         int AdrTest = 0;
         String ss = "";
         boolean ret = false;
@@ -1252,36 +1261,35 @@ public class TMSReader extends Thread
                 case rsStart:
                     // zjistim aktualni adresu
                     respond = fHer.doCommand("S");
-                    if (respond.length() > 1)
-                        fAddr = getaddr(respond);
-                    rState = TReadState.rsReadPacket;
-                    break;
-
-                case rsReadPacket:
-                    // data odebiram v callbacku v hlavni forme
-                    //rState = TReadState.rsPacketFalse;
-                    respond = fHer.doCommand("D");
                     if (respond.length() > 1) {
-                        ret = parser.dpacket(respond);
-                        rState = TReadState.rsPacketFalse;
-                        if (ret) {
-                            fAddr = DecodeTmsFormat.GetSafeAddress();
-                            rState = TReadState.rsPacketOK;
-                        }
+                        fAddr = getaddr(respond);
+                        DecodeTmsFormat.SetSafeAddress(fAddr);
+                        rState = TReadState.rsReadPacket;
                     }
                     break;
 
-                case rsPacketOK:
-                    // zkontroluj, jestli jsem nepretekl s adresou na konci
-                    if (fAddr < lastAddress)
-                        rState = TReadState.rsReadPacket;
-                    else
-                        rState = TReadState.rsFinal;
+                case rsReadPacket:
+                    respond = fHer.doCommand("D");
+                    if (respond.length() > 1) {
+                        ret = parser.dpacket(respond);  // data are send into HomeFragment
+                        if (ret) {
+                           // extract last address from the data packet
+                            fAddr = DecodeTmsFormat.GetSafeAddress();
+                            if (fAddr < lastAddress)
+                                rState = TReadState.rsReadPacket;
+                            else
+                                rState = TReadState.rsFinal;
+                            break;
+                        }
+                        else
+                            rState = TReadState.rsPacketFalse;
+                    }
                     break;
 
                 case rsPacketFalse:
                     // prenastavim adresu a zkontroluju, jestli se prenastavila
-                    ss = "S=$" + LineUpHexa(fAddr+8);
+                    fAddr = DecodeTmsFormat.GetSafeAddress()+8;
+                    ss = "S=$" + LineUpHexa(fAddr);
                     respond = fHer.doCommand(ss);
                     if (respond.length() > 1) {
                         AdrTest = getaddr(respond);

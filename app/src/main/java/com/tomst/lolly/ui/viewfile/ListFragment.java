@@ -4,6 +4,7 @@ package com.tomst.lolly.ui.viewfile;
 import static android.app.Activity.RESULT_CANCELED;
 import static android.os.Environment.*;
 import static com.tomst.lolly.LollyApplication.DIRECTORY_TEMP;
+import static com.tomst.lolly.core.shared.bef;
 
 import android.content.Context;
 import android.content.DialogInterface;
@@ -174,7 +175,7 @@ public class ListFragment extends Fragment
         TextView folderName = binding.tvFolderDest;
        //  folderName.setText("Folder: " + sharedFolder.getUri().getPath());
         //folderName.setText("Folder: " + DIRECTORY_TEMP);
-        folderName.setText(LollyApplication.getInstance().getCacheDirectoryPath());
+        folderName.setText(LollyApplication.getInstance().getCacheCsvPath());
 
         // Saving folder destination
         Button btn_reload = binding.btnLoadFolder;
@@ -639,12 +640,35 @@ public class ListFragment extends Fragment
                 }
                 fdet.setFull(fileUri.toString());
                 fdet.setName(file.getName());
+                fdet.setNiceName(getNiceName(file.getName()));
+
                 fdet.setFileSize((int) file.length());
                 fFriends.add(fdet);
             }
         }
         }
     }
+    // _data_98765432_2024_10_28_5.csv
+    // 1
+    // 2  data
+    // 3 98765432
+    // 4 2024
+    // 5 10
+    // 6 28
+    // 7  5.csv
+    private String  getNiceName(String name)
+    {
+        String[] parts = name.split("_");
+        if (parts.length > 6)
+            return parts[1];
+
+        if (parts[1].isEmpty())
+            return null;
+
+        String s = parts[1] + "-" + parts[2] + parts[3] + parts[4]+ bef(parts[5],".");
+         return s;
+        }
+
 
     //public void DoLoadFiles(String sharedPath, String privatePath)
     @RequiresApi(api = Build.VERSION_CODES.O)
@@ -659,6 +683,15 @@ public class ListFragment extends Fragment
             Context context = LollyApplication.getInstance().getApplicationContext();
             DatabaseHandler db = LollyApplication.getInstance().gpsDataBase;
 
+            // remove not used files from db
+            String[] usedFiles = new String[files.length];
+            int index = 0;
+            for (File file: files)
+            {
+                usedFiles[index++] = file.getName();
+            }
+            db.ClearUnusedFiles(usedFiles);
+
             FileDetail fdet = null;
             CSVReader reader = new CSVReader();
             for (File file : files) {
@@ -666,17 +699,21 @@ public class ListFragment extends Fragment
                     // ve fdet se mi vraci info z db, pripadne z dlouheho runu radek po radku
                     if (db.getFileDetail(file.getName()) != null) {
                         fdet = db.getFileDetail(file.getName());
-                    } else {
-                        Location location = LollyApplication.getInstance().getLocation();
-                        Uri fileUri = Uri.fromFile(file);
+                        fdet.setNiceName(getNiceName(file.getName()));
 
+                    } else {
+                        // vycti uplne cely soubor a udelej komplet statistiku
+                        // je to brutalne pomalne, takze celou tuhle obludu
+                        // ctu asynchronne
+                        Uri fileUri = Uri.fromFile(file);
                         if (!fileUri.toString().contains(".csv"))
                             continue;
+
+                        Location location = LollyApplication.getInstance().getLocation();
 
                         fdet = reader.readFileContent(fileUri);
                         if (fdet==null)
                             continue;
-
                         fdet.setName(file.getName());
                         fdet.setFileSize((int) file.length());
                         fdet.setFull(fileUri.toString());

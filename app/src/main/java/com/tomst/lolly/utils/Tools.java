@@ -57,8 +57,8 @@ public class Tools {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             Window window = act.getWindow();
             window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-            window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
-            window.setStatusBarColor(act.getResources().getColor(R.color.colorPrimaryDark));
+//            window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+//            window.setStatusBarColor(act.getResources().getColor(R.color.colorPrimaryDark));
         }
     }
 
@@ -66,8 +66,8 @@ public class Tools {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             Window window = act.getWindow();
             window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-            window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
-            window.setStatusBarColor(act.getResources().getColor(color));
+//            window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+//          window.setStatusBarColor(act.getResources().getColor(color));
         }
     }
 
@@ -75,7 +75,7 @@ public class Tools {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             Window window = act.getWindow();
             window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-            window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+//            window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
             window.setStatusBarColor(color);
         }
     }
@@ -84,33 +84,33 @@ public class Tools {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             Window window = dialog.getWindow();
             window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-            window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
-            window.setStatusBarColor(act.getResources().getColor(color));
+//            window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+//            window.setStatusBarColor(act.getResources().getColor(color));
         }
     }
 
     public static void setSystemBarLight(Activity act) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             View view = act.findViewById(android.R.id.content);
-            int flags = view.getSystemUiVisibility() | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
-            view.setSystemUiVisibility(flags);
+//            int flags = view.getSystemUiVisibility() | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+//            view.setSystemUiVisibility(flags);
         }
     }
 
     public static void setSystemBarDark(Activity act) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             View view = act.findViewById(android.R.id.content);
-            int flags = view.getSystemUiVisibility() & ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
-            view.setSystemUiVisibility(flags);
+//            int flags = view.getSystemUiVisibility() & ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+ //           view.setSystemUiVisibility(flags);
         }
     }
 
     public static void setSystemBarLightDialog(Dialog dialog) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             View view = dialog.findViewById(android.R.id.content);
-            int flags = view.getSystemUiVisibility();
-            flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
-            view.setSystemUiVisibility(flags);
+//            int flags = view.getSystemUiVisibility();
+ //           flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+ //           view.setSystemUiVisibility(flags);
         }
     }
 
@@ -278,7 +278,7 @@ public class Tools {
     public static void changeNavigateionIconColor(Toolbar toolbar, @ColorInt int color) {
         Drawable drawable = toolbar.getNavigationIcon();
         drawable.mutate();
-        drawable.setColorFilter(color, PorterDuff.Mode.SRC_ATOP);
+//        drawable.setColorFilter(color, PorterDuff.Mode.SRC_ATOP);
     }
 
     public static void changeMenuIconColor(Menu menu, @ColorInt int color) {
@@ -286,7 +286,7 @@ public class Tools {
             Drawable drawable = menu.getItem(i).getIcon();
             if (drawable == null) continue;
             drawable.mutate();
-            drawable.setColorFilter(color, PorterDuff.Mode.SRC_ATOP);
+//            drawable.setColorFilter(color, PorterDuff.Mode.SRC_ATOP);
         }
     }
 
@@ -294,7 +294,7 @@ public class Tools {
         try {
             Drawable drawable = toolbar.getOverflowIcon();
             drawable.mutate();
-            drawable.setColorFilter(color, PorterDuff.Mode.SRC_ATOP);
+//            drawable.setColorFilter(color, PorterDuff.Mode.SRC_ATOP);
         } catch (Exception e) {
         }
     }
@@ -303,7 +303,7 @@ public class Tools {
         try {
             Drawable drawable = toolbar.getOverflowIcon();
             drawable.mutate();
-            drawable.setColorFilter(color, PorterDuff.Mode.SRC_ATOP);
+//            drawable.setColorFilter(color, PorterDuff.Mode.SRC_ATOP);
         } catch (Exception e) {
         }
     }

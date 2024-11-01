@@ -44,15 +44,15 @@ public class LollyService extends Service {
     private Looper serviceLooper;
     private ServiceHandler serviceHandler;
 
+    // handlers for exchanging status, data and full  hardware flow between service and main activity
     private Handler dataHandler;
     private static Handler handler = null;
-    public void SetHandler(Handler han){
-        this.handler = han;
-    }
+    private static Handler loghandler=null;
+    public  void SetHandler(Handler han){ this.handler = han;}
     public void SetDataHandler(Handler han) {
         this.dataHandler=han;
     }
-
+    public void SetLogHandler(Handler han) {  this.loghandler=han; }
     private void sendDataProgress(TDevState stat, int pos) { // Handle sending message back to handler
         Message message = handler.obtainMessage();
         TInfo info = new TInfo();
@@ -127,9 +127,6 @@ public class LollyService extends Service {
         serviceHandler = new ServiceHandler(serviceLooper);
     }
 
-    private void PrepareHardware(){
-
-    }
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -141,7 +138,6 @@ public class LollyService extends Service {
     @Override
     public boolean onUnbind(Intent intent){
         ftTMS.SetRunning(false); // vylez z vycitaciho threadu
-
         super.onUnbind(intent);
         return true;
     }
@@ -151,7 +147,6 @@ public class LollyService extends Service {
     }
 
     public void startBindService(){
-
         Toast.makeText(this, "service starting", Toast.LENGTH_SHORT).show();
         // For each start request, send a message to start a job and deliver the
         // start ID so we know which request we're stopping when we finish the job
@@ -159,24 +154,21 @@ public class LollyService extends Service {
         if (mContext == null){
             throw new UnsupportedOperationException("startBindService.mContext is null / (set app context !)");
         }
-
         //Context context = getContext();
         SharedPreferences sharedPref = mContext.getSharedPreferences(getString(R.string.save_options), mContext.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPref.edit();
 
         ftTMS = new TMSReader(mContext);
-        ftTMS.ConnectDevice();
         ftTMS.SetHandler(handler);
         ftTMS.SetDataHandler(this.dataHandler);
+        ftTMS.SetLogHandler(this.loghandler);
+        ftTMS.ConnectDevice();  // beware, first setup callback handlers before calling this
 
         Message msg = serviceHandler.obtainMessage();
         msg.arg1 = 12;
         serviceHandler.sendMessage(msg);
-
         ftTMS.SetRunning(true); // povol provoz v mLoop
         //ftTMS.start();
-
-
     }
 
     @Override

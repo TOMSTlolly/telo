@@ -12,6 +12,7 @@ import androidx.annotation.RequiresApi;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -35,12 +36,14 @@ public class DecodeTmsFormat {
     static public int GetSafeAddress(){
         return SafeAddress;
     }
-
     static private int SafeAddress = 0;  // pri vycitani paketu nastavuju start pro kontrolu, ze mi dosel cely paket
+
+
 
     private static String OFFPATTERN = "yyyy.MM.dd HH:mm";
     private static DateTimeFormatter dateTimeFormatter;
     public static Instant lastDateTrace;
+    public static Instant lastSafeDataTrace;
     static private int fIdx =0;
 
     //private OnGeekEventListener mListener; // listener field
@@ -57,17 +60,20 @@ public class DecodeTmsFormat {
     private static TDeviceType devType;
     public static void SetDeviceType(TDeviceType dev){
         devType = dev;
-
         if (fMereni == null)
             throw new UnsupportedOperationException("Please init fMereni in pars.java first");
         fMereni.dev = dev;
     }
 
-
     //@ struct
     static private TMereni fMereni;
     static {
         fMereni = new TMereni();
+    }
+
+    static private TMereni  fMerBefore;
+    static {
+        fMerBefore = new TMereni();
     }
 
      static {
@@ -395,6 +401,14 @@ public class DecodeTmsFormat {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
+    private boolean isSameDay(LocalDateTime dateTime1, LocalDateTime dateTime2) {
+        return dateTime1.getYear() == dateTime2.getYear() &&
+                dateTime1.getMonth() == dateTime2.getMonth() &&
+                dateTime1.getDayOfMonth() == dateTime2.getDayOfMonth();
+    }
+
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
     public boolean dpacket(String reply)
     {
         if (SafeAddress <0)
@@ -404,9 +418,12 @@ public class DecodeTmsFormat {
         String str = "";
         reply =reply.replaceAll("(\\r|\\n)", "");
 
-        int StartAddr = fMereni.Address;
-        StartAddr = SafeAddress;
+        int StartAddr = SafeAddress;
         fMereniList.clear();
+        fMereni.dtm = null;
+//        fMereni.year = 0;
+//        fMereni.month=0;
+//       fMereni.day =0;
 
         try {
             int i = 0;
@@ -416,7 +433,7 @@ public class DecodeTmsFormat {
                 if (val.length() == 0)
                     continue;
 
-                // ignoruj echo
+                // ignoruj echo ze simulatoru
                 if (val.startsWith("<<"))
                     continue;
 
@@ -425,27 +442,45 @@ public class DecodeTmsFormat {
 
                     if (val.startsWith("DD")) {
                         // je to datum
-                        disassembleDate(val, fMereni);
+                        disassembleDate(val, fMereni);  // doesnt calculate LocalDateTime, only setup year, month, day, hh, mm, ss, gtm
 
+                        fMereni.dtm = LocalDateTime.of(fMereni.year, fMereni.month, fMereni.day, fMereni.hh, fMereni.mm, fMereni.ss, 0);
                         if (fMereni.dtm != null)
                           lastDateTrace = fMereni.dtm.toInstant(ZoneOffset.UTC);
                     } else {
                         disassembleData(val, fMereni);
 
-                        if (fMereni.month == 0) {
-                            continue;
-                        }
-                        else {
+                        // calculate date time only if it makes sense
+                        if (fMereni.month >0) {
                             fMereni.dtm = LocalDateTime.of(fMereni.year, fMereni.month, fMereni.day, fMereni.hh, fMereni.mm, fMereni.ss, 0);
+                            // correct date part if there is no date mark (DD) before, this is a bug inside TMS firmware
+                            if (fMerBefore.dtm != null) {
+                                if ((fMerBefore.hh == 23) && (fMereni.hh == 0)) {
+                                    if (fMerBefore.mm > fMereni.mm)
+                                        if (isSameDay(fMerBefore.dtm, fMereni.dtm)) {
+                                            fMereni.dtm = fMereni.dtm.plusDays(1);
+                                            fMereni.year = fMereni.dtm.getYear();
+                                            fMereni.month = fMereni.dtm.getMonthValue();
+                                            fMereni.day = fMereni.dtm.getDayOfMonth();
+
+                                            lastDateTrace = fMereni.dtm.toInstant(ZoneOffset.UTC);
+                                        }
+                                }
+                                Duration duration = Duration.between(fMerBefore.dtm, fMereni.dtm);
+                                if (duration.getSeconds() > Constants.MAX_DELTA) {
+                                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                                    String meroFormatted = fMerBefore.dtm.format(formatter);
+                                    String merFormatted = fMereni.dtm.format(formatter);
+                                    String ss = String.format("Between messages  (from %s to %s)", meroFormatted, merFormatted);
+                                    Log.e("TOMSTLolly", "[#] " + ss);
+                                }
+                            }
                         }
+                        fMerBefore = new TMereni(fMereni);
+
                         fMereni.idx = fIdx;
-
-                        //  append  parsed measure into queue
-                        //sendMeasure(fMereni);
-                        fMereniList.add(fMereni);
-
+                        fMereniList.add(new TMereni(fMereni));
                         fIdx++;
-
                     }
                 }
                 else {
@@ -488,6 +523,7 @@ public class DecodeTmsFormat {
                    if (ret){
                         SafeAddress = AdrAfter;
                         fMereni.Address = AdrAfter;
+                        lastSafeDataTrace = lastDateTrace;    // posledni validni casova stopa
                     }
                     return ret;
                     //E=$000010;M;01
@@ -507,9 +543,66 @@ public class DecodeTmsFormat {
         return false;
     }
 
+    // fixing situation when restarting block miss leading date mark
+    // just wait for first valid mark and then correct the date mark back
+    private void correctLeadingNulls()
+    {
+        int i =0;
+        LocalDateTime dateTime=null;
+        for (TMereni mer : fMereniList) {
+            if (mer.month >0)
+                break;
+            i++;  // count leading nulls
+        }
+
+        if (fMereniList.get(i).dtm != null) {
+            dateTime = fMereniList.get(i).dtm;
+        }
+        else {
+            return;  // no valid date mark found
+        }
+
+        TMereni merPlus=fMereniList.get(i);  // first valid date mark
+        // going backwards and correct all date marks
+        for (int j = i-1; j>=0; j--) {
+            TMereni mer = fMereniList.get(j);
+            if (mer.month == 0) {
+
+                if( (merPlus.hh==0)  &&  (mer.hh == 23) ){
+                    if (mer.mm >= merPlus.mm) {
+                        dateTime = dateTime.minusDays(1);
+
+                        //mer.dtm =dateTime;
+                        // dopln datovou cast, hh:mm:ss uz existuji
+                        mer.year = dateTime.getYear();
+                        mer.month = dateTime.getMonthValue();
+                        mer.day =dateTime.getDayOfMonth();
+                        mer.dtm = LocalDateTime.of(mer.year, mer.month, mer.day, mer.hh, mer.mm, mer.ss, 0);
+                    }
+                }
+
+                if (mer.dtm == null) {
+                    mer.dtm = dateTime;
+                    mer.year = dateTime.getYear();
+                    mer.month = dateTime.getMonthValue();
+                    mer.day = dateTime.getDayOfMonth();
+                    mer.dtm = LocalDateTime.of(mer.year, mer.month, mer.day, mer.hh, mer.mm, mer.ss, 0);
+                }
+                fMereniList.set(j,mer);
+                merPlus = new TMereni(mer);
+            }
+        }
+    }
+
    private void sendWholePacket(){
         if (handler == null)
             return;
+
+        if (fMereniList.size() == 0)
+            return;
+
+        if (fMereniList.get(0).month == 0)
+            correctLeadingNulls();
 
         for (TMereni mer : fMereniList) {
             sendMeasure(mer);

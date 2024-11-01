@@ -15,6 +15,7 @@ public class FileDetail
 
     // zakladni informace
     private String name;
+    private String niceName;  // zkomprimovane jmeno souboru  20241231-9876543210
     private int iconID;
     private long FileSize;
     private String fullName;
@@ -63,7 +64,18 @@ public class FileDetail
     public void setCount(int count){ iCount = count; }
     public void setFrom(LocalDateTime from){ iFrom = from; }
     public void setInto(LocalDateTime into){ iInto = into; }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+    public void setNiceName(String niceName){
+        this.niceName= niceName;
+    }
+
     public String getName() { return name; }
+    public String getNiceName() {
+        return niceName;
+    }
     public int getIconID() { return iconID; }
     public String getFull() { return fullName; }
     public long getFileSize() { return FileSize; }
@@ -74,7 +86,8 @@ public class FileDetail
     }
     public void setFileSize(long size) { FileSize = size; }
     public void setIconID(int iconID) { this.iconID = iconID; }
-    public void setName(String name) { this.name = name; }
+
+
     public void setFull(String fullName) { this.fullName = fullName; }
     public void setSelected(boolean select)  { isSelected = select;}
     public boolean isSelected() { return isSelected; }

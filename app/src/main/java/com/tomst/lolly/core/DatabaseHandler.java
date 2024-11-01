@@ -227,4 +227,39 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         return fileDetail;
     }
 
+      // skutecne existujici soubory v cache aplikace
+      public int ClearUnusedFiles(String[] UsedFileNames) { // fileNames is an array of file names
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cursor = db.rawQuery("SELECT * FROM csvlist", null);
+        // Iterate through the results and log each line
+        int i = 0;
+        if (cursor.moveToFirst()) {
+            do {
+                @SuppressLint("Range") String name = cursor.getString(cursor.getColumnIndex("name"));
+                @SuppressLint("Range") int id = cursor.getInt(cursor.getColumnIndex("id"));
+               // System.out.println("Name: " + name + ", ID: " + id);
+
+                // search UsedFileNames array for existing
+                boolean found = false;
+                for (String fileName : UsedFileNames) {
+                    if (name.equals(fileName)) {
+                        found = true;
+                        break;
+                    }
+                }
+
+                // If the name is not found in UsedFileNames, delete the entry
+                if (!found) {
+                    // int result = db.delete(TABLE_CLIST, KEY_CLIST_NAME + " = ?", new String[]{name});
+                    System.out.println("Deleted file: " + name);
+                    i++;
+                }
+            } while (cursor.moveToNext());
+        }
+
+        cursor.close();
+        db.close();
+        return i; // vracim, pocet vymazanych zaznamu
+    }
+
 }

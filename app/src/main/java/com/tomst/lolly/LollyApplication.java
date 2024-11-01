@@ -25,6 +25,8 @@ import android.os.Environment;
 import android.os.IBinder;
 import android.provider.Settings;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
@@ -71,6 +73,14 @@ public class LollyApplication extends AppCompatActivity implements View.OnClickL
     private String  prefExportFolder            = "";            // The folder for csv exportation
     public DatabaseHandler gpsDataBase;
 
+    private static String SerialNumber;
+    public String getSerialNumber() {
+        return SerialNumber;
+    }
+    public void setSerialNumber(String serialNumber) {
+        SerialNumber = serialNumber;
+    }
+
     public String getPrefExportFolder() {
         return prefExportFolder;                                 // The folder for csv exportation
     }
@@ -78,8 +88,8 @@ public class LollyApplication extends AppCompatActivity implements View.OnClickL
         this.prefExportFolder = prefExportFolder;                 // The folder for csv exportation
     }
 
-    public  String getCacheDirectoryPath() {
-            //File tempDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+    public  String getCacheCsvPath() {
+       //File tempDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
        // String ret =  getBaseContext() .getCacheDir() .getAbsolutePath()+ "/Tracks";
         String ret= null;
         try {
@@ -89,6 +99,18 @@ public class LollyApplication extends AppCompatActivity implements View.OnClickL
         }
         return ret;
     }
+
+
+    public  String getCacheLogPath() {
+        String ret= null;
+        try {
+            ret = getCacheDir().getCanonicalPath() + "/Logs";
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return ret;
+    }
+
 
     public TDeviceType getDeviceType() {
         return dmdViewModel.GetDeviceType();
@@ -486,20 +508,47 @@ public class LollyApplication extends AppCompatActivity implements View.OnClickL
         // sdileny datovy modul
         dmdViewModel = new ViewModelProvider(this).get(DmdViewModel.class);
 
-        BottomNavigationView navView = findViewById(R.id.nav_view);
-        // Passing each menu ID as a set of Ids because each
-        // menu should be considered as top level destinations.
+        //BottomNavigationView navView = findViewById(R.id.nav_view);
         AppBarConfiguration appBarConfiguration = new AppBarConfiguration.Builder(
                 R.id.navigation_home, R.id.navigation_graph, R.id.navigation_notifications, R.id.navigation_options)
                 .build();
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_activity_main);
         NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
         NavigationUI.setupWithNavController(binding.navView, navController);
-
     }
 
     public void sendMessageToHomeFragment(String message) {
         dmdViewModel.sendMessageToFragment(message);
     }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main_menu,menu);
+        return true;
+    }
+
+    private void switchToSettingsFragment(){
+        BottomNavigationView bottomNavigationView;
+        bottomNavigationView = (BottomNavigationView) binding.navView;
+        View view = bottomNavigationView.findViewById(R.id.navigation_options);
+        view.performClick();
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        int id = item.getItemId();
+
+        if  (id ==R.id.action_settings) {
+            switchToSettingsFragment();
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
+
 
 }

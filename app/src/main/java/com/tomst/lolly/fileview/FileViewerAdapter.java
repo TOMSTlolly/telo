@@ -85,7 +85,8 @@ public class FileViewerAdapter extends BaseAdapter
         String formattedFrom = currentFile.getiFrom().toString();
         String formattedInto = currentFile.getiInto().toString();
 
-        holder.trackName.setText(currentFile.getName());
+//        holder.trackName.setText(currentFile.getName());  // tohle zobrazuju v titulce !!!
+        holder.trackName.setText(currentFile.getNiceName());  // tohle zobrazuju v titulce !!!
         holder.count.setText(String.valueOf(currentFile.getiCount()));
         holder.annotation.setText("Annotation");
         holder.from.setText(formattedFrom);

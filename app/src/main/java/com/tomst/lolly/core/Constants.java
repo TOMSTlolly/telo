@@ -3,6 +3,7 @@ package com.tomst.lolly.core;
 import android.annotation.SuppressLint;
 
 public class Constants {
+    public static final long MAX_DELTA = 60*60;  // hours 1 in seconds
     public static boolean showMicro = true;
     static public int fMicroInter = 1279;
     static public double fMicroSlope = (8890.0 / (34000.0 - 1279.0));

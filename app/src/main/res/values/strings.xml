@@ -106,6 +106,10 @@
     <string name="label_size">bytes</string>
     <string name="label_max_hum">mxHum</string>
     <string name="label_min_hum">minHum</string>
+    <string name="menu_settings">settings</string>
+    <string name="menu_about">about</string>
+    <string name="menu_online_help">online</string>
+    <string name="menu_shutdown">shutdown</string>
 
     <string-array name="friends">
         <item>File 1</item>
