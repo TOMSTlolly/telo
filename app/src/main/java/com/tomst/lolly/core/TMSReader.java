@@ -1254,6 +1254,7 @@ public class TMSReader extends Thread
         int AdrTest = 0;
         String ss = "";
         boolean ret = false;
+        parser.SetLastSafeDtm(null);
         TReadState rState = TReadState.rsStart;
 
         while (rState != TReadState.rsFinal) {

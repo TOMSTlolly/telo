@@ -475,7 +475,7 @@ public class HomeFragment extends Fragment {
                     break;
 
                 case tFinishedData:
-                    csv.CloseExternalCsv();
+                    saveLogAndData();
                     readWasFinished = true;
 
                     /*
@@ -483,7 +483,7 @@ public class HomeFragment extends Fragment {
                     String ALogFileName =  ADir+"/"+  CompileFileName("logs_",serialNumber,ADir);
                     saveLogs(ALogFileName);
                     */
-                    saveLog();
+
 
                     // get option for showing graph
                     boolean showGraph = getContext()
@@ -506,16 +506,21 @@ public class HomeFragment extends Fragment {
         }
     };
 
+    private void saveLogAndData(){
+        csv.CloseExternalCsv();
+        saveLogToFile(csv.getFileName());
+    }
+
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     private void saveLog()
     {
         String ADir= LollyApplication.getInstance().getCacheLogPath();
         String ALogFileName =  ADir+"/"+  CompileFileName("logs_",serialNumber,ADir);
-        saveLogs(ALogFileName);
+        saveLogToFile(ALogFileName);
     }
 
-    private void saveLogs(String ALogFileName){
+    private void saveLogToFile(String ALogFileName){
             try (BufferedWriter writer = new BufferedWriter(new FileWriter(ALogFileName))) {
                 for (TMSRec log : logs) {
                     writer.write("<<"+log.sCmd);
@@ -691,10 +696,12 @@ public class HomeFragment extends Fragment {
     @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
     public void onDestroyView() {
-        //odometer.SetRunning(false);
-        saveLog();
-        super.onDestroyView();
 
+        // save if we skipped the tFinishedData
+        if (!readWasFinished)
+           saveLogAndData();
+
+        super.onDestroyView();
         binding = null;
     }
 }

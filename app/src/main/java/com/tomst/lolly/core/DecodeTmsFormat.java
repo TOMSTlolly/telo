@@ -43,7 +43,8 @@ public class DecodeTmsFormat {
     private static String OFFPATTERN = "yyyy.MM.dd HH:mm";
     private static DateTimeFormatter dateTimeFormatter;
     public static Instant lastDateTrace;
-    public static Instant lastSafeDataTrace;
+  //  public static Instant lastSafeDataTrace;
+    public static LocalDateTime lastSafeDtm;
     static private int fIdx =0;
 
     //private OnGeekEventListener mListener; // listener field
@@ -391,6 +392,11 @@ public class DecodeTmsFormat {
         fMereni.month = 0;
 
         dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+        lastSafeDtm = null;
+    }
+
+    public static void SetLastSafeDtm(LocalDateTime dtm){
+        lastSafeDtm = dtm;
     }
 
     /*** Konstruktor, nastavim defaultni hodnoty ***/
@@ -418,13 +424,27 @@ public class DecodeTmsFormat {
         String str = "";
         reply =reply.replaceAll("(\\r|\\n)", "");
 
-        int StartAddr = SafeAddress;
+        int StartAddr   = SafeAddress;
+
+        fMereni.year = 0;
+        fMereni.month=0;
+        fMereni.day =0;
+        if (lastSafeDtm != null)
+        {
+            if ((lastSafeDtm.getHour()==23) && (lastSafeDtm.getMinute()>=45))
+            {
+                lastSafeDtm = lastSafeDtm.plusDays(1);
+                lastSafeDtm = lastSafeDtm.withHour(1);  // pokud dojde k novemu restartu se stejnym datumem, nepricitam korekci +1
+            }
+            fMereni.year = lastSafeDtm.getYear();
+            fMereni.month = lastSafeDtm.getMonthValue();
+            fMereni.day = lastSafeDtm.getDayOfMonth();
+            Log.d("TOMSTLolly","Setting year, month, day from lastSafeDtm"+fMereni.year+" "+fMereni.month+" "+fMereni.day);
+        }
+
         fMereniList.clear();
         fMereni.dtm = null;
-//        fMereni.year = 0;
-//        fMereni.month=0;
-//       fMereni.day =0;
-
+        fMerBefore.dtm = null;
         try {
             int i = 0;
             for (String val : reply.split("@")) {
@@ -486,6 +506,9 @@ public class DecodeTmsFormat {
                 else {
                     // address
                     String[] view = val.split(";");
+                    if (view.length < 3)
+                        return false;
+
                     int AdrAfter = StrToHex(aft(view[ADR_INDEX],"="));
 
                     // command
@@ -523,7 +546,8 @@ public class DecodeTmsFormat {
                    if (ret){
                         SafeAddress = AdrAfter;
                         fMereni.Address = AdrAfter;
-                        lastSafeDataTrace = lastDateTrace;    // posledni validni casova stopa
+
+                        lastSafeDtm = fMereni.dtm;
                     }
                     return ret;
                     //E=$000010;M;01
@@ -555,12 +579,19 @@ public class DecodeTmsFormat {
             i++;  // count leading nulls
         }
 
+        if (i>fMereniList.size())
+        {
+            Log.d("TOMSTLolly","Suspect index out of range i,size"+i+" "+fMereniList.size());
+            return;
+        }
+
         if (fMereniList.get(i).dtm != null) {
             dateTime = fMereniList.get(i).dtm;
         }
         else {
             return;  // no valid date mark found
         }
+
 
         TMereni merPlus=fMereniList.get(i);  // first valid date mark
         // going backwards and correct all date marks
@@ -604,8 +635,20 @@ public class DecodeTmsFormat {
         if (fMereniList.get(0).month == 0)
             correctLeadingNulls();
 
+       String format = "Date: %s, Year: %d, Month: %d, Day: %d, Hour: %d, Minute: %d, Second: %d";
         for (TMereni mer : fMereniList) {
             sendMeasure(mer);
+
+            String formattedString = String.format(format,
+                    mer.dtm != null ? mer.dtm.toString() : "null",
+                    mer.year,
+                    mer.month,
+                    mer.day,
+                    mer.hh,
+                    mer.mm,
+                    mer.ss);
+
+            Log.d("TOMSTMereni",formattedString);
         }
     }
 
