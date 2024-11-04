@@ -6,6 +6,7 @@ package com.tomst.lolly.core;
  *  between the Android device and the TMSim.
  */
 public class TMSRec {
+    public  byte aByte;   // co se mi vraci, jako prvni byte
     public String sCmd;
     public String sRsp;
 }

@@ -507,6 +507,9 @@ public class HomeFragment extends Fragment {
     };
 
     private void saveLogAndData(){
+        if (csv == null)
+            return;
+
         csv.CloseExternalCsv();
         saveLogToFile(csv.getFileName());
     }

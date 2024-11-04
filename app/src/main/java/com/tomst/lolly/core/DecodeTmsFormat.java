@@ -513,6 +513,7 @@ public class DecodeTmsFormat {
 
                     // command
                     char cmd = (view[CMD_INDEX]).charAt(0);
+                    String par = view[PAR_INDEX];
 
                     // parameter
                     switch(cmd){
@@ -520,6 +521,12 @@ public class DecodeTmsFormat {
                             //i = -1;
                             break;
                         case 'D':
+                              // nastaveni posledni casove znacky
+                              // @E=$011880;D;2024/03/23,00:00:00+04
+                              //   2024/03/23,00:00:00+04
+                              DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd,HH:mm:ssX");
+                              LocalDateTime dateTime = LocalDateTime.parse(par, formatter);
+                              lastDateTrace = dateTime.toInstant(ZoneOffset.UTC);
                             break;
                         case 'C':
                             break;

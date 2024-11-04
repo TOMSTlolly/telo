@@ -1180,8 +1180,8 @@ public class TMSReader extends Thread
                 respond = fHer.doCommand("S=$000000");
 
                // respond = fHer.doCommand("S=$120C60");
-                SendMeasure(TDevState.tReadType, "read  wurst from reset flash!!!");
-                Log.d("Sendmessage", respond);
+               // SendMeasure(TDevState.tReadType, "read  wurst from reset flash!!!");
+                //Log.d("Sendmessage", respond);
                 break;
             case SPI_DOWNLOAD_BOOKMARK:
                 // find last bookmark values and setup pointer to the correct address
