@@ -747,7 +747,8 @@
         android:paddingLeft="@dimen/spacing_middle"
         android:paddingRight="@dimen/spacing_middle"
         android:layout_marginTop="20dp"
-        android:visibility="gone">
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent">
         <TextView
             android:id="@+id/expPath"
             android:layout_width="wrap_content"
