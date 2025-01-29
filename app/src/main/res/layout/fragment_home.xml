@@ -570,7 +570,7 @@
                         android:autoSizeMinTextSize="12sp"
                         android:autoSizeMaxTextSize="100sp" />
                     <TextView
-                        android:id="@id/devhumAD"
+                        android:id="@+id/devhumADVal"
                         android:layout_width="0dp"
                         android:layout_height="match_parent"
                         android:layout_weight="1"
@@ -582,8 +582,6 @@
                         android:autoSizeTextType="uniform"
                         android:autoSizeMinTextSize="12sp"
                         android:autoSizeMaxTextSize="100sp" />
-
-
 
                     <View
                         android:layout_width="1dp"

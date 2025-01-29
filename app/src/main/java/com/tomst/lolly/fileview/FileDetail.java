@@ -29,6 +29,8 @@ public class FileDetail
     private double minT3, maxT3;
     private double minHum,maxHum;
 
+    public int errFlag;  // znacka chyby
+
     public String getSerialNumber() { return SerialNumber; }
     public void setSerialNumber(String serialNumber) { SerialNumber = serialNumber; }
 
@@ -59,8 +61,12 @@ public class FileDetail
     public void setMinHum(double minHum) { this.minHum = minHum; }
     public void setMaxHum(double maxHum) { this.maxHum = maxHum; }
 
+
     // settery pro doplnujici informace
-    public void setAnnotation(String annotation){ fullName = annotation; }
+    public void setAnnotation(String annotation){
+        this.fullName = annotation;
+    }
+
     public void setCount(int count){ iCount = count; }
     public void setFrom(LocalDateTime from){ iFrom = from; }
     public void setInto(LocalDateTime into){ iInto = into; }
@@ -93,6 +99,10 @@ public class FileDetail
     public boolean isSelected() { return isSelected; }
     public boolean isUploaded() { return isUploaded; }
     public void setUploaded(boolean uploaded) { this.isUploaded = uploaded; }
+
+    // nove property
+    public void setCreated(LocalDateTime created) { this.iFrom = created; }
+    public void setErr(int errFlag) { this.errFlag = errFlag; }
 
     private void  ClearMembers()
     {

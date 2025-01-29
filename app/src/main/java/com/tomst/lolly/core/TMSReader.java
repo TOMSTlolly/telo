@@ -128,6 +128,8 @@ public class TMSReader extends Thread
     //String CsvFileName = "";
     //boolean writeTxf = false;
 
+    private boolean fShowMicro = false;
+
     // handler k TMD adapteru
     private FT_Device ftDev = null;
 
@@ -355,8 +357,8 @@ public class TMSReader extends Thread
         String[] str = line.split(";");
         // 00F;ADC;FF3;183;2
         if (str[1].equals("ADC")) {
-            byte k = con(str[0], (byte) 0);
-            byte l = con(str[0], (byte) 1);
+            byte k   = con(str[0], (byte) 0);
+            byte l    = con(str[0], (byte) 1);
             byte m = con(str[0], (byte) 2);
 
             byte x = con(str[2], (byte) 0);
@@ -910,14 +912,14 @@ public class TMSReader extends Thread
                     devState = TDevState.tGetTime;
 
                     // get option for showing graph
-                    boolean showMicro = context.getSharedPreferences(
+                     fShowMicro = context.getSharedPreferences(
                             "save_options", Context.MODE_PRIVATE
                     ).getBoolean("showmicro", false);
 
                     // if setting for setupAD is no, move on to capacity
-                    if (!showMicro) {
-                        devState = TDevState.tCapacity;
-                    }
+                   // if (!showMicro) {
+                    //    devState = TDevState.tCapacity;
+                    //}
                     break;
 
                 case tCapacity:
@@ -996,7 +998,7 @@ public class TMSReader extends Thread
                     message.obj = inx;
                     handler.sendMessage(message);
 
- //                   SendMeasure(TDevState.tReadMeteo,sMeteo);
+ //              SendMeasure(TDevState.tReadMeteo,sMeteo);
 
                     devState = TDevState.tSetMeteo;
                     break;
@@ -1036,6 +1038,7 @@ public class TMSReader extends Thread
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
+
                     break;
 
                 case tCheckTMSFirmware:
@@ -1075,21 +1078,6 @@ public class TMSReader extends Thread
         return true;
     }
 
-    private int getaddr(String respond)
-    {
-        //String s = new String("P=$05ED00");
-        try {
-            String[] arr = respond.split("=", 2);
-            String s = arr[1].substring(1);
-            s = s.replaceAll("(\\r|\\n)", "");
-            int ret = Integer.parseInt(s, 16);
-            return (ret);
-        }
-        catch (Exception e){
-            e.printStackTrace();
-        }
-        return 0;
-    }
 
     private String getHexValueFromBookmark(int pValue, int bookmarkDays) {
         // subtract p value (current pointer) from days converted to int/hex
@@ -1167,7 +1155,7 @@ public class TMSReader extends Thread
 
         // napocitej pocet cyklu z posledni adresy
         String pRespond = fHer.doCommand("P");
-        int lastAddress = getaddr(pRespond);
+        int lastAddress = shared.getaddr(pRespond);
         DoProgress(-lastAddress);  // celkovy pocet bytu
 
         String sHexString = "";
@@ -1186,10 +1174,12 @@ public class TMSReader extends Thread
             case SPI_DOWNLOAD_BOOKMARK:
                 // find last bookmark values and setup pointer to the correct address
                 respond = fHer.doCommand("B");
-                sHexString = aft(respond, "=");
+                //sHexString = aft(respond, "=");
 
                 // set and check pointer to the data before readin from flash
-                if (!fHer.doSACH(Integer.parseInt(sHexString)))
+                fAddr = shared.getaddr(respond);
+                if (!fHer.doSACH(fAddr))
+                //if (!fHer.doSACH(Integer.parseInt(sHexString)))
                     return false;
                 /*
                 // controlled conversion back and forth between types just to check the value is valid
@@ -1255,15 +1245,19 @@ public class TMSReader extends Thread
         String ss = "";
         boolean ret = false;
         parser.SetLastSafeDtm(null);
+        parser.SetMicroMeter(fShowMicro);
+
         TReadState rState = TReadState.rsStart;
 
+        int iErr=0;
         while (rState != TReadState.rsFinal) {
             switch (rState) {
                 case rsStart:
                     // zjistim aktualni adresu
+                    iErr = 0;
                     respond = fHer.doCommand("S");
                     if (respond.length() > 1) {
-                        fAddr = getaddr(respond);
+                        fAddr = shared.getaddr(respond);
                         DecodeTmsFormat.SetSafeAddress(fAddr);
                         rState = TReadState.rsReadPacket;
                     }
@@ -1272,9 +1266,11 @@ public class TMSReader extends Thread
                 case rsReadPacket:
                     respond = fHer.doCommand("D");
                     if (respond.length() > 1) {
+
                         ret = parser.dpacket(respond);  // data are send into HomeFragment
                         if (ret) {
                            // extract last address from the data packet
+                            iErr =0;
                             fAddr = DecodeTmsFormat.GetSafeAddress();
                             if (fAddr < lastAddress)
                                 rState = TReadState.rsReadPacket;
@@ -1293,12 +1289,16 @@ public class TMSReader extends Thread
                     ss = "S=$" + LineUpHexa(fAddr);
                     respond = fHer.doCommand(ss);
                     if (respond.length() > 1) {
-                        AdrTest = getaddr(respond);
+                        AdrTest = shared.getaddr(respond);
                         if (AdrTest == fAddr)
                             rState = TReadState.rsReadPacket;
                         else
                             rState = TReadState.rsStart;
                     }
+
+                    // podezrela hodnota, mozna bude spatny adapter
+                    if (++iErr>10)
+                        SendMeasure(TDevState.tTMDCycling, " Please reflash TMD firmware");
                     break;
 
                 default:

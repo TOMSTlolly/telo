@@ -18,6 +18,7 @@ public enum TDevState
     tLollyService,
     tMeasure,
     tNoHardware,
+    tTMDCycling,
     tProgress,
     tReadData,
     tReadType,

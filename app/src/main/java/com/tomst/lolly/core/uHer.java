@@ -457,11 +457,11 @@ public class uHer extends Thread {
         if (respond.isEmpty())
             return(false);
 
-        String sHexString = aft(respond, "=");
-        if (AValue !=Integer.parseInt(sHexString, 16))
-            return(false);
-
-        return (true);
+        //String sHexString = aft(respond, "=");
+        //String sHexString = shared.getaddr(respond);
+        //if (AValue !=Integer.parseInt(sHexString, 16))
+         //  return(false);
+        return (AValue == shared.getaddr(respond));
     }
 
     private void doLog(String cmd, String resp){

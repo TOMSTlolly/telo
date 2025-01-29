@@ -39,7 +39,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
-                android:text="Correct Sql"
+                android:text="Scan Fol."
                 android:backgroundTint="#f1a833"/>
         </LinearLayout>
 

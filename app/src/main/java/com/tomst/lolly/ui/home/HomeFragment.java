@@ -24,6 +24,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
+import androidx.core.content.ContextCompat;
 import androidx.documentfile.provider.DocumentFile;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
@@ -184,7 +185,7 @@ public class HomeFragment extends Fragment {
 
      @Override
      public void onStart(){
-        Constants.showMicro = true;
+        //Constants.showMicro =
 
         super.onStart();
 
@@ -366,7 +367,20 @@ public class HomeFragment extends Fragment {
 
                 case tWaitForAdapter:
                     // if (ftTMS.AdapterNumber.length()>MIN_ADANUMBER) ;
-                    if (info.msg.length()>MIN_ADANUMBER); // tady bude zobrazeni cisla adapteru
+
+                    // tady je zobrazeni cisla adapteru
+                    if (info.msg.length()>MIN_ADANUMBER) {
+                        binding.proMessage.setText(info.msg);
+
+                        ImageView adapterImage = getActivity().findViewById(R.id.adapterImage);
+                        adapterImage.setImageResource(R.drawable.adapter_green);
+                    }
+                    break;
+
+                case tTMDCycling:
+                    // sem me dostane adapter, ktery neumi podepsat dlouhy paket
+                    binding.proMessage.setText(info.msg);
+                    binding.proMessage.setTextColor(ContextCompat.getColor(requireContext(), R.color.color_accent)); // Set text color to red
                     break;
 
                 case tHead:
@@ -396,7 +410,7 @@ public class HomeFragment extends Fragment {
                     break;
 
                 case tInfo:
-                    binding.devhumAD.setText(String.valueOf(info.humAd));
+                    binding.devhumADVal.setText(String.valueOf(info.humAd));
                     binding.devt1.setText(String.valueOf(info.t1));
                     binding.devt2.setText(String.valueOf(info.t2));
                     binding.devt3.setText(String.valueOf(info.t3));
@@ -483,8 +497,6 @@ public class HomeFragment extends Fragment {
                     String ALogFileName =  ADir+"/"+  CompileFileName("logs_",serialNumber,ADir);
                     saveLogs(ALogFileName);
                     */
-
-
                     // get option for showing graph
                     boolean showGraph = getContext()
                             .getSharedPreferences(
@@ -511,7 +523,8 @@ public class HomeFragment extends Fragment {
             return;
 
         csv.CloseExternalCsv();
-        saveLogToFile(csv.getFileName());
+        saveLog();
+        //saveLogToFile(csv.getFileName());
     }
 
 
@@ -545,9 +558,20 @@ public class HomeFragment extends Fragment {
         binding.expPath.setText("Home Fragment onViewCreated");
     }
 
+    private void FragmentToDefaultState() {
+        //binding.proMessage.setText("Home Fragment onViewCreated");
+        binding.devser.setText("0123456789");
+        binding.devTime.setText("01.01.2000 12:34:56");
+        binding.phoneTime.setText("01.01.2000 12:34:56");
+        binding.devMode.setText("Basic");
+        binding.devMemory.setProgress(0);
+        binding.devhumADVal.setText("0");
+        binding.devt1.setText("0");
+        binding.devt2.setText("0");
+        binding.devt3.setText("0");
+    }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
-
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
         HomeViewModel homeViewModel = new ViewModelProvider(this).get(HomeViewModel.class);
@@ -556,7 +580,6 @@ public class HomeFragment extends Fragment {
         dmd.ClearMereni();
 
         logs  = new ArrayList<>();
-
 
         // tady vybiram callbacky od jinych fragmentu a aplikace
         dmd.getMessageContainerToFragment().observe(getViewLifecycleOwner(), message -> {
@@ -567,6 +590,9 @@ public class HomeFragment extends Fragment {
         binding = FragmentHomeBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
         binding.proBar.setProgress(0); // vycisti progress bar
+
+        // do formulare nahrej defaultni nastaveni
+        FragmentToDefaultState();
 
         Button testLollyInstance = binding.testLolly;
         testLollyInstance.setOnClickListener(new View.OnClickListener() {

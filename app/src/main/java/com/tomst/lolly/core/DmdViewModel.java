@@ -95,6 +95,14 @@ public class DmdViewModel extends ViewModel
                 valHA.add(new Entry(fIdx, (float)mer.hum));
                 break;
 
+            case dStehlik:
+                valT1.add(new Entry(fIdx, (float)mer.t1 ));
+                valT2.add(new Entry(fIdx, (float)mer.t2 ));
+                valT3.add(new Entry(fIdx, (float)mer.t3 ));
+                valHA.add(new Entry(fIdx, (float)mer.hum));
+                break;
+
+
             case dAD:
                 valT1.add(new Entry(fIdx, (float)mer.t1 ));
                 valHA.add(new Entry(fIdx, (float)mer.hum));

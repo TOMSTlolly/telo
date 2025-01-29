@@ -326,7 +326,6 @@ public class CSVReader extends Thread
         handler.sendMessage(message);
     }
 
-
     public void CloseExternalCsv()
     {
         try
@@ -359,11 +358,25 @@ public class CSVReader extends Thread
     {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern(DMD_PATTERN);
         String dts = Mer.dtm.format(formatter);
+
+        int hum = Mer.adc; // v defaultu ukladam vystup z prevodniku, bez prepoctu na mikrometry
+        if (Mer.dev == TDeviceType.dAD)
+         {
+            if (Constants.showMicro) {
+                Mer.mvs = TDeviceType.dAdMicro.ordinal() + Constants.MVS_OFFSET;
+                hum = Mer.hum;
+            }
+            else
+                Mer.mvs = TDeviceType.dAD.ordinal() + Constants.MVS_OFFSET;
+
+         }
+
         String line = String.format(
-                Locale.US,
-                "%d;%s;%d;%.4f;%.4f;%.4f;%d;%d;%d",
-                Mer.idx,dts,Mer.gtm,Mer.t1,Mer.t2,Mer.t3,Mer.hum,Mer.mvs,Mer.Err
+                    Locale.US,
+                    "%d;%s;%d;%.2f;%.2f;%.2f;%d;%d;%d",
+                    Mer.idx, dts, Mer.gtm, Mer.t1, Mer.t2, Mer.t3, hum, Mer.mvs, Mer.Err
         );
+
         return (line);
     }
 
@@ -514,7 +527,7 @@ public class CSVReader extends Thread
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
-    private void ProcessLine(String currentline) {
+    private boolean ProcessLine(String currentline) {
         String T1, T2, T3;
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern(DMD_PATTERN);
         LocalDateTime dateTime = null;
@@ -545,16 +558,20 @@ public class CSVReader extends Thread
                 Mer.hum = Integer.parseInt(str[iHum]);
                 Mer.mvs = Integer.parseInt(str[iMvs]);
 
-                if (Mer.mvs >= 200)
+                // zjisti typ zarizeni
+                if (Mer.mvs >0)
                     Mer.dev = shared.MvsToDevice(Mer.mvs);
                 else
                     Mer.dev = GuessDevice(Mer);
 
 
-            } catch (Exception e) {
-                System.out.println(e);
+            }
+            catch (Exception e) {
+                    System.out.println(e);
+                    return(false);
             }
         }
+        return (true);
     }
 
     // nacte prvni a posledni radek ze souboru
@@ -567,9 +584,12 @@ public class CSVReader extends Thread
         // extrahuj seriove cislo z jmena souboru
         String serialNumber = shared.getSerialNumberFromFileName(uri.getLastPathSegment());
 
-        // prvni radek
+        // prvni radek -> ... data od
         String s = raf.readLine();
-        ProcessLine(s);
+        if (!ProcessLine(s)) {
+            fdet.setErr(Constants.PARSER_ERROR);
+            return fdet;
+        }
         fdet .setFrom(Mer.dtm);
 
         // posledni radek
@@ -583,8 +603,13 @@ public class CSVReader extends Thread
             }
             sb.append(c);
         }
+        // posledni radek , data do...
         s= sb.reverse().toString();
-        ProcessLine(s);
+        if (!ProcessLine(s)) {
+            fdet.setErr(Constants.PARSER_ERROR);
+            return fdet;
+        }
+
         fdet.setInto(Mer.dtm);
         fdet.setCount(Mer.idx);
         return fdet;
@@ -611,16 +636,23 @@ public class CSVReader extends Thread
         FileDetail fileDetail = new FileDetail(uri.getLastPathSegment());
         String currentline = reader.readLine();
         if (currentline == null)
-            return null;
+            return fileDetail;
 
-        ProcessLine(currentline);
+        if (!ProcessLine(currentline))
+        {
+            fileDetail.setErr(Constants.PARSER_ERROR);
+            return fileDetail;
+        }
+
         fileDetail.setFrom(Mer.dtm);
-
+        fileDetail.setErr(Constants.PARSER_OK);  // zadne chyby
         DoProgress(-totalBytes);  // vynuluj progress bar
         while ((currentline = reader.readLine()) != null)
         {
             //  vysledek je v lokalni promenne Mer
-            ProcessLine(currentline);
+            if (ProcessLine(currentline) == false)
+               fileDetail.setErr(Constants.PARSER_ERROR);
+
             Mer.idx = ++iline;
             idx = inputStream.available();
             idx = (totalBytes - idx) ;

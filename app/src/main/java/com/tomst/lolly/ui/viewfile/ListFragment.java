@@ -60,6 +60,11 @@ import com.tomst.lolly.BuildConfig;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -643,7 +648,7 @@ public class ListFragment extends Fragment
                 fdet.setNiceName(getNiceName(file.getName()));
 
                 fdet.setFileSize((int) file.length());
-                fFriends.add(fdet);
+                 fFriends.add(fdet);
             }
         }
         }
@@ -652,6 +657,7 @@ public class ListFragment extends Fragment
     // 1
     // 2  data
     // 3 98765432
+
     // 4 2024
     // 5 10
     // 6 28
@@ -665,7 +671,7 @@ public class ListFragment extends Fragment
         if (parts[1].isEmpty())
             return null;
 
-        String s = parts[1] + "-" + parts[2] + parts[3] + parts[4]+ bef(parts[5],".");
+        String s = parts[1] + "-" + parts[2] + parts[3] + parts[4]+ "-" + bef(parts[5],"\\.");
          return s;
         }
 
@@ -692,10 +698,20 @@ public class ListFragment extends Fragment
             }
             db.ClearUnusedFiles(usedFiles);
 
+            Location location = LollyApplication.getInstance().getLocation();
+
             FileDetail fdet = null;
             CSVReader reader = new CSVReader();
             for (File file : files) {
                 try {
+
+                    /*
+                    // Get the creation time
+                    Path filePath = file.toPath();
+                    BasicFileAttributes attrs = Files.readAttributes(filePath, BasicFileAttributes.class);
+                    LocalDateTime creationTime = LocalDateTime.ofInstant(attrs.creationTime().toInstant(), ZoneId.systemDefault());
+                    */
+
                     // ve fdet se mi vraci info z db, pripadne z dlouheho runu radek po radku
                     if (db.getFileDetail(file.getName()) != null) {
                         fdet = db.getFileDetail(file.getName());
@@ -709,15 +725,15 @@ public class ListFragment extends Fragment
                         if (!fileUri.toString().contains(".csv"))
                             continue;
 
-                        Location location = LollyApplication.getInstance().getLocation();
-
                         fdet = reader.readFileContent(fileUri);
-                        if (fdet==null)
-                            continue;
+
                         fdet.setName(file.getName());
                         fdet.setFileSize((int) file.length());
                         fdet.setFull(fileUri.toString());
-                        db.addFile(fdet, location);
+
+                        // je to datovy soubor ?
+                        if (fdet.errFlag == Constants.PARSER_OK)
+                            db.addFile(fdet, location);
                     }
 
                 } catch (IOException e) {
@@ -764,13 +780,13 @@ public class ListFragment extends Fragment
             }
         });
        */
-        // in async task we're gonna load files from the folder and setup the database
+
+        /*
         Log.d("LIST", "Started...");
         executor.execute(() -> {
             DoLoadFiles();
         });
-
-
+        */
     }
 
 

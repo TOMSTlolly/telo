@@ -27,8 +27,9 @@
             android:layout_centerVertical="true"
             android:layout_margin="5dp"
             android:scaleType="center"
-            android:src="@drawable/baseline_insert_drive_file_24"
-            app:tint="#14532D" />
+            app:tint="#14532D"
+            android:src="@drawable/ic_launcher_foreground"
+            android:visibility="gone" />
 
         <ImageView
             android:id="@+id/cloudIcon"
@@ -36,8 +37,8 @@
             android:layout_height="@dimen/thumbSize"
             android:layout_margin="5dp"
             android:scaleType="center"
-            android:src="@drawable/baseline_cloud_done_24"
-            android:visibility="gone" />
+            android:src="@drawable/ic_expand_arrow"
+             />
 
         <CheckBox
             android:id="@+id/checkBox"
@@ -62,16 +63,16 @@
         android:background="@color/colorCardBackground_Title">
 
         <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceMedium"
-        android:id="@+id/id_textView_card_TrackName"
-        android:textColor="@color/textColorCardTitle"
-        android:textStyle="bold"
-        android:textDirection="locale"
-        android:gravity="start"
-        android:textAlignment="viewStart"
-        android:paddingTop="1dp" />
+            android:id="@+id/id_textView_card_TrackName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="start"
+            android:paddingTop="1dp"
+            android:textAlignment="viewStart"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:textColor="@color/textColorCardTitle"
+            android:textDirection="locale"
+            android:textStyle="bold" />
 
         <TextView
             android:layout_width="match_parent"
@@ -84,11 +85,12 @@
             android:layout_marginEnd="40dp"
             android:textStyle="italic"
             android:textDirection="locale"
-            android:gravity="start"
+
             android:textAlignment="viewStart"
             android:paddingTop="1dp"
             android:paddingBottom="1dp"
-            android:layout_below="@id/id_textView_card_TrackName"/>
+            android:layout_below="@id/id_textView_card_TrackName"
+           />
 
     </RelativeLayout>
 
@@ -98,7 +100,6 @@
             android:layout_height="24dp"
             android:layout_margin="7dp"
             android:clickable="false"
-            app:tint="@color/textColorPrimary"
             android:layout_alignParentEnd="true"
             android:layout_alignParentRight="true" />
 
@@ -111,6 +112,8 @@
             android:layout_toRightOf="@+id/iconID"
             android:layout_toEndOf="@+id/iconID"
             android:layout_below="@+id/id_cardDataTitle" />
+
+        <!-- odsud jsem to menil -->
 
         <!-- Male popisky pod textovym souborem a anotaci -->
         <LinearLayout
@@ -171,7 +174,7 @@
                         android:layout_height="wrap_content"
                         android:textAppearance="@style/TextAppearanceCardSmall"
                         android:text="@string/label_min_hum"
-                        android:layout_marginTop="9dp"/>
+                        android:layout_marginTop="3dp"/>
 
                 </LinearLayout>
 
@@ -223,7 +226,8 @@
                 android:orientation="horizontal"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_weight="1" >
+                android:paddingBottom="2dp"
+                android:layout_weight="1">
 
                 <LinearLayout
                     android:orientation="vertical"
@@ -299,7 +303,7 @@
                         android:layout_height="wrap_content"
                         android:textAppearance="@style/TextAppearanceCardSmall"
                         android:id="@+id/id_max_hum"
-                        android:layout_marginTop="9dp"
+                        android:layout_marginTop="3dp"
                         android:textColor="@color/textColorPrimary"
                         android:maxLines="1" />
                 </LinearLayout>
@@ -308,7 +312,6 @@
 
         </LinearLayout>
 
-
-    </RelativeLayout>
+</RelativeLayout>
 
 </androidx.cardview.widget.CardView>

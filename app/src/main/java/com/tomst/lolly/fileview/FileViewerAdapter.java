@@ -9,11 +9,14 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.CheckBox;
-import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.annotation.RequiresApi;
+import androidx.core.content.ContextCompat;
+
 import com.tomst.lolly.R;
+import com.tomst.lolly.core.Constants;
+
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -60,6 +63,9 @@ public class FileViewerAdapter extends BaseAdapter
             LayoutInflater myInflater = LayoutInflater.from(mContext);
             convertView = myInflater.inflate(R.layout.rowitem, parent, false);
             holder = new ViewHolder();
+
+            //id_imageView_card_tracktype
+            holder.trackTypeIcon = convertView.findViewById(R.id.id_imageView_card_tracktype);  // pravy horni roh ikona
             holder.cloudIcon = convertView.findViewById(R.id.cloudIcon);
             holder.imageView = convertView.findViewById(R.id.iconID);
             holder.checkBox  = convertView.findViewById(R.id.checkBox);
@@ -75,36 +81,57 @@ public class FileViewerAdapter extends BaseAdapter
             holder.maxhum = convertView.findViewById(R.id.id_max_hum);
 
             convertView.setTag(holder);
-        } else {
+        }
+        else {
             holder = (ViewHolder) convertView.getTag();
         }
+
         FileDetail currentFile = mAllFiles.get(position);
 
-       // DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneId.of("UTC"));
-        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-        String formattedFrom = currentFile.getiFrom().toString();
-        String formattedInto = currentFile.getiInto().toString();
-
-//        holder.trackName.setText(currentFile.getName());  // tohle zobrazuju v titulce !!!
         holder.trackName.setText(currentFile.getNiceName());  // tohle zobrazuju v titulce !!!
-        holder.count.setText(String.valueOf(currentFile.getiCount()));
-        holder.annotation.setText("Annotation");
-        holder.from.setText(formattedFrom);
-        holder.into.setText(formattedInto);
-        holder.mintx.setText(String.valueOf(currentFile.getMinT1()));
-        holder.maxtx.setText(String.valueOf(currentFile.getMaxT1()));
-        holder.minhum.setText(String.valueOf(currentFile.getMinHum()));
-        holder.maxhum.setText(String.valueOf(currentFile.getMaxHum()));
-        holder.size.setText(String.valueOf(currentFile.getFileSize()));
+        holder.imageView.setImageResource(0);
 
-        // zbyla cast stareho holderu
-        // holder.cloudIcon.setVisibility(currentFile.isUploaded() ? View.VISIBLE : View.GONE);
-        holder.imageView.setImageResource(currentFile.getIconID());
-        holder.checkBox.setText(currentFile.getName());
-        holder.checkBox.setChecked(currentFile.isSelected());
+        // doplnim statistiku, pokud je to znamy datovy soubor
+        if (currentFile.errFlag==Constants.PARSER_OK)
+        {
+           // DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneId.of("UTC"));
+            DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+            String formattedFrom = currentFile.getiFrom().toString();
+            String formattedInto = currentFile.getiInto().toString();
+
+            //holder.trackName.setText(currentFile.getNiceName());  // tohle zobrazuju v titulce !!!
+            holder.count.setText(String.valueOf(currentFile.getiCount()));
+            holder.annotation.setText("Parser OK");
+            holder.from.setText(formattedFrom);
+            holder.into.setText(formattedInto);
+            holder.mintx.setText(String.valueOf(currentFile.getMinT1()));
+            holder.maxtx.setText(String.valueOf(currentFile.getMaxT1()));
+            holder.minhum.setText(String.valueOf(currentFile.getMinHum()));
+            holder.maxhum.setText(String.valueOf(currentFile.getMaxHum()));
+            holder.size.setText(String.valueOf(currentFile.getFileSize()));
+
+            // zbyla cast stareho holderu
+            holder.trackTypeIcon.setImageResource(R.drawable.ic_expand_arrow)  ;
+
+            holder.imageView.setImageResource(R.drawable.cog);
+            holder.imageView.setImageResource(R.drawable.cog);
+            holder.checkBox.setText(currentFile.getName());
+            holder.checkBox.setChecked(currentFile.isSelected());
+            holder.annotation.setTextColor(ContextCompat.getColor(mContext, R.color.default_text_color));
+        }
+        else
+        {
+            //holder.cloudIcon.setImageResource(R.drawable.ic_bookmark);
+            holder.imageView.setImageResource(R.drawable.ic_file_download);
+            holder.annotation.setText("Parser Error");
+            holder.annotation.setTextColor(ContextCompat.getColor(mContext, R.color.color_accent));
+        }
+
+        holder.imageView.setVisibility(View.VISIBLE);
+
         holder.checkBox.setOnCheckedChangeListener((compoundButton, isChecked) -> {
-            Log.d("FILEVIEWER", getFullName(position) + " selected = " + isChecked);
-            currentFile.setSelected(isChecked);
+        Log.d("FILEVIEWER", getFullName(position) + " selected = " + isChecked);
+        currentFile.setSelected(isChecked);
         });
 
         // Change background color based on selection state
@@ -120,6 +147,9 @@ public class FileViewerAdapter extends BaseAdapter
     private static class ViewHolder {
         ImageView cloudIcon;
         ImageView imageView;
+
+        ImageView trackTypeIcon;    // tohle je ikona trasy
+
         CheckBox checkBox;
         TextView trackName;
         TextView annotation;

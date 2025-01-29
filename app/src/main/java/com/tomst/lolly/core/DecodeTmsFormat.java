@@ -199,7 +199,7 @@ public class DecodeTmsFormat {
 
     public void disassembleDate(String reply, TMereni Mereni){
         //DD 2021 04 28 13 00 00 08
-        //12 3456 78 90 12 34 56 78
+        //12  3456 78 90 12 34 56 78
         int dif = copyInt(reply,3,4);
 
         Mereni.year  = dif;
@@ -308,8 +308,10 @@ public class DecodeTmsFormat {
 
             Mereni.t2 = tmpNan;
             Mereni.t3 = tmpNan;
+            Mereni.mvs = TDeviceType.dAD.ordinal();
         }
-        else {
+        else
+        {
             Mereni.hh = copyInt(reply,2,2);
             Mereni.mm = copyInt(reply,4,2);
             Mereni.ss = 0;
@@ -350,6 +352,8 @@ public class DecodeTmsFormat {
 
             // ulozim typ zarizeni
         }
+        if (Mereni.dev != TDeviceType.dUnknown)
+            Mereni.mvs = Mereni.dev.ordinal() + Constants.MVS_OFFSET;
     }
 
     private int tNumber (int AValue){
@@ -397,6 +401,10 @@ public class DecodeTmsFormat {
 
     public static void SetLastSafeDtm(LocalDateTime dtm){
         lastSafeDtm = dtm;
+    }
+
+    public static void SetMicroMeter(boolean val){
+        Constants.showMicro = val;
     }
 
     /*** Konstruktor, nastavim defaultni hodnoty ***/
@@ -655,7 +663,7 @@ public class DecodeTmsFormat {
                     mer.mm,
                     mer.ss);
 
-            Log.d("TOMSTMereni",formattedString);
+       //     Log.d("TOMSTMereni",formattedString);
         }
     }
 

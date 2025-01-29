@@ -14,10 +14,14 @@ public class Constants {
     private static final int MAXTIMEDIFF = 5; // pod 5 sekund nenastavuju cas v lizatku
     public static final String FILEDIR = "/storage/emulated/0/Documents/";
     public static final String KEY_EMAIL = "krata@tomst.com";
-
+    public static final int MVS_OFFSET =  200; // Offset
     // constants for merging CSV files
     public  static final int HEADER_LINE_LENGTH = 3;
     public static final int SERIAL_NUMBER_INDEX = 1;
     public static final String DEFAULT_SERIAL_NUMBER_VALUE = "Unknown";
+
+    // constants for parser
+    public static final int PARSER_OK=0;
+    public static final int PARSER_ERROR=1;
 
 }

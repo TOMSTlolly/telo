@@ -37,8 +37,6 @@ public class shared {
         String fmtdate = localDateTime.format(formatter);
         DocumentFile txtFile;
 
-        // test
-
         //CreateTestFile(ADir);
         try {
             DocumentFile pickedDir;
@@ -99,6 +97,23 @@ public class shared {
         return "";
     }
 
+    public static int getaddr(String respond)
+    {
+        //String s = new String("P=$05ED00");
+        try {
+            String[] arr = respond.split("=", 2);
+            String s = arr[1].substring(1);
+            s = s.replaceAll("(\\r|\\n)", "");
+            int ret = Integer.parseInt(s, 16);
+            return (ret);
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
+
 
 
     public static String between(String line, String s1, String s2){
@@ -138,8 +153,11 @@ public class shared {
         return ret;
     }
     public static TDeviceType MvsToDevice(int mvs){
-        if (mvs<200)
+        if (mvs == 0)
             return TDeviceType.dUnknown;
+
+        if ((mvs>0) && (mvs<200))
+            return TDeviceType.fromValue(mvs);
 
         mvs = mvs -200;
         TDeviceType ret = TDeviceType.fromValue(mvs);

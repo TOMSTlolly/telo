@@ -467,8 +467,8 @@ public class LollyApplication extends AppCompatActivity implements View.OnClickL
          */
 
         // for user authentication
-        auth = FirebaseAuth.getInstance();
-        user = auth.getCurrentUser();
+//        auth = FirebaseAuth.getInstance();
+ //       user = auth.getCurrentUser();
         /*
         if (user == null)
         {
