@@ -51,6 +51,7 @@ import com.tomst.lolly.core.TMSRec;
 import com.tomst.lolly.core.TMSSim;
 import com.tomst.lolly.core.TMereni;
 import com.tomst.lolly.core.TMeteo;
+import com.tomst.lolly.core.shared;
 import com.tomst.lolly.databinding.FragmentHomeBinding;
 
 import java.io.BufferedWriter;
@@ -403,6 +404,8 @@ public class HomeFragment extends Fragment {
 
                     ADir = LollyApplication.getInstance().getCacheCsvPath();
                     String ACsvFileName =   CompileFileName("data_",serialNumber,ADir);
+                    String ALogFileName = "log_"+shared.bef(ACsvFileName,".");
+
                     ACsvFileName = ADir + "/" + ACsvFileName;
                     csv = new CSVReader(ACsvFileName);
                     csv.OpenForWrite();  // otevre vystupni stream pro addCsv vyse
@@ -492,11 +495,6 @@ public class HomeFragment extends Fragment {
                     saveLogAndData();
                     readWasFinished = true;
 
-                    /*
-                    ADir= LollyApplication.getInstance().getCacheLogPath();
-                    String ALogFileName =  ADir+"/"+  CompileFileName("logs_",serialNumber,ADir);
-                    saveLogs(ALogFileName);
-                    */
                     // get option for showing graph
                     boolean showGraph = getContext()
                             .getSharedPreferences(
@@ -524,7 +522,7 @@ public class HomeFragment extends Fragment {
 
         csv.CloseExternalCsv();
         saveLog();
-        //saveLogToFile(csv.getFileName());
+        saveLogToFile(csv.getFileName());
     }
 
 

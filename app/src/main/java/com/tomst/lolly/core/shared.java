@@ -56,8 +56,7 @@ public class shared {
 
             //String fName = "testfile";
             filex = true;
-            Integer i = 0;
-            while ((filex == true) && (i<100)) {
+            Integer i = 0;while ((filex == true) && (i<100)) {
                 locFile = Prefix+Serial+"_"+fmtdate+"_"+Integer.valueOf(i)+".csv";
                 txtFile = pickedDir.findFile(locFile);
                 // soubor uz existuje, neprepisuju, ale pridam index na konci souboru
@@ -67,8 +66,6 @@ public class shared {
                 else
                     i++;
             }
-
-
         } catch (Exception e) {
             e.printStackTrace();
             return null;

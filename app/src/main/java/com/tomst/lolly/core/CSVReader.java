@@ -65,6 +65,8 @@ public class CSVReader extends Thread
 
     private static final byte iMvs=7;
 
+    private static String sFmt="";  // nastav formatovani podle zarizeni
+
     double currT1, currT2, currT3;
     double maxT1, maxT2, maxT3;
     double minT1, minT2, minT3;
@@ -352,6 +354,26 @@ public class CSVReader extends Thread
         }
     }
 
+    // format staci nastavit jenom jednou na zacatku
+    public String SetupFormat(TMereni mer)
+    {
+
+        switch (mer.dev)
+        {
+            default:
+            case dLolly3:
+            case dLolly4:
+                sFmt = String.format(Locale.US,"%d;%s;%d;%.2f;%.2f;%.2f;%d;%d;%d");
+                break;
+            case dAD:
+            case dAdMicro:
+            case dTermoChron:
+                sFmt = String.format(Locale.US,"%d;%s;%d;%.2f,%d;%d;%d;%d;%d;%d");
+                break;
+        }
+        return sFmt;
+    }
+
     // csv radek z TMereni
     @RequiresApi(api = Build.VERSION_CODES.O)
     private String FormatLine(TMereni Mer)
@@ -368,15 +390,15 @@ public class CSVReader extends Thread
             }
             else
                 Mer.mvs = TDeviceType.dAD.ordinal() + Constants.MVS_OFFSET;
-
          }
-
+        /*
         String line = String.format(
                     Locale.US,
                     "%d;%s;%d;%.2f;%.2f;%.2f;%d;%d;%d",
                     Mer.idx, dts, Mer.gtm, Mer.t1, Mer.t2, Mer.t3, hum, Mer.mvs, Mer.Err
         );
-
+         */
+         String line = String.format(sFmt,Mer.idx, dts, Mer.gtm, Mer.t1, Mer.t2, Mer.t3, hum, Mer.mvs, Mer.Err);
         return (line);
     }
 
