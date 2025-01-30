@@ -110,9 +110,6 @@ public class shared {
         return 0;
     }
 
-
-
-
     public static String between(String line, String s1, String s2){
         if ( (line.indexOf(s1) <0) ||  (line.indexOf(s2)<0)  )
             return "";
@@ -120,8 +117,6 @@ public class shared {
         String subStr = line.substring(line.indexOf(s1 ) + 1, line.indexOf(s2));
         return subStr;
     }
-
-
 
     public static  String getSerialNumberFromFileName(String fileName) {
         // filename should look like "data_92221411_2023_09_26_0.csv"

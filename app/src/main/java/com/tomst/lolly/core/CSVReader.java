@@ -196,25 +196,7 @@ public class CSVReader extends Thread
         }
     }
 
-    public void OpenForWrite(){
-        this.context = LollyApplication.getInstance().getApplicationContext();
-        String AFileName = this.FileName;
-        try {
-            if (AFileName.startsWith("content")) {
-                Uri uri = Uri.parse(AFileName);
-                documentFile = DocumentFile.fromSingleUri(this.context, uri);;
-                privateDocumentDir = DocumentFile.fromTreeUri(this.context, uri);
-            } else {
-               // fNewCsv = new FileOutputStream(AFileName);
-                 fNewCsv = new FileOutputStream(AFileName);
-                //privateDocumentDir = DocumentFile.fromFile(file);
-            }
 
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ;
-        }
-    }
 
 
     private void ClearPrivate()
@@ -354,21 +336,44 @@ public class CSVReader extends Thread
         }
     }
 
+
+    public void OpenForWrite(){
+        this.context = LollyApplication.getInstance().getApplicationContext();
+        String AFileName = this.FileName;
+        try {
+            if (AFileName.startsWith("content")) {
+                Uri uri = Uri.parse(AFileName);
+                documentFile = DocumentFile.fromSingleUri(this.context, uri);;
+                privateDocumentDir = DocumentFile.fromTreeUri(this.context, uri);
+            } else {
+                // fNewCsv = new FileOutputStream(AFileName);
+                fNewCsv = new FileOutputStream(AFileName);
+                //privateDocumentDir = DocumentFile.fromFile(file);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ;
+        }
+    }
+
+
     // format staci nastavit jenom jednou na zacatku
-    public String SetupFormat(TMereni mer)
+    public String SetupFormat(TDeviceType dev)
     {
 
-        switch (mer.dev)
+        switch (dev)
         {
             default:
             case dLolly3:
             case dLolly4:
-                sFmt = String.format(Locale.US,"%d;%s;%d;%.2f;%.2f;%.2f;%d;%d;%d");
+                sFmt = "%d;%s;%d;%.2f;%.2f;%.2f;%d;%d;%d";
                 break;
             case dAD:
             case dAdMicro:
             case dTermoChron:
-                sFmt = String.format(Locale.US,"%d;%s;%d;%.2f,%d;%d;%d;%d;%d;%d");
+                //sFmt = "%d;%s;%d;%.2f,%d;%d;%d;%d;%d;%d";
+                sFmt = "%d;%s;%d;%.0f;%.0f;%.0f;%d;%d;%d";
                 break;
         }
         return sFmt;
@@ -585,8 +590,6 @@ public class CSVReader extends Thread
                     Mer.dev = shared.MvsToDevice(Mer.mvs);
                 else
                     Mer.dev = GuessDevice(Mer);
-
-
             }
             catch (Exception e) {
                     System.out.println(e);

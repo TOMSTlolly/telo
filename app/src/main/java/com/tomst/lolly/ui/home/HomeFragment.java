@@ -89,6 +89,7 @@ public class HomeFragment extends Fragment {
     private int heartIdx = 0;
     private String serialNumber = "Unknown";
     private boolean readWasFinished=false;
+    private String ALogFileName="";
 
     //private Handler progressBarHandler = new Handler(Looper.getMainLooper());
     private TMereni merold =null;
@@ -357,7 +358,8 @@ public class HomeFragment extends Fragment {
 
             TInfo info = (TInfo) msg.obj;
             Log.d(Constants.TAG,String.valueOf(info.idx)+' '+info.msg);
-            String  ADir=null;
+     //       String  ATrackDir=null;
+       //     String ALogDir =  null;
 
             // tady rozebiram vystupy ze stavu v threadu
             switch(info.stat){
@@ -402,14 +404,14 @@ public class HomeFragment extends Fragment {
                     // csv file output, it should be unique for each device and each download
                     LollyApplication.getInstance().setSerialNumber(serialNumber);
 
-                    ADir = LollyApplication.getInstance().getCacheCsvPath();
-                    String ACsvFileName =   CompileFileName("data_",serialNumber,ADir);
-                    String ALogFileName = "log_"+shared.bef(ACsvFileName,".");
+                    String ATrackDir = LollyApplication.getInstance().getCacheCsvPath();
+                    String ACsvFileName =   CompileFileName("data_",serialNumber,ATrackDir);
+                    ALogFileName= "log_"+shared.aft(ACsvFileName,"data_");
+                    ALogFileName = LollyApplication.getInstance().getCacheLogPath()+"/"+ALogFileName;
 
-                    ACsvFileName = ADir + "/" + ACsvFileName;
+                    ACsvFileName = ATrackDir + "/" + ACsvFileName;
                     csv = new CSVReader(ACsvFileName);
                     csv.OpenForWrite();  // otevre vystupni stream pro addCsv vyse
-
                     break;
 
                 case tInfo:
@@ -417,6 +419,9 @@ public class HomeFragment extends Fragment {
                     binding.devt1.setText(String.valueOf(info.t1));
                     binding.devt2.setText(String.valueOf(info.t2));
                     binding.devt3.setText(String.valueOf(info.t3));
+
+                    // teprve ted vim, co mam za zarizeni na sonde a muzu nastavit format do csv
+                    csv.SetupFormat(info.devType);
                     break;
 
                 case tCapacity:
@@ -521,18 +526,10 @@ public class HomeFragment extends Fragment {
             return;
 
         csv.CloseExternalCsv();
-        saveLog();
-        saveLogToFile(csv.getFileName());
-    }
-
-
-    @RequiresApi(api = Build.VERSION_CODES.O)
-    private void saveLog()
-    {
-        String ADir= LollyApplication.getInstance().getCacheLogPath();
-        String ALogFileName =  ADir+"/"+  CompileFileName("logs_",serialNumber,ADir);
         saveLogToFile(ALogFileName);
     }
+
+
 
     private void saveLogToFile(String ALogFileName){
             try (BufferedWriter writer = new BufferedWriter(new FileWriter(ALogFileName))) {
@@ -630,7 +627,8 @@ public class HomeFragment extends Fragment {
         Button sendSerial =binding.genSerial;
         sendSerial.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
-                saveLog();
+                ALogFileName = LollyApplication.getInstance().getCacheLogPath()+"/"+"testlog.csv";
+                saveLogAndData();
                 //odometer.SetState(TDevState.tSerial);
                 // dmd.sendMessageToFragment("TSN");
             }
