@@ -1248,6 +1248,7 @@ public class TMSReader extends Thread
         parser.SetMicroMeter(fShowMicro);
 
         TReadState rState = TReadState.rsStart;
+        parser.ClearMereni();
 
         int iErr=0;
         while (rState != TReadState.rsFinal) {

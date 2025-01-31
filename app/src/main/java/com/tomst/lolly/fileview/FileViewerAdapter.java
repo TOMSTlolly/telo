@@ -69,7 +69,7 @@ public class FileViewerAdapter extends BaseAdapter
             holder.cloudIcon = convertView.findViewById(R.id.cloudIcon);
             holder.imageView = convertView.findViewById(R.id.iconID);
             holder.checkBox  = convertView.findViewById(R.id.checkBox);
-            holder.trackName = convertView.findViewById(R.id.id_textView_card_TrackName);
+            holder.trackName = convertView.findViewById(R.id.id_TrackName);
             holder.annotation= convertView.findViewById(R.id.id_textView_card_TrackDesc);
             holder.from = convertView.findViewById(R.id.id_file_from);
             holder.into = convertView.findViewById(R.id.id_file_into);
@@ -87,7 +87,6 @@ public class FileViewerAdapter extends BaseAdapter
         }
 
         FileDetail currentFile = mAllFiles.get(position);
-
         holder.trackName.setText(currentFile.getNiceName());  // tohle zobrazuju v titulce !!!
         holder.imageView.setImageResource(0);
 
@@ -101,7 +100,7 @@ public class FileViewerAdapter extends BaseAdapter
 
             //holder.trackName.setText(currentFile.getNiceName());  // tohle zobrazuju v titulce !!!
             holder.count.setText(String.valueOf(currentFile.getiCount()));
-            holder.annotation.setText("Parser OK");
+            holder.annotation.setText(currentFile.getCreated());
             holder.from.setText(formattedFrom);
             holder.into.setText(formattedInto);
             holder.mintx.setText(String.valueOf(currentFile.getMinT1()));

@@ -109,7 +109,10 @@ public class HomeFragment extends Fragment {
             // zkontroluj odstup od posledniho mereni
 
             TMereni mer = (TMereni) msg.obj;
-            if (mer != null && merold != null) {
+            if (mer != null &&  merold!= null) {
+                if (mer.dtm==null || merold.dtm==null)
+                    return;
+
                long delta = calculateSecondsBetween(merold.dtm, mer.dtm);
                if (delta>Constants.MAX_DELTA) {
                    // zobraz chybu

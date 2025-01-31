@@ -30,6 +30,7 @@ public class FileDetail
     private double minHum,maxHum;
 
     public int errFlag;  // znacka chyby
+    private LocalDateTime created;
 
     public String getSerialNumber() { return SerialNumber; }
     public void setSerialNumber(String serialNumber) { SerialNumber = serialNumber; }
@@ -101,7 +102,8 @@ public class FileDetail
     public void setUploaded(boolean uploaded) { this.isUploaded = uploaded; }
 
     // nove property
-    public void setCreated(LocalDateTime created) { this.iFrom = created; }
+    public void setCreated(LocalDateTime created) { this.created = created; }
+    public String getCreated() { return created.toString(); }
     public void setErr(int errFlag) { this.errFlag = errFlag; }
 
     private void  ClearMembers()

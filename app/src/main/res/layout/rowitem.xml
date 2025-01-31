@@ -63,7 +63,7 @@
         android:background="@color/colorCardBackground_Title">
 
         <TextView
-            android:id="@+id/id_textView_card_TrackName"
+            android:id="@+id/id_TrackName"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="start"
@@ -85,14 +85,13 @@
             android:layout_marginEnd="40dp"
             android:textStyle="italic"
             android:textDirection="locale"
-
             android:textAlignment="viewStart"
             android:paddingTop="1dp"
             android:paddingBottom="1dp"
-            android:layout_below="@id/id_textView_card_TrackName"
+            android:layout_below="@id/id_TrackName"
            />
-
     </RelativeLayout>
+
 
         <ImageView
             android:id="@+id/id_imageView_card_tracktype"
@@ -112,8 +111,6 @@
             android:layout_toRightOf="@+id/iconID"
             android:layout_toEndOf="@+id/iconID"
             android:layout_below="@+id/id_cardDataTitle" />
-
-        <!-- odsud jsem to menil -->
 
         <!-- Male popisky pod textovym souborem a anotaci -->
         <LinearLayout

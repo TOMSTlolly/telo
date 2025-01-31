@@ -78,12 +78,16 @@ public class DecodeTmsFormat {
     }
 
      static {
-        //fMereni = new TMereni();
         fMereniList = new java.util.ArrayList<TMereni>();
     }
 
      //  mezibuffer pro vyparsovane data, odeslu, az kdyz mi sedi napoctena adresa na konci
     private static List<TMereni> fMereniList;
+
+    public static void ClearMereni()
+    {
+        fMereniList.clear();
+    }
 
     private static String getDateTime() {
         DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
@@ -450,7 +454,7 @@ public class DecodeTmsFormat {
             Log.d("TOMSTLolly","Setting year, month, day from lastSafeDtm"+fMereni.year+" "+fMereni.month+" "+fMereni.day);
         }
 
-        fMereniList.clear();
+//        fMereniList.clear();
         fMereni.dtm = null;
         fMerBefore.dtm = null;
         try {
@@ -468,14 +472,21 @@ public class DecodeTmsFormat {
                 if (val.startsWith("D")) {
                     // return from "D" command, we could probably omit the test above
 
-                    if (val.startsWith("DD")) {
+                    if (val.startsWith("DD"))
+                    {
                         // je to datum
                         disassembleDate(val, fMereni);  // doesnt calculate LocalDateTime, only setup year, month, day, hh, mm, ss, gtm
 
                         fMereni.dtm = LocalDateTime.of(fMereni.year, fMereni.month, fMereni.day, fMereni.hh, fMereni.mm, fMereni.ss, 0);
+                        lastSafeDtm = fMereni.dtm;;
                         if (fMereni.dtm != null)
-                          lastDateTrace = fMereni.dtm.toInstant(ZoneOffset.UTC);
-                    } else {
+                            lastDateTrace = fMereni.dtm.toInstant(ZoneOffset.UTC);
+                        else {
+                            fMereni.dtm = LocalDateTime.of(fMerBefore.year, fMerBefore.month, fMerBefore.day, fMerBefore.hh, fMerBefore.mm, fMerBefore.ss, 0);
+                        }
+                    }
+                    else
+                    {
                         disassembleData(val, fMereni);
 
                         // calculate date time only if it makes sense
@@ -504,8 +515,11 @@ public class DecodeTmsFormat {
                                 }
                             }
                         }
-                        fMerBefore = new TMereni(fMereni);
+                        else {
+                            fMereni.dtm = LocalDateTime.of(fMerBefore.year, fMerBefore.month, fMerBefore.day, fMereni.hh, fMereni.mm, fMereni.ss, 0);
+                        }
 
+                        fMerBefore = new TMereni(fMereni);
                         fMereni.idx = fIdx;
                         fMereniList.add(new TMereni(fMereni));
                         fIdx++;
@@ -556,7 +570,7 @@ public class DecodeTmsFormat {
                         int FinComp= (8 * (i + 1) + StartAddr) ;
                         ret = (AdrAfter == FinComp);
                         if (ret)
-                            sendWholePacket();
+                            sendWholePacket( );
                     }
                    if (ret){
                         SafeAddress = AdrAfter;
@@ -600,15 +614,17 @@ public class DecodeTmsFormat {
             return;
         }
 
-        if (fMereniList.get(i).dtm != null) {
-            dateTime = fMereniList.get(i).dtm;
+        if (fMereniList.get(i-1).dtm == null)
+        {
+             //dateTime  =  lastDateTrace;
+            return;
         }
-        else {
-            return;  // no valid date mark found
+        else
+        {
+            dateTime  =  fMereniList.get(i-1).dtm;
         }
 
-
-        TMereni merPlus=fMereniList.get(i);  // first valid date mark
+        TMereni merPlus=fMereniList.get(i-1);  // first valid date mark
         // going backwards and correct all date marks
         for (int j = i-1; j>=0; j--) {
             TMereni mer = fMereniList.get(j);
@@ -628,11 +644,11 @@ public class DecodeTmsFormat {
                 }
 
                 if (mer.dtm == null) {
-                    mer.dtm = dateTime;
-                    mer.year = dateTime.getYear();
-                    mer.month = dateTime.getMonthValue();
-                    mer.day = dateTime.getDayOfMonth();
-                    mer.dtm = LocalDateTime.of(mer.year, mer.month, mer.day, mer.hh, mer.mm, mer.ss, 0);
+                    mer.dtm      =  dateTime;
+                    mer.year      =  dateTime.getYear();
+                    mer.month =  dateTime.getMonthValue();
+                    mer.day       =  dateTime.getDayOfMonth();
+                    mer.dtm      = LocalDateTime.of(mer.year, mer.month, mer.day, mer.hh, mer.mm, mer.ss, 0);
                 }
                 fMereniList.set(j,mer);
                 merPlus = new TMereni(mer);
@@ -640,6 +656,8 @@ public class DecodeTmsFormat {
         }
     }
 
+    // lastDtm je posledni datovou znacku, pouziju ji, jenom kdyz nebudu mit zadny jiny datum v sekvenci
+    // @D2330000ADC0011C63@DD2024121223394504@E=$130000;C;2024/12/12,23:39:45+04
    private void sendWholePacket(){
         if (handler == null)
             return;
@@ -665,6 +683,7 @@ public class DecodeTmsFormat {
 
        //     Log.d("TOMSTMereni",formattedString);
         }
+        fMereniList.clear();
     }
 
 

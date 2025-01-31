@@ -118,7 +118,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         values.put(KEY_CLIST_URL, fileDetail.getFull());
         values.put(KEY_CLIST_TYPE, 0); // Assuming type is 0, adjust as needed
         values.put(KEY_CLIST_MD5, ""); // Assuming MD5 is empty, adjust as needed
-        values.put(KEY_CLIST_CREATED, fileDetail.getiFrom().toString());
+        values.put(KEY_CLIST_CREATED, fileDetail.getCreated().toString());
         values.put(KEY_CLIST_FIRST, fileDetail.getiFrom().toString());
         values.put(KEY_CLIST_LAST, fileDetail.getiInto().toString());
         values.put(KEY_CLIST_COUNT, fileDetail.getiCount());

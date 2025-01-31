@@ -705,13 +705,6 @@ public class ListFragment extends Fragment
             for (File file : files) {
                 try {
 
-                    /*
-                    // Get the creation time
-                    Path filePath = file.toPath();
-                    BasicFileAttributes attrs = Files.readAttributes(filePath, BasicFileAttributes.class);
-                    LocalDateTime creationTime = LocalDateTime.ofInstant(attrs.creationTime().toInstant(), ZoneId.systemDefault());
-                    */
-
                     // ve fdet se mi vraci info z db, pripadne z dlouheho runu radek po radku
                     if (db.getFileDetail(file.getName()) != null) {
                         fdet = db.getFileDetail(file.getName());
@@ -765,28 +758,14 @@ public class ListFragment extends Fragment
 
          DoLoadFil();
 
-         /*
-        ListView mListView = rootView.findViewById(R.id.listView);
-        FileViewerAdapter friendsAdapter = new FileViewerAdapter(getContext(), fFriends);
-        mListView.setAdapter(friendsAdapter);
-        mListView.animate();
-
-        mListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                FileDetail selectedItem = (FileDetail) parent.getItemAtPosition(position);
-                String fileName = selectedItem.getName();
-                friendsAdapter.setSelectedPosition(position);
-            }
-        });
-       */
-
         /*
         Log.d("LIST", "Started...");
         executor.execute(() -> {
             DoLoadFiles();
         });
-        */
+
+         */
+
     }
 
 

@@ -24,6 +24,8 @@ package com.tomst.lolly.core;
  import java.io.InputStream;
  import java.io.InputStreamReader;
  import java.io.RandomAccessFile;
+ import java.nio.file.attribute.FileTime;
+ import java.time.ZoneId;
  import java.time.format.DateTimeFormatter;
  import java.nio.file.Files;
  import java.nio.file.Path;
@@ -367,13 +369,13 @@ public class CSVReader extends Thread
             default:
             case dLolly3:
             case dLolly4:
-                sFmt = "%d;%s;%d;%.2f;%.2f;%.2f;%d;%d;%d";
+                sFmt = "%d;%s;%d;%.3f;%.3f;%.3f;%d;%d;%d";
                 break;
             case dAD:
             case dAdMicro:
             case dTermoChron:
                 //sFmt = "%d;%s;%d;%.2f,%d;%d;%d;%d;%d;%d";
-                sFmt = "%d;%s;%d;%.0f;%.0f;%.0f;%d;%d;%d";
+                sFmt = "%d;%s;%d;%.3f;%.0f;%.0f;%d;%d;%d";
                 break;
         }
         return sFmt;
@@ -603,6 +605,13 @@ public class CSVReader extends Thread
     @RequiresApi(api = Build.VERSION_CODES.O)
     public FileDetail FirstLast(Uri uri) throws IOException {
         FileDetail fdet = new FileDetail(uri.getLastPathSegment());     // nastavim rovnou jmeno souboru
+
+        // Get the creation date
+        Path path = new File(uri.getPath()).toPath();
+        FileTime fileTime = (FileTime) Files.getAttribute(path, "creationTime");
+        LocalDateTime creationDate = LocalDateTime.ofInstant(fileTime.toInstant(), ZoneId.systemDefault());
+        fdet.setCreated(creationDate);
+
         DocumentFile docFile = DocumentFile.fromSingleUri(context, uri);
         File tempFile = FileUtils.copyDocumentFileToTempFile(context, docFile);
         RandomAccessFile raf = new RandomAccessFile(tempFile, "r");
@@ -659,6 +668,13 @@ public class CSVReader extends Thread
         ClearAvg();
         // cas prvniho mereni
         FileDetail fileDetail = new FileDetail(uri.getLastPathSegment());
+
+        // soubor byl vytvoren
+        Path path = new File(uri.getPath()).toPath();
+        FileTime fileTime = (FileTime) Files.getAttribute(path, "creationTime");
+        LocalDateTime creationDate = LocalDateTime.ofInstant(fileTime.toInstant(), ZoneId.systemDefault());
+        fileDetail.setCreated(creationDate);
+
         String currentline = reader.readLine();
         if (currentline == null)
             return fileDetail;
