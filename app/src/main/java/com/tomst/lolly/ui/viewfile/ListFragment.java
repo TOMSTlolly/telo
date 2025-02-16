@@ -3,6 +3,7 @@ package com.tomst.lolly.ui.viewfile;
 
 import static android.app.Activity.RESULT_CANCELED;
 import static android.os.Environment.*;
+import static android.os.SystemClock.sleep;
 import static com.tomst.lolly.LollyApplication.DIRECTORY_TEMP;
 import static com.tomst.lolly.core.shared.bef;
 
@@ -15,6 +16,8 @@ import android.location.Location;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.InputType;
 import android.text.TextUtils;
 import android.util.Log;
@@ -51,6 +54,7 @@ import com.tomst.lolly.core.Constants;
 import com.tomst.lolly.core.DatabaseHandler;
 import com.tomst.lolly.core.DmdViewModel;
 import com.tomst.lolly.core.FileOpener;
+import com.tomst.lolly.core.OnProListener;
 import com.tomst.lolly.core.ZipFiles;
 import com.tomst.lolly.databinding.FragmentViewerBinding;
 import com.tomst.lolly.fileview.FileDetail;
@@ -60,20 +64,19 @@ import com.tomst.lolly.BuildConfig;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicReference;
 
 
-public class ListFragment extends Fragment
+
+public class ListFragment extends Fragment implements OnProListener
 {
+
+
     private ExecutorService executor;
     public void SetFilePath(String path)
     {
@@ -144,12 +147,12 @@ public class ListFragment extends Fragment
         //ConnectDevice();
     };
 
-    public ListFragment()
-    {
-        //executor = new ScheduledThreadPoolExecutor(1);
-        //fopen = new FileOpener(this);
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
         executor = Executors.newSingleThreadExecutor();
     }
+
 
 
     @RequiresApi(api = Build.VERSION_CODES.O)
@@ -165,6 +168,10 @@ public class ListFragment extends Fragment
                 inflater, container, false
         );
         rootView = binding.getRoot();
+
+        binding.proBar.setMin(0);
+        binding.proBar.setMax(100);
+        binding.proBar.setProgress(5);
 
         //  cesty pro export do SAF
         String sharedPath = LollyApplication.getInstance().getPrefExportFolder();
@@ -189,8 +196,21 @@ public class ListFragment extends Fragment
             @Override   // load files from the folder
             public void onClick(View view)
             {
-                DoLoadFiles();
+               // DoLoadFiles();
+                if (SelectedFileName != "")
+                {
+                    //csvPath = SelectedFileName;
+                    loadCSVFil(SelectedFileName);
+                }
             }
+
+            /*
+            @Override   // load files from the folder
+            public void onClick(View view)
+            {
+                DoTestProBar(1000);
+            }
+             */
         });
 
         Button zip_btn = binding.buttonZipall;
@@ -371,7 +391,6 @@ public class ListFragment extends Fragment
                 }
             }
         });
-
     }
 
     private void loadFromStorage()
@@ -595,27 +614,7 @@ public class ListFragment extends Fragment
         return(ret);
     }
 
-    private String formatSize(long size) {
-        String suffix = null;
-        float fSize = size;
 
-        if (fSize >= 1024) {
-            suffix = "KB";
-            fSize /= 1024;
-            if (fSize >= 1024) {
-                suffix = "MB";
-                fSize /= 1024;
-                if (fSize >= 1024) {
-                    suffix = "GB";
-                    fSize /= 1024;
-                }
-            }
-        }
-
-        StringBuilder resultBuffer = new StringBuilder(String.format("%.2f", fSize));
-        if (suffix != null) resultBuffer.append(" ").append(suffix);
-        return resultBuffer.toString();
-    }
 
 
     @RequiresApi(api = Build.VERSION_CODES.O)
@@ -647,6 +646,7 @@ public class ListFragment extends Fragment
                 fdet.setName(file.getName());
                 fdet.setNiceName(getNiceName(file.getName()));
 
+
                 fdet.setFileSize((int) file.length());
                  fFriends.add(fdet);
             }
@@ -673,13 +673,69 @@ public class ListFragment extends Fragment
 
         String s = parts[1] + "-" + parts[2] + parts[3] + parts[4]+ "-" + bef(parts[5],"\\.");
          return s;
+    }
+
+    protected Handler handler = new Handler(Looper.getMainLooper()) {
+        @Override
+        public void handleMessage(android.os.Message msg) {
+            super.handleMessage(msg);
+        }
+    };
+
+    protected int px=0;
+
+    @Override
+    public void OnProEvent(int pos){
+        if (pos < 0) {
+            binding.proBar.setProgress(0);
+            //binding.proBar.setMax(-pos);
+            binding.proBar.setMax(1000);
+            return;
         }
 
+        handler.post(() -> binding.proBar.setProgress(px));
+        px++;
+    }
+
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    private FileDetail LoadCsvFile(Uri fileUri)
+    {
+        FileDetail fdet = null;
+
+        CSVReader csv = new CSVReader(fileUri.toString());
+        csv.SetHandler(handler);
+        csv.SetProgressListener(this);
+        csv.SetProgressListener(value -> {
+            Log.d(TAG, "Bar: " + value);
+            if (value < 0) {
+                binding.proBar.setMax((int) -value); // posledni adresa
+                binding.proBar.setProgress(value);
+            } else {  // progress
+                binding.proBar.setProgress(value);
+            }
+        });
+        csv.SetFinListener(value -> {
+            Log.d(TAG, "Finished");
+            binding.proBar.setProgress(0);
+
+
+        });
+
+        try{
+            fdet = csv.readFileContent(fileUri);
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        return fdet;
+    }
 
     //public void DoLoadFiles(String sharedPath, String privatePath)
     @RequiresApi(api = Build.VERSION_CODES.O)
-    public void DoLoadFiles()
-    {
+    public void DoLoadFiles() {
+
         File cacheDir = new File(DIRECTORY_TEMP);
         if (cacheDir.isDirectory()) {
             File[] files = cacheDir.listFiles();
@@ -692,8 +748,7 @@ public class ListFragment extends Fragment
             // remove not used files from db
             String[] usedFiles = new String[files.length];
             int index = 0;
-            for (File file: files)
-            {
+            for (File file : files) {
                 usedFiles[index++] = file.getName();
             }
             db.ClearUnusedFiles(usedFiles);
@@ -701,52 +756,76 @@ public class ListFragment extends Fragment
             Location location = LollyApplication.getInstance().getLocation();
 
             FileDetail fdet = null;
-            CSVReader reader = new CSVReader();
+
             for (File file : files) {
-                try {
+                //s.set(file.getName());
+                Uri fileUri = Uri.fromFile(file);
+                if (!fileUri.toString().contains(".csv"))
+                    continue;
 
-                    // ve fdet se mi vraci info z db, pripadne z dlouheho runu radek po radku
-                    if (db.getFileDetail(file.getName()) != null) {
-                        fdet = db.getFileDetail(file.getName());
-                        fdet.setNiceName(getNiceName(file.getName()));
-
-                    } else {
-                        // vycti uplne cely soubor a udelej komplet statistiku
-                        // je to brutalne pomalne, takze celou tuhle obludu
-                        // ctu asynchronne
-                        Uri fileUri = Uri.fromFile(file);
-                        if (!fileUri.toString().contains(".csv"))
-                            continue;
-
-                        fdet = reader.readFileContent(fileUri);
-
-                        fdet.setName(file.getName());
-                        fdet.setFileSize((int) file.length());
-                        fdet.setFull(fileUri.toString());
-
-                        // je to datovy soubor ?
-                        if (fdet.errFlag == Constants.PARSER_OK)
-                            db.addFile(fdet, location);
-                    }
-
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
+                if (db.getFileDetail(file.getName()) != null) {
+                    fdet = db.getFileDetail(file.getName());
+                    fdet.setNiceName(getNiceName(file.getName()));
                 }
+                else
+                {
+                    fdet = LoadCsvFile(fileUri);
+                    fdet.setName(file.getName());
+                    fdet.setFileSize((int) file.length());
+                    fdet.setFull(fileUri.toString());
 
-                // vymeni vizualni prvni
-                FileDetail temp = findFileName(file.getName());  // najdi existujici row podle jmena souboru
+                    // je to datovy soubor ?
+                    if (fdet.errFlag == Constants.PARSER_OK)
+                        db.addFile(fdet, location);
+                }
+                // predelej radek v recycleru
+                FileDetail temp = findFileName(file.getName());  // najdi existujici radek v recycleru podle jmena souboru
                 if (temp != null) {
                     updateFriends(fdet, temp);
                 }
             }
-
-            /*
-            ListView mListView = rootView.findViewById(R.id.listView);
-            FileViewerAdapter friendsAdapter = new FileViewerAdapter(getContext(), fFriends);
-            mListView.setAdapter(friendsAdapter);
-            */
-            //mListView.animate();
         }
+    }
+
+    private boolean loadCSVFil(String uriPath)  {
+        Uri fileUri = Uri.parse(uriPath);
+        CSVReader csv = new CSVReader(fileUri.toString());
+        csv.SetHandler(handler);
+
+        //FileDetail fileDetail = null;
+        // progress bar
+        csv.SetProgressListener(value -> {
+            Log.d(TAG, "Bar: " + value);
+            if (value<0) {
+                binding.proBar.setMax((int) -value); // posledni adresa
+                binding.proBar.setProgress(value);
+            }
+            else {  // progress
+                binding.proBar.setProgress(value);
+            }
+        });
+        // konec vycitani
+        csv.SetFinListener(value -> {
+            Log.d(TAG,"Finished");
+            //DisplayData();
+            //LoadDmdData();
+            //  binding.proBar.setProgress(0);
+        });
+
+        csv.start();
+
+        /*
+        try {
+            csv.start();
+            csv.join();
+        }
+        catch (InterruptedException e) {
+            Log.d(TAG, e.toString());
+        };
+
+         */
+
+        return true;
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
@@ -758,16 +837,13 @@ public class ListFragment extends Fragment
 
          DoLoadFil();
 
-        /*
+
         Log.d("LIST", "Started...");
         executor.execute(() -> {
             DoLoadFiles();
         });
 
-         */
+
 
     }
-
-
-
 }

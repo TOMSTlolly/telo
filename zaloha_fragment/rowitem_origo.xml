@@ -1,0 +1,314 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView
+    xmlns:card_view="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/card_view"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginRight="2dp"
+    android:layout_marginLeft="2dp"
+    android:foreground="@drawable/card_foreground"
+    card_view:cardBackgroundColor="@color/colorCardBackground"
+    card_view:cardCornerRadius="2dp"
+    card_view:cardElevation="3dp"
+    card_view:cardPreventCornerOverlap="false"
+    card_view:cardUseCompatPadding="true">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <ImageView
+            android:id="@+id/iconID"
+            android:layout_width="@dimen/thumbSize"
+            android:layout_height="@dimen/thumbSize"
+            android:layout_centerVertical="true"
+            android:layout_margin="5dp"
+            android:scaleType="center"
+            app:tint="#14532D"
+            android:src="@drawable/ic_launcher_foreground"
+            android:visibility="gone" />
+
+        <ImageView
+            android:id="@+id/cloudIcon"
+            android:layout_width="@dimen/thumbSize"
+            android:layout_height="@dimen/thumbSize"
+            android:layout_margin="5dp"
+            android:scaleType="center"
+            android:src="@drawable/ic_expand_arrow"
+             />
+
+        <CheckBox
+            android:id="@+id/checkBox"
+            android:layout_width="@dimen/thumbSize"
+            android:layout_height="@dimen/thumbSize"
+            android:layout_margin="5dp"
+            android:scaleType="center"
+            android:visibility="gone" />
+
+    <RelativeLayout
+        android:id="@+id/id_cardDataTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_toRightOf="@+id/iconID"
+        android:layout_toEndOf="@+id/iconID"
+        android:paddingTop="5dp"
+        android:paddingBottom="6dp"
+        android:paddingLeft="8dp"
+        android:paddingStart="8dp"
+        android:paddingRight="5dp"
+        android:paddingEnd="5dp"
+        android:background="@color/colorCardBackground_Title">
+
+        <TextView
+            android:id="@+id/id_TrackName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="start"
+            android:paddingTop="1dp"
+            android:textAlignment="viewStart"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:textColor="@color/textColorCardTitle"
+            android:textDirection="locale"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAppearance="@style/TextAppearanceCardSmall"
+            android:id="@+id/id_textView_card_TrackDesc"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:layout_marginRight="40dp"
+            android:layout_marginEnd="40dp"
+            android:textStyle="italic"
+            android:textDirection="locale"
+            android:textAlignment="viewStart"
+            android:paddingTop="1dp"
+            android:paddingBottom="1dp"
+            android:layout_below="@id/id_TrackName"
+           />
+    </RelativeLayout>
+
+
+        <ImageView
+            android:id="@+id/id_device_type_rowitem"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_margin="7dp"
+            android:clickable="false"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentRight="true" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1.7dp"
+            android:id="@+id/id_card_separator"
+            android:background="@color/colorCardBackground_Line"
+            android:layout_margin="0dp"
+            android:layout_toRightOf="@+id/iconID"
+            android:layout_toEndOf="@+id/iconID"
+            android:layout_below="@+id/id_cardDataTitle" />
+
+        <!-- Male popisky pod textovym souborem a anotaci -->
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/colorCardBackground_Data"
+            android:baselineAligned="false"
+            android:weightSum="2"
+            android:paddingTop="2dp"
+            android:paddingBottom="6dp"
+            android:paddingLeft="8dp"
+            android:paddingStart="8dp"
+            android:paddingRight="5dp"
+            android:paddingEnd="5dp"
+            android:layout_toRightOf="@+id/iconID"
+            android:layout_toEndOf="@+id/iconID"
+            android:layout_below="@+id/id_card_separator">
+
+            <LinearLayout
+                android:orientation="horizontal"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:paddingBottom="2dp"
+                android:layout_weight="1">
+
+                <!-- popisky  count/start/stop/maxtx -->
+                <LinearLayout
+                    android:orientation="vertical"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginRight="8dp"
+                    android:layout_marginEnd="8dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="@style/TextAppearanceCardSmall"
+                        android:text="@string/label_from"
+                        android:layout_marginTop="2dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="@style/TextAppearanceCardSmall"
+                        android:text="@string/label_events"
+                        android:layout_marginTop="3dp"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:text="@string/label_min_tx"
+                        android:textAppearance="@style/TextAppearanceCardSmall" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="@style/TextAppearanceCardSmall"
+                        android:text="@string/label_min_hum"
+                        android:layout_marginTop="3dp"/>
+
+                </LinearLayout>
+
+                <!-- hodnoty prvni sloupec-->
+                <LinearLayout
+                    android:orientation="vertical"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" >
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="@style/TextAppearanceCardSmall"
+                        android:id="@+id/id_file_from"
+                        android:layout_marginTop="2dp"
+                        android:textColor="@color/textColorPrimary"
+                        android:maxLines="1" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="@style/TextAppearanceCardSmall"
+                        android:id="@+id/id_file_count"
+                        android:layout_marginTop="3dp"
+                        android:textColor="@color/textColorPrimary"
+                        android:maxLines="1" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="@style/TextAppearanceCardSmall"
+                        android:id="@+id/id_min_tx"
+                        android:layout_marginTop="3dp"
+                        android:textColor="@color/textColorPrimary"
+                        android:maxLines="1" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="@style/TextAppearanceCardSmall"
+                        android:id="@+id/id_min_hum"
+                        android:layout_marginTop="3dp"
+                        android:textColor="@color/textColorPrimary"
+                        android:maxLines="1" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- prava cast boxu s malinkyma hodnotama pod hlavni popiskou -->
+            <LinearLayout
+                android:orientation="horizontal"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:paddingBottom="2dp"
+                android:layout_weight="1">
+
+                <LinearLayout
+                    android:orientation="vertical"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginRight="8dp"
+                    android:layout_marginEnd="8dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="@style/TextAppearanceCardSmall"
+                        android:text="@string/label_into"
+                        android:layout_marginTop="2dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="@style/TextAppearanceCardSmall"
+                        android:text="@string/label_size"
+                        android:layout_marginTop="3dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="@style/TextAppearanceCardSmall"
+                        android:text="@string/label_max_tx"
+                        android:layout_marginTop="3dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="@style/TextAppearanceCardSmall"
+                        android:layout_marginTop="3dp"
+                        android:text="@string/label_max_hum" />
+                </LinearLayout>
+
+                <!-- druhy sloupec -->
+                <LinearLayout
+                    android:orientation="vertical"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" >
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="@style/TextAppearanceCardSmall"
+                        android:id="@+id/id_file_into"
+                        android:layout_marginTop="2dp"
+                        android:textColor="@color/textColorPrimary"
+                        android:maxLines="1" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="@style/TextAppearanceCardSmall"
+                        android:id="@+id/id_file_size"
+                        android:layout_marginTop="3dp"
+                        android:textColor="@color/textColorPrimary"
+                        android:maxLines="1" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="@style/TextAppearanceCardSmall"
+                        android:id="@+id/id_max_tx"
+                        android:layout_marginTop="3dp"
+                        android:textColor="@color/textColorPrimary"
+                        android:maxLines="1" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="@style/TextAppearanceCardSmall"
+                        android:id="@+id/id_max_hum"
+                        android:layout_marginTop="3dp"
+                        android:textColor="@color/textColorPrimary"
+                        android:maxLines="1" />
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+</RelativeLayout>
+
+</androidx.cardview.widget.CardView>

@@ -15,10 +15,10 @@
       </SelectionState>
       <SelectionState runConfigName="LollyApplication">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-01-28T11:00:48.750197653Z">
+        <DropdownSelection timestamp="2025-02-06T14:45:48.050985082Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="Default" identifier="serial=10.0.0.144:5555;connection=eff1b29b" />
+              <DeviceId pluginId="PhysicalDevice" identifier="serial=R5CT716YPYH" />
             </handle>
           </Target>
         </DropdownSelection>

@@ -39,13 +39,25 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
-                android:text="Scan Fol."
+                android:text="SQ.SCN"
                 android:backgroundTint="#f1a833"/>
+
+
         </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+
+            android:orientation="vertical">
+
+            <ProgressBar
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:id="@+id/proBar"
+             />
 
             <TextView
                 android:id="@+id/tvFolderDest"

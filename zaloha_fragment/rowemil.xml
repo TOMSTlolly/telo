@@ -84,7 +84,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:textAppearance="?android:attr/textAppearanceMedium"
-                            android:id="@+id/id_TrackName"
+                            android:id="@+id/id_textView_card_TrackName"
                             android:textColor="@color/textColorCardTitle"
                             android:textStyle="bold"
                             android:textDirection="locale"
@@ -110,7 +110,7 @@
                             android:gravity="start"
                             android:textAlignment="viewStart"
                             android:layout_margin="1dp"
-                            android:layout_below="@id/id_TrackName"/>
+                            android:layout_below="@id/id_textView_card_TrackName"/>
                     </LinearLayout>
                 </LinearLayout>
 

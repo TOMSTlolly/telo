@@ -12,7 +12,6 @@ package com.tomst.lolly.core;
  import android.util.Log;
 
  import androidx.annotation.RequiresApi;
- import androidx.core.content.FileProvider;
  import androidx.documentfile.provider.DocumentFile;
 
  import java.io.BufferedInputStream;
@@ -31,9 +30,7 @@ package com.tomst.lolly.core;
  import java.nio.file.Path;
  import java.io.FileOutputStream;
  import java.time.LocalDateTime;
- import java.util.Locale;
 
- import com.tomst.lolly.BuildConfig;
  import com.tomst.lolly.LollyApplication;
  import com.tomst.lolly.fileview.FileDetail;
 
@@ -85,7 +82,7 @@ public class CSVReader extends Thread
 
     private OnGeekEventListener mListener; // callback pro vysilani z threadu
 
-    public OnProListener mBarListener; // listener field
+    private OnProListener progressListener; // listener field
 
     public OnProListener mFinListener; // listener field
 
@@ -97,8 +94,8 @@ public class CSVReader extends Thread
     }
 
     // pozice progressBaru
-    public void SetBarListener(OnProListener AListener){
-        this.mBarListener = AListener;
+    public void SetProgressListener(OnProListener AListener){
+        this.progressListener = AListener;
     }
 
     public void SetFinListener(OnProListener AListener){
@@ -272,33 +269,7 @@ public class CSVReader extends Thread
             return;;
     }
 
-    private void DoProgress(int pos)
-    {
-        if (oldPos == pos)
-            return;
-        oldPos = pos;
 
-        progressBarHandler.post(new Runnable()
-        {
-            public void run()
-            {
-                if (mBarListener != null)
-                {
-                    mBarListener.OnProEvent(pos);
-                }
-            }
-        });
-    }
-
-    private void DoFinished(int pos) {
-        progressBarHandler.post(new Runnable() {
-            public void run() {
-                if (mFinListener != null) {
-                    mFinListener.OnProEvent(pos);
-                }
-            }
-        });
-    }
 
 
     private void sendMessage (TMereni mer)
@@ -386,6 +357,9 @@ public class CSVReader extends Thread
     private String FormatLine(TMereni Mer)
     {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern(DMD_PATTERN);
+
+        if (Mer.dtm==null)
+            Mer.dtm = LocalDateTime.of(0,0,0,0,0);
         String dts = Mer.dtm.format(formatter);
 
         int hum = Mer.adc; // v defaultu ukladam vystup z prevodniku, bez prepoctu na mikrometry
@@ -429,6 +403,16 @@ public class CSVReader extends Thread
         currT2 = 0;
         currT3 = 0;
         currHm = 0;
+
+        minT1 = MAXTX;
+        minT2 = MAXTX;
+        minT3=MAXTX;
+        minHm = MAXHM;
+
+        maxT1 = MINTX;
+        maxT2 = MINTX;
+        maxT3 = MINTX;
+        maxHm = MINHM;
     }
 
     // pridej stat
@@ -646,7 +630,47 @@ public class CSVReader extends Thread
 
         fdet.setInto(Mer.dtm);
         fdet.setCount(Mer.idx);
+        fdet.setDeviceType(Mer.dev);
         return fdet;
+    }
+
+    private void DoProgress(int pos)
+    {
+        if (oldPos == pos)
+            return;
+        oldPos = pos;
+
+
+        if (progressListener != null) {
+            progressListener.OnProEvent(pos);
+        }
+
+
+
+        /*
+        progressBarHandler.post(new Runnable()
+        {
+            public void run()
+            {
+                if (progressListener != null)
+                {
+                    progressListener.OnProEvent(pos);
+                }
+            }
+        });
+
+         */
+    }
+
+
+    private void DoFinished(int pos) {
+        progressBarHandler.post(new Runnable() {
+            public void run() {
+                if (mFinListener != null) {
+                    mFinListener.OnProEvent(pos);
+                }
+            }
+        });
     }
 
 
@@ -687,7 +711,15 @@ public class CSVReader extends Thread
 
         fileDetail.setFrom(Mer.dtm);
         fileDetail.setErr(Constants.PARSER_OK);  // zadne chyby
+
         DoProgress(-totalBytes);  // vynuluj progress bar
+
+        /*
+        if (progressListener != null) {
+            progressListener.OnProEvent(-idx);
+        }
+         */
+
         while ((currentline = reader.readLine()) != null)
         {
             //  vysledek je v lokalni promenne Mer
@@ -698,7 +730,7 @@ public class CSVReader extends Thread
             idx = inputStream.available();
             idx = (totalBytes - idx) ;
 
-           // AppendStat(Mer);
+            // AppendStat(Mer);
             FindMinMax(Mer);
             sendMessage(Mer);
 
@@ -720,10 +752,21 @@ public class CSVReader extends Thread
         fileDetail.setMinT3(minT3);
         fileDetail.setMaxHum(maxHm);
         fileDetail.setMinHum(minHm);
+        fileDetail.setDeviceType(Mer.dev);
 
         //return stringBuilder.toString();
         DoProgress(-1);
         return fileDetail;
+    }
+
+    public void Prepare()
+    {
+        this.context = LollyApplication.getInstance().getApplicationContext();
+        this.FileName = null;
+        ClearPrivate();
+        ClearAvg();
+
+        Looper.prepare();
     }
 
 

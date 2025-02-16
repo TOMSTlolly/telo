@@ -2,7 +2,6 @@ package com.tomst.lolly.ui.graph;
 
 import static android.graphics.Color.RED;
 import static com.tomst.lolly.core.Constants.HEADER_LINE_LENGTH;
-import static com.tomst.lolly.core.TDeviceType.dLolly4;
 import static com.tomst.lolly.core.shared.getSerialNumberFromFileName;
 
 import android.content.pm.ActivityInfo;
@@ -53,7 +52,6 @@ import com.tomst.lolly.LollyApplication;
 import com.tomst.lolly.R;
 import com.tomst.lolly.core.CSVFile;
 import com.tomst.lolly.core.TDendroInfo;
-import com.tomst.lolly.core.TDeviceType;
 import com.tomst.lolly.core.TMereni;
 import com.tomst.lolly.core.TPhysValue;
 import com.tomst.lolly.databinding.FragmentGraphBinding;
@@ -131,16 +129,6 @@ public class GraphFragment extends Fragment {
     private DmdViewModel dmd;
     private Integer fIdx = 0;
 
-    protected Handler handler = new Handler(Looper.getMainLooper()) {
-        @Override
-        public void handleMessage(Message msg) {
-            TMereni mer = (TMereni) msg.obj;
-            //Log.d(TAG,String.valueOf(mer.idx));
-            dmd.AddMereni(mer);
-            fIdx++;
-        }
-    };
-
     @Override
     public void onDestroy() {
         super.onDestroy();
@@ -171,7 +159,6 @@ public class GraphFragment extends Fragment {
         LineData lines = new LineData(dataSets);
         combinedData.setData(lines);
 
-        //
         // combinedData.setData(generateBarData());
         chart.setData(combinedData);
         chart.getAxisLeft().setEnabled(true);
@@ -308,6 +295,15 @@ public class GraphFragment extends Fragment {
         dendroInfos.get(0).vHA = dmd.getHA();
     }
 
+    protected Handler handler = new Handler(Looper.getMainLooper()) {
+        @Override
+        public void handleMessage(Message msg) {
+            TMereni mer = (TMereni) msg.obj;
+            //Log.d(TAG,String.valueOf(mer.idx));
+            dmd.AddMereni(mer);
+            fIdx++;
+        }
+    };
 
     private boolean loadCSVFil(String uriPath)  {
         Uri fileUri = Uri.parse(uriPath);
@@ -316,7 +312,7 @@ public class GraphFragment extends Fragment {
 
         //FileDetail fileDetail = null;
         // progress bar
-        csv.SetBarListener(value -> {
+        csv.SetProgressListener(value -> {
                  Log.d(TAG, "Bar: " + value);
                 if (value<0) {
                     binding.proBar.setMax((int) -value); // posledni adresa

@@ -116,6 +116,10 @@ public class TMSReader extends Thread
         loghandler= han;
     }
 
+    public void SetCmd(String cmd){
+
+    }
+
     public void SetBarListener(OnProListener AListener){
         this.mBarListener = AListener;
     }
@@ -795,6 +799,11 @@ public class TMSReader extends Thread
             return;
         }
 
+        //
+        SharedPreferences prefs = context.getSharedPreferences(
+                "save_options", Context.MODE_PRIVATE
+        );
+
         while (( devState != TDevState.tFinal )
                 && (devState != TDevState.tError)
                 && (mRunning))
@@ -824,6 +833,7 @@ public class TMSReader extends Thread
 
                 case tFirmware:
                     break;
+
 
                 case tSerialDuplicity:
                     s = fHer.doCommand("#");
@@ -882,6 +892,20 @@ public class TMSReader extends Thread
                     fHer.setLogName(SerialNumber+"_");
 
                     SendMeasure(TDevState.tSerial,SerialNumber);
+                    devState = TDevState.tSmallCommand;
+                    break;
+
+                case tSmallCommand:
+                    // malinkaty command z bookmarku
+                    boolean checkboxBookmark = prefs.getBoolean("checkboxBookmark", false);
+                    String sCmd = prefs.getString("commandBookmark", "");
+                    if (checkboxBookmark == true)
+                     {
+                        if (sCmd.length() > 0) {
+                            s = fHer.doCommand(sCmd);
+                            SendMeasure(TDevState.tSmallCommand, s);
+                        }
+                     }
                     devState = TDevState.tInfo;
                     break;
 

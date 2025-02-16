@@ -454,7 +454,7 @@ public class DecodeTmsFormat {
             Log.d("TOMSTLolly","Setting year, month, day from lastSafeDtm"+fMereni.year+" "+fMereni.month+" "+fMereni.day);
         }
 
-//        fMereniList.clear();
+        fMereniList.clear();
         fMereni.dtm = null;
         fMerBefore.dtm = null;
         try {
@@ -516,6 +516,7 @@ public class DecodeTmsFormat {
                             }
                         }
                         else {
+                            if (fMerBefore.dtm!=null)
                             fMereni.dtm = LocalDateTime.of(fMerBefore.year, fMerBefore.month, fMerBefore.day, fMereni.hh, fMereni.mm, fMereni.ss, 0);
                         }
 
@@ -572,12 +573,16 @@ public class DecodeTmsFormat {
                         if (ret)
                             sendWholePacket( );
                     }
+
                    if (ret){
                         SafeAddress = AdrAfter;
                         fMereni.Address = AdrAfter;
-
-                        lastSafeDtm = fMereni.dtm;
+                        if ((i>0) && (fMereni.dtm != null))
+                           lastSafeDtm = fMereni.dtm;
                     }
+                   else
+                       lastSafeDtm = null;
+
                     return ret;
                     //E=$000010;M;01
                     //E=$06D5F8;C;2023/10/20,09:14:49+04
@@ -608,23 +613,23 @@ public class DecodeTmsFormat {
             i++;  // count leading nulls
         }
 
-        if (i>fMereniList.size())
+        if (i>=fMereniList.size())
         {
             Log.d("TOMSTLolly","Suspect index out of range i,size"+i+" "+fMereniList.size());
             return;
         }
 
-        if (fMereniList.get(i-1).dtm == null)
+        if (fMereniList.get(i).dtm == null)
         {
              //dateTime  =  lastDateTrace;
             return;
         }
         else
         {
-            dateTime  =  fMereniList.get(i-1).dtm;
+            dateTime  =  fMereniList.get(i).dtm;
         }
 
-        TMereni merPlus=fMereniList.get(i-1);  // first valid date mark
+        TMereni merPlus=fMereniList.get(i);  // first valid date mark
         // going backwards and correct all date marks
         for (int j = i-1; j>=0; j--) {
             TMereni mer = fMereniList.get(j);

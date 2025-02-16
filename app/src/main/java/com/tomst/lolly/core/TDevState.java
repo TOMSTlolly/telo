@@ -27,6 +27,7 @@ public enum TDevState
     tRemainDays,
     tSerial,
     tSerialDuplicity,
+    tSmallCommand,
     tSetMeteo,
     tSetTime,
     tStart,

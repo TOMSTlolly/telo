@@ -1,6 +1,9 @@
 package com.tomst.lolly.fileview;
 
 import android.location.Location;
+
+import com.tomst.lolly.core.TDeviceType;
+
 import java.time.LocalDateTime;
 
 public class FileDetail
@@ -12,6 +15,9 @@ public class FileDetail
 
     // seriove cislo
     private String SerialNumber;
+
+    // typ zarizeni
+    private TDeviceType deviceType;
 
     // zakladni informace
     private String name;
@@ -43,6 +49,9 @@ public class FileDetail
     public Location  getLocation() { return location; }
 
     // getter & setter
+    public TDeviceType getDeviceType() { return deviceType; }
+    public void setDeviceType(TDeviceType deviceType) { this.deviceType = deviceType; }
+
     public double getMinT1() { return minT1; }
     public double getMaxT1() {
         return maxT1;
@@ -103,7 +112,9 @@ public class FileDetail
 
     // nove property
     public void setCreated(LocalDateTime created) { this.created = created; }
-    public String getCreated() { return created.toString(); }
+    public String getCreated() {
+        return created.toString();
+    }
     public void setErr(int errFlag) { this.errFlag = errFlag; }
 
     private void  ClearMembers()

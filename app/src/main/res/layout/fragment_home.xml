@@ -445,6 +445,7 @@
                         android:textStyle="bold"
                         android:textColor="@color/black" />
                 </LinearLayout>
+
                 <LinearLayout
                     android:id="@+id/linearLayout7_22"
                     android:layout_width="match_parent"

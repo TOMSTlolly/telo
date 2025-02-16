@@ -16,7 +16,9 @@ import androidx.core.content.ContextCompat;
 
 import com.tomst.lolly.R;
 import com.tomst.lolly.core.Constants;
+import com.tomst.lolly.core.TDeviceType;
 
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -65,7 +67,9 @@ public class FileViewerAdapter extends BaseAdapter
             holder = new ViewHolder();
 
             //id_imageView_card_tracktype
-            holder.trackTypeIcon = convertView.findViewById(R.id.id_imageView_card_tracktype);  // pravy horni roh ikona
+//            holder.trackTypeIcon = convertView.findViewById(R.id.id_imageView_card_tracktype);  // pravy horni roh ikona
+
+            holder.trackType = convertView.findViewById(R.id.id_device_type_rowitem);  // pravy horni roh, symbol zarizeni;
             holder.cloudIcon = convertView.findViewById(R.id.cloudIcon);
             holder.imageView = convertView.findViewById(R.id.iconID);
             holder.checkBox  = convertView.findViewById(R.id.checkBox);
@@ -88,17 +92,27 @@ public class FileViewerAdapter extends BaseAdapter
 
         FileDetail currentFile = mAllFiles.get(position);
         holder.trackName.setText(currentFile.getNiceName());  // tohle zobrazuju v titulce !!!
-        holder.imageView.setImageResource(0);
+ //       holder.imageView.setImageResource(0);
+
+        TDeviceType devType = currentFile.getDeviceType();
+        if (devType==null)
+            holder.trackType.setText("?");
+        else
+            holder.trackType.setText(formatDevType(devType));
+
 
         // doplnim statistiku, pokud je to znamy datovy soubor
         if (currentFile.errFlag==Constants.PARSER_OK)
         {
            // DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneId.of("UTC"));
-            DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-            String formattedFrom = currentFile.getiFrom().toString();
-            String formattedInto = currentFile.getiInto().toString();
+            DateTimeFormatter fmtFrom = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+            DateTimeFormatter fmtInto   = DateTimeFormatter.ofPattern("yy-MM-dd HH:mm").withZone(ZoneId.of("UTC"));
+
+            String formattedFrom = currentFile.getiFrom().format(fmtFrom);
+            String formattedInto = currentFile.getiInto().format(fmtInto);
 
             //holder.trackName.setText(currentFile.getNiceName());  // tohle zobrazuju v titulce !!!
+
             holder.count.setText(String.valueOf(currentFile.getiCount()));
             holder.annotation.setText(currentFile.getCreated());
             holder.from.setText(formattedFrom);
@@ -107,12 +121,14 @@ public class FileViewerAdapter extends BaseAdapter
             holder.maxtx.setText(String.valueOf(currentFile.getMaxT1()));
             holder.minhum.setText(String.valueOf(currentFile.getMinHum()));
             holder.maxhum.setText(String.valueOf(currentFile.getMaxHum()));
-            holder.size.setText(String.valueOf(currentFile.getFileSize()));
+
+            String s = formatSize(currentFile.getFileSize()) ;
+            holder.size.setText(s);
+            //holder.size.setText(String.valueOf(currentFile.getFileSize()));
 
             // zbyla cast stareho holderu
-            holder.trackTypeIcon.setImageResource(R.drawable.ic_expand_arrow)  ;
+//            holder.trackTypeIcon.setImageResource(R.drawable.ic_expand_arrow)  ;
 
-            holder.imageView.setImageResource(R.drawable.cog);
             holder.imageView.setImageResource(R.drawable.cog);
             holder.checkBox.setText(currentFile.getName());
             holder.checkBox.setChecked(currentFile.isSelected());
@@ -143,11 +159,53 @@ public class FileViewerAdapter extends BaseAdapter
         return convertView;
     }
 
+    private String formatDevType(TDeviceType devType)
+    {
+        switch(devType)
+        {
+            case dLolly3:
+                return "M";
+            case dLolly4:
+                return "M";
+            case dAD:
+                return "D";
+            case dAdMicro:
+                return "Du";
+            case dTermoChron:
+                return "T";
+            case dUnknown:
+                return "U";
+        }
+        return ("!");
+    }
+
+    private String formatSize(long size) {
+        String suffix = null;
+        float fSize = size;
+
+        if (fSize >= 1024) {
+            suffix = "KB";
+            fSize /= 1024;
+            if (fSize >= 1024) {
+                suffix = "MB";
+                fSize /= 1024;
+                if (fSize >= 1024) {
+                    suffix = "GB";
+                    fSize /= 1024;
+                }
+            }
+        }
+        StringBuilder resultBuffer = new StringBuilder(String.format("%.2f", fSize));
+        if (suffix != null) resultBuffer.append(" ").append(suffix);
+        return resultBuffer.toString();
+    }
+
     private static class ViewHolder {
         ImageView cloudIcon;
         ImageView imageView;
 
-        ImageView trackTypeIcon;    // tohle je ikona trasy
+        //ImageView trackTypeIcon;    // tohle je ikona trasy
+        TextView trackType;
 
         CheckBox checkBox;
         TextView trackName;

@@ -229,6 +229,13 @@ public class OptionsFragment extends Fragment implements AdapterView.OnItemSelec
         int spiDownload = (int) binding.spiDownload.getSelectedItemId();
         editor.putInt("readFrom",spiDownload);
 
+        //  malinkaty prikaz na zacatku komunikace
+        String s = binding.commandBookmark.getText().toString();
+        editor.putString("commandBookmark",s);
+
+        boolean b = binding.checkboxBookmark.isChecked();
+        editor.putBoolean("checkboxBookmark",b);
+
         // interval mezi merenima
         int spiInterval = (int) binding.spiInterval.getSelectedItemId();
         editor.putInt("mode",spiInterval);
@@ -241,7 +248,7 @@ public class OptionsFragment extends Fragment implements AdapterView.OnItemSelec
         editor.putBoolean("settime",binding.settime.isChecked());
 
         // nastav carku-tecku
-        String s = String.valueOf(binding.Deci.getText());
+        s = String.valueOf(binding.Deci.getText());
         editor.putString("decimalseparator",s);
 
         String bookmarkStr = String.valueOf(binding.bookmarkDeci.getText());
@@ -294,6 +301,13 @@ public class OptionsFragment extends Fragment implements AdapterView.OnItemSelec
         boolean r3 = sharedPref.getBoolean(
                 "read_date", false
         );  // false je default, kdyz neexistuje
+
+        // malinkaty prikaz, ktery se provede jenom jednou na zacatku stavoveho stroje
+        boolean checkoxBookmark = sharedPref.getBoolean("checkboxBookmark", false);
+        binding.checkboxBookmark.setChecked(checkoxBookmark);
+
+        String commandBookmark = sharedPref.getString("commandBookmark", "");
+        binding.commandBookmark.setText(commandBookmark);
 
         //  TextView textView = root.findViewById(R.id.userDetails);
         //  TextView pExp =  root.findViewById(R.id.p_export_folder);

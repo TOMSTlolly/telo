@@ -163,6 +163,8 @@ public class LollyService extends Service {
         ftTMS.SetDataHandler(this.dataHandler);
         ftTMS.SetLogHandler(this.loghandler);
         ftTMS.ConnectDevice();  // beware, first setup callback handlers before calling this
+          sharedPref.getBoolean("checkoxBookmark", false);
+
 
         Message msg = serviceHandler.obtainMessage();
         msg.arg1 = 12;
