@@ -24,6 +24,7 @@ package com.tomst.lolly.core;
  import java.io.InputStreamReader;
  import java.io.RandomAccessFile;
  import java.nio.file.attribute.FileTime;
+ import java.time.Duration;
  import java.time.ZoneId;
  import java.time.format.DateTimeFormatter;
  import java.nio.file.Files;
@@ -79,6 +80,7 @@ public class CSVReader extends Thread
         this.handler = han;
     }
     TMereni Mer = new TMereni(); // mereni
+    TMereni Mol = new TMereni(); // stare mereni
 
     private OnGeekEventListener mListener; // callback pro vysilani z threadu
 
@@ -104,6 +106,12 @@ public class CSVReader extends Thread
 
     public void SetMereniListener(OnGeekEventListener AListener){
         this.mListener = AListener;
+    }
+
+    private static FileDetail det= null;
+
+    public FileDetail getFileDetail(){
+        return det;
     }
 
     private static Context context = null;
@@ -540,6 +548,24 @@ public class CSVReader extends Thread
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
+    private boolean WasHole(TMereni Mer)
+    {
+        // zjisti zda je mezera v datech
+        if (Mol.dtm==null) {
+            Mol = Mer; // presun do starych dat
+            return false;
+        }
+        Duration duration = Duration.between(Mer.dtm, Mol.dtm);
+        Mol=Mer;
+        if (duration.getSeconds() > 60) {
+            Mer.Err = Constants.PARSER_HOLE_ERR;
+            return true;
+        }
+        return false;
+    }
+
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
     private boolean ProcessLine(String currentline) {
         String T1, T2, T3;
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern(DMD_PATTERN);
@@ -720,6 +746,7 @@ public class CSVReader extends Thread
         }
          */
 
+        Mer.Err = 0;
         while ((currentline = reader.readLine()) != null)
         {
             //  vysledek je v lokalni promenne Mer
@@ -732,6 +759,7 @@ public class CSVReader extends Thread
 
             // AppendStat(Mer);
             FindMinMax(Mer);
+            WasHole(Mer);       // nastaveni priznaku Mer.Err
             sendMessage(Mer);
 
             if (progressBarHandler != null)
@@ -753,6 +781,7 @@ public class CSVReader extends Thread
         fileDetail.setMaxHum(maxHm);
         fileDetail.setMinHum(minHm);
         fileDetail.setDeviceType(Mer.dev);
+        fileDetail.setErr(Mer.Err);
 
         //return stringBuilder.toString();
         DoProgress(-1);
@@ -782,8 +811,8 @@ public class CSVReader extends Thread
         Context context = LollyApplication.getInstance().getApplicationContext();
         Uri uri = Uri.parse(this.FileName);
         try {
-            FileDetail det = readFileContent(uri);
-
+            //FileDetail det = readFileContent(uri);
+            det = readFileContent(uri);
         } catch (IOException e) {
             // Handle error here
             Log.d(TAG,e.toString());

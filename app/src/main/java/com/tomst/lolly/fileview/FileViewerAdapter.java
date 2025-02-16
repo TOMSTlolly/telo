@@ -67,7 +67,7 @@ public class FileViewerAdapter extends BaseAdapter
             holder = new ViewHolder();
 
             //id_imageView_card_tracktype
-//            holder.trackTypeIcon = convertView.findViewById(R.id.id_imageView_card_tracktype);  // pravy horni roh ikona
+//          holder.trackTypeIcon = convertView.findViewById(R.id.id_imageView_card_tracktype);  // pravy horni roh ikona
 
             holder.trackType = convertView.findViewById(R.id.id_device_type_rowitem);  // pravy horni roh, symbol zarizeni;
             holder.cloudIcon = convertView.findViewById(R.id.cloudIcon);
@@ -92,8 +92,9 @@ public class FileViewerAdapter extends BaseAdapter
 
         FileDetail currentFile = mAllFiles.get(position);
         holder.trackName.setText(currentFile.getNiceName());  // tohle zobrazuju v titulce !!!
- //       holder.imageView.setImageResource(0);
+//        holder.imageView.setImageResource(0); // vynuluj obrazek
 
+        // typ zarizeni
         TDeviceType devType = currentFile.getDeviceType();
         if (devType==null)
             holder.trackType.setText("?");
@@ -106,30 +107,46 @@ public class FileViewerAdapter extends BaseAdapter
         {
            // DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneId.of("UTC"));
             DateTimeFormatter fmtFrom = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-            DateTimeFormatter fmtInto   = DateTimeFormatter.ofPattern("yy-MM-dd HH:mm").withZone(ZoneId.of("UTC"));
+            DateTimeFormatter fmtInto  = DateTimeFormatter.ofPattern("yy-MM-dd HH:mm").withZone(ZoneId.of("UTC"));
 
             String formattedFrom = currentFile.getiFrom().format(fmtFrom);
             String formattedInto = currentFile.getiInto().format(fmtInto);
-
-            //holder.trackName.setText(currentFile.getNiceName());  // tohle zobrazuju v titulce !!!
 
             holder.count.setText(String.valueOf(currentFile.getiCount()));
             holder.annotation.setText(currentFile.getCreated());
             holder.from.setText(formattedFrom);
             holder.into.setText(formattedInto);
-            holder.mintx.setText(String.valueOf(currentFile.getMinT1()));
-            holder.maxtx.setText(String.valueOf(currentFile.getMaxT1()));
+            // holder.mintx.setText(String.valueOf(currentFile.getMinT1()));
+
+            // maxima a mimina pro vsechny  teplomery
+            if (currentFile.getDeviceType() == TDeviceType.dLolly3 || currentFile.getDeviceType() == TDeviceType.dLolly4)
+            {
+                double minT1 = currentFile.getMinT1();
+                double minT2 = currentFile.getMinT2();
+                double minT3 = currentFile.getMinT3();
+                double minTX = Math.min(minT1, Math.min(minT2, minT3));
+                holder.mintx.setText(String.format("%.1f", minTX));
+                double maxT1 = currentFile.getMaxT1();
+                double maxT2 = currentFile.getMaxT2();
+                double maxT3 = currentFile.getMaxT3();
+                double maxtx = Math.max(maxT1, Math.max(maxT2, maxT3));
+                holder.maxtx.setText(String.format("%.1f",maxtx));
+            }
+            else
+            {
+                holder.mintx.setText(String.format("%.1f",currentFile.getMinT1()));
+                holder.maxtx.setText(String.format("%.1f",currentFile.getMaxT1()));
+            }
+
             holder.minhum.setText(String.valueOf(currentFile.getMinHum()));
             holder.maxhum.setText(String.valueOf(currentFile.getMaxHum()));
-
             String s = formatSize(currentFile.getFileSize()) ;
             holder.size.setText(s);
-            //holder.size.setText(String.valueOf(currentFile.getFileSize()));
 
-            // zbyla cast stareho holderu
-//            holder.trackTypeIcon.setImageResource(R.drawable.ic_expand_arrow)  ;
+//          holder.trackTypeIcon.setImageResource(R.drawable.ic_expand_arrow)  ;
+//          holder.imageView.setImageResource(R.drawable.cog);
 
-            holder.imageView.setImageResource(R.drawable.cog);
+            holder.imageView.setBackgroundColor(Color.green(1));
             holder.checkBox.setText(currentFile.getName());
             holder.checkBox.setChecked(currentFile.isSelected());
             holder.annotation.setTextColor(ContextCompat.getColor(mContext, R.color.default_text_color));
@@ -137,8 +154,22 @@ public class FileViewerAdapter extends BaseAdapter
         else
         {
             //holder.cloudIcon.setImageResource(R.drawable.ic_bookmark);
-            holder.imageView.setImageResource(R.drawable.ic_file_download);
-            holder.annotation.setText("Parser Error");
+            //holder.imageView.setImageResource(R.drawable.ic_file_download);
+            holder.imageView.setBackgroundColor(Color.RED);
+
+            // zobrazim chybovou hlasku
+            switch (currentFile.errFlag)
+            {
+                case Constants.PARSER_ERROR:
+                    holder.annotation.setText("Parser Error");
+                    break;
+                case Constants.PARSER_HOLE_ERR:
+                    holder.annotation.setText("Hole in data");
+                    break;
+                default:
+                    holder.annotation.setText("Unknown");
+                    break;
+            }
             holder.annotation.setTextColor(ContextCompat.getColor(mContext, R.color.color_accent));
         }
 

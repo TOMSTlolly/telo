@@ -20,8 +20,10 @@ public class Constants {
     public static final int SERIAL_NUMBER_INDEX = 1;
     public static final String DEFAULT_SERIAL_NUMBER_VALUE = "Unknown";
 
-    // constants for parser
+    // constants for parser, kombinuju do jednoho bytu
     public static final int PARSER_OK=0;
     public static final int PARSER_ERROR=1;
+    public static final int PARSER_HOLE_ERR=2;
+
 
 }

@@ -3,7 +3,6 @@ package com.tomst.lolly.ui.viewfile;
 
 import static android.app.Activity.RESULT_CANCELED;
 import static android.os.Environment.*;
-import static android.os.SystemClock.sleep;
 import static com.tomst.lolly.LollyApplication.DIRECTORY_TEMP;
 import static com.tomst.lolly.core.shared.bef;
 
@@ -69,8 +68,6 @@ import java.util.List;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicReference;
-
 
 
 public class ListFragment extends Fragment implements OnProListener
@@ -615,8 +612,6 @@ public class ListFragment extends Fragment implements OnProListener
     }
 
 
-
-
     @RequiresApi(api = Build.VERSION_CODES.O)
     public void DoLoadFil()
     {
@@ -754,7 +749,6 @@ public class ListFragment extends Fragment implements OnProListener
             db.ClearUnusedFiles(usedFiles);
 
             Location location = LollyApplication.getInstance().getLocation();
-
             FileDetail fdet = null;
 
             for (File file : files) {
@@ -807,9 +801,17 @@ public class ListFragment extends Fragment implements OnProListener
         // konec vycitani
         csv.SetFinListener(value -> {
             Log.d(TAG,"Finished");
+
+            // pote co prolezu csv, mam hotovou statistiku, kterou muzu prehrat do radky
+            FileDetail fdet= csv.getFileDetail();
+            FileDetail temp = findFileName(fileUri.toString());  // najdi existujici radek v recycleru podle jmena souboru
+            if (temp != null) {
+                updateFriends(fdet, temp);
+            }
+
             //DisplayData();
             //LoadDmdData();
-            //  binding.proBar.setProgress(0);
+              binding.proBar.setProgress(0);
         });
 
         csv.start();
