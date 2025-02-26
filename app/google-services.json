@@ -1,26 +1,36 @@
 {
   "project_info": {
-    "project_number": "699298216355",
-    "project_id": "dendro-doggie",
-    "storage_bucket": "dendro-doggie.appspot.com"
+    "project_number": "733237118232",
+    "project_id": "crashlytic-f28b8",
+    "storage_bucket": "crashlytic-f28b8.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:699298216355:android:a76240d85ff5b56c740216",
+        "mobilesdk_app_id": "1:733237118232:android:79e82d7b969ee42f360a6d",
         "android_client_info": {
           "package_name": "com.tomst.lolly"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "733237118232-qatcm4m6ftu72mbfco7216kukqp3re6g.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyBumSXa19a7o1XzpxIShdZbouCCFhfxzec"
+          "current_key": "AIzaSyBCSwsBtKDoMYNeBzj5Tmfu7XHWONjQiUE"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "733237118232-qatcm4m6ftu72mbfco7216kukqp3re6g.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

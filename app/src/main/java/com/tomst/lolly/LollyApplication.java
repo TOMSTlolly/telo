@@ -45,8 +45,6 @@ import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
 
 import com.google.android.material.snackbar.Snackbar;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
 import com.tomst.lolly.core.Constants;
 import com.tomst.lolly.core.DatabaseHandler;
 import com.tomst.lolly.core.FileOpener;
@@ -58,6 +56,10 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.crashlytics.FirebaseCrashlytics;
 
 public class LollyApplication extends AppCompatActivity implements View.OnClickListener {
 
@@ -409,8 +411,12 @@ public class LollyApplication extends AppCompatActivity implements View.OnClickL
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         singleton = this;
+
+        // Initialize Firebase and crashlytics for collecting crash reports and analytics
+        FirebaseApp.initializeApp(this);
+        FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(true);
+
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
         view = binding.getRoot();

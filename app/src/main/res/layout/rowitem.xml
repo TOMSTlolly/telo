@@ -1,14 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView
-    xmlns:card_view="http://schemas.android.com/apk/res-auto"
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:card_view="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/card_view"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginRight="2dp"
     android:layout_marginLeft="2dp"
+    android:layout_marginRight="2dp"
     android:foreground="@drawable/card_foreground"
     card_view:cardBackgroundColor="@color/colorCardBackground"
     card_view:cardCornerRadius="2dp"
@@ -19,21 +18,21 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:layout_weight="8">
-
+            android:layout_weight="8"
+            android:orientation="vertical">
 
 
             <CheckBox
                 android:id="@+id/checkBox"
                 android:layout_width="@dimen/thumbSize"
                 android:layout_height="@dimen/thumbSize"
+                android:layout_gravity="center"
                 android:layout_margin="5dp"
                 android:gravity="center_vertical"
-                android:layout_gravity="center"
                 android:scaleType="center"
                 android:visibility="gone" />
 
@@ -41,9 +40,9 @@
                 android:id="@+id/cloudIcon"
                 android:layout_width="@dimen/thumbSize"
                 android:layout_height="@dimen/thumbSize"
+                android:layout_gravity="center"
                 android:layout_margin="5dp"
                 android:gravity="center_vertical"
-                android:layout_gravity="center"
                 android:scaleType="center"
                 android:src="@drawable/baseline_cloud_done_24"
                 android:visibility="gone" />
@@ -54,11 +53,12 @@
                 android:layout_height="match_parent"
                 android:layout_centerVertical="true"
                 android:layout_margin="5dp"
-                android:scaleType="center"
                 android:layout_weight="1"
+                android:scaleType="center"
                 android:src="@drawable/baseline_insert_drive_file_24"
-                app:tint="#14532D"/>
+                app:tint="#14532D" />
         </LinearLayout>
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -70,27 +70,30 @@
                 android:layout_height="0dp"
                 android:layout_weight="1"
                 android:orientation="horizontal">
+
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="10"
                     android:orientation="vertical">
+
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="0dp"
                         android:layout_weight="3"
                         android:orientation="horizontal">
+
                         <TextView
+                            android:id="@+id/id_TrackName"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
-                            android:textAppearance="?android:attr/textAppearanceMedium"
-                            android:id="@+id/id_TrackName"
-                            android:textColor="@color/textColorCardTitle"
-                            android:textStyle="bold"
-                            android:textDirection="locale"
-                            android:gravity="start"
                             android:layout_margin="1dp"
-                            android:textAlignment="viewStart" />
+                            android:gravity="start"
+                            android:textAlignment="viewStart"
+                            android:textAppearance="?android:attr/textAppearanceMedium"
+                            android:textColor="@color/textColorCardTitle"
+                            android:textDirection="locale"
+                            android:textStyle="bold" />
                     </LinearLayout>
 
                     <LinearLayout
@@ -98,19 +101,20 @@
                         android:layout_height="0dp"
                         android:layout_weight="2"
                         android:orientation="horizontal">
+
                         <TextView
+                            android:id="@+id/id_textView_card_TrackDesc"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
-                            android:textAppearance="@style/TextAppearanceCardSmall"
-                            android:id="@+id/id_textView_card_TrackDesc"
-                            android:maxLines="1"
-                            android:ellipsize="end"
-                            android:textStyle="italic"
-                            android:textDirection="locale"
-                            android:gravity="start"
-                            android:textAlignment="viewStart"
+                            android:layout_below="@id/id_TrackName"
                             android:layout_margin="1dp"
-                            android:layout_below="@id/id_TrackName"/>
+                            android:ellipsize="end"
+                            android:gravity="start"
+                            android:maxLines="1"
+                            android:textAlignment="viewStart"
+                            android:textAppearance="@style/TextAppearanceCardSmall"
+                            android:textDirection="locale"
+                            android:textStyle="italic" />
                     </LinearLayout>
                 </LinearLayout>
 
@@ -119,16 +123,17 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:orientation="vertical">
+
                     <TextView
+                        android:id="@+id/id_device_type_rowitem"
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
-                        android:id="@+id/id_device_type_rowitem"
-                        android:text="M"
                         android:autoSizeTextType="uniform"
-                        android:textStyle="bold"
                         android:gravity="center"
-                        android:maxLines="1">
-                        
+                        android:maxLines="1"
+                        android:text="M"
+                        android:textStyle="bold">
+
                     </TextView>
 
                 </LinearLayout>
@@ -137,50 +142,50 @@
 
             <!-- Male popisky pod textovym souborem a anotaci -->
             <LinearLayout
-                android:orientation="horizontal"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_below="@+id/id_card_separator"
+                android:layout_toEndOf="@+id/iconID"
+                android:layout_toRightOf="@+id/iconID"
                 android:background="@color/colorCardBackground_Data"
                 android:baselineAligned="false"
-                android:weightSum="2"
-                android:paddingTop="2dp"
-                android:paddingBottom="6dp"
-                android:paddingLeft="8dp"
+                android:orientation="horizontal"
                 android:paddingStart="8dp"
-                android:paddingRight="5dp"
+                android:paddingLeft="8dp"
+                android:paddingTop="2dp"
                 android:paddingEnd="5dp"
-                android:layout_toRightOf="@+id/iconID"
-                android:layout_toEndOf="@+id/iconID"
-                android:layout_below="@+id/id_card_separator">
+                android:paddingRight="5dp"
+                android:paddingBottom="6dp"
+                android:weightSum="2">
 
                 <LinearLayout
-                    android:orientation="horizontal"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:paddingBottom="2dp"
-                    android:layout_weight="1">
+                    android:layout_weight="1"
+                    android:orientation="horizontal"
+                    android:paddingBottom="2dp">
 
                     <!-- popisky  count/start/stop/maxtx -->
                     <LinearLayout
-                        android:orientation="vertical"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
                         android:layout_marginRight="8dp"
-                        android:layout_marginEnd="8dp">
+                        android:orientation="vertical">
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:textAppearance="@style/TextAppearanceCardSmall"
+                            android:layout_marginTop="2dp"
                             android:text="@string/label_from"
-                            android:layout_marginTop="2dp"/>
+                            android:textAppearance="@style/TextAppearanceCardSmall" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:textAppearance="@style/TextAppearanceCardSmall"
+                            android:layout_marginTop="3dp"
                             android:text="@string/label_events"
-                            android:layout_marginTop="3dp"/>
+                            android:textAppearance="@style/TextAppearanceCardSmall" />
 
                         <TextView
                             android:layout_width="match_parent"
@@ -192,146 +197,146 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:textAppearance="@style/TextAppearanceCardSmall"
+                            android:layout_marginTop="3dp"
                             android:text="@string/label_min_hum"
-                            android:layout_marginTop="3dp"/>
+                            android:textAppearance="@style/TextAppearanceCardSmall" />
 
                     </LinearLayout>
 
                     <!-- hodnoty prvni sloupec-->
                     <LinearLayout
-                        android:orientation="vertical"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" >
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
                         <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:textAppearance="@style/TextAppearanceCardSmall"
                             android:id="@+id/id_file_from"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
-                            android:textColor="@color/textColorPrimary"
-                            android:maxLines="1" />
+                            android:maxLines="1"
+                            android:textAppearance="@style/TextAppearanceCardSmall"
+                            android:textColor="@color/textColorPrimary" />
 
                         <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:textAppearance="@style/TextAppearanceCardSmall"
                             android:id="@+id/id_file_count"
-                            android:layout_marginTop="3dp"
-                            android:textColor="@color/textColorPrimary"
-                            android:maxLines="1" />
-
-                        <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:maxLines="1"
                             android:textAppearance="@style/TextAppearanceCardSmall"
+                            android:textColor="@color/textColorPrimary" />
+
+                        <TextView
                             android:id="@+id/id_min_tx"
-                            android:layout_marginTop="3dp"
-                            android:textColor="@color/textColorPrimary"
-                            android:maxLines="1" />
-
-                        <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:textAppearance="@style/TextAppearanceCardSmall"
-                            android:id="@+id/id_min_hum"
                             android:layout_marginTop="3dp"
-                            android:textColor="@color/textColorPrimary"
-                            android:maxLines="1" />
+                            android:maxLines="1"
+                            android:textAppearance="@style/TextAppearanceCardSmall"
+                            android:textColor="@color/textColorPrimary" />
+
+                        <TextView
+                            android:id="@+id/id_min_hum"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:maxLines="1"
+                            android:textAppearance="@style/TextAppearanceCardSmall"
+                            android:textColor="@color/textColorPrimary" />
                     </LinearLayout>
                 </LinearLayout>
 
                 <!-- prava cast boxu s malinkyma hodnotama pod hlavni popiskou -->
                 <LinearLayout
-                    android:orientation="horizontal"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:paddingBottom="2dp"
-                    android:layout_weight="1">
+                    android:layout_weight="1"
+                    android:orientation="horizontal"
+                    android:paddingBottom="2dp">
 
                     <LinearLayout
-                        android:orientation="vertical"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
                         android:layout_marginRight="8dp"
-                        android:layout_marginEnd="8dp">
+                        android:orientation="vertical">
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:textAppearance="@style/TextAppearanceCardSmall"
+                            android:layout_marginTop="2dp"
                             android:text="@string/label_into"
-                            android:layout_marginTop="2dp"/>
+                            android:textAppearance="@style/TextAppearanceCardSmall" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:textAppearance="@style/TextAppearanceCardSmall"
-                            android:text="@string/label_size"
-                            android:layout_marginTop="3dp"/>
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:textAppearance="@style/TextAppearanceCardSmall"
-                            android:text="@string/label_max_tx"
-                            android:layout_marginTop="3dp"/>
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:textAppearance="@style/TextAppearanceCardSmall"
                             android:layout_marginTop="3dp"
-                            android:text="@string/label_max_hum" />
+                            android:text="@string/label_size"
+                            android:textAppearance="@style/TextAppearanceCardSmall" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="@string/label_max_tx"
+                            android:textAppearance="@style/TextAppearanceCardSmall" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="@string/label_max_hum"
+                            android:textAppearance="@style/TextAppearanceCardSmall" />
                     </LinearLayout>
 
                     <!-- druhy sloupec -->
                     <LinearLayout
-                        android:orientation="vertical"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" >
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
 
                         <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:textAppearance="@style/TextAppearanceCardSmall"
                             android:id="@+id/id_file_into"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
-                            android:textColor="@color/textColorPrimary"
-                            android:maxLines="1" />
+                            android:maxLines="1"
+                            android:textAppearance="@style/TextAppearanceCardSmall"
+                            android:textColor="@color/textColorPrimary" />
 
                         <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:textAppearance="@style/TextAppearanceCardSmall"
                             android:id="@+id/id_file_size"
-                            android:layout_marginTop="3dp"
-                            android:textColor="@color/textColorPrimary"
-                            android:maxLines="1" />
-
-                        <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:maxLines="1"
                             android:textAppearance="@style/TextAppearanceCardSmall"
+                            android:textColor="@color/textColorPrimary" />
+
+                        <TextView
                             android:id="@+id/id_max_tx"
-                            android:layout_marginTop="3dp"
-                            android:textColor="@color/textColorPrimary"
-                            android:maxLines="1" />
-
-                        <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:textAppearance="@style/TextAppearanceCardSmall"
-                            android:id="@+id/id_max_hum"
                             android:layout_marginTop="3dp"
-                            android:textColor="@color/textColorPrimary"
-                            android:maxLines="1" />
+                            android:maxLines="1"
+                            android:textAppearance="@style/TextAppearanceCardSmall"
+                            android:textColor="@color/textColorPrimary" />
+
+                        <TextView
+                            android:id="@+id/id_max_hum"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:maxLines="1"
+                            android:textAppearance="@style/TextAppearanceCardSmall"
+                            android:textColor="@color/textColorPrimary" />
                     </LinearLayout>
 
                 </LinearLayout>
 
             </LinearLayout>
-
 
 
         </LinearLayout>

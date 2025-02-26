@@ -445,7 +445,6 @@
                         android:textStyle="bold"
                         android:textColor="@color/black" />
                 </LinearLayout>
-
                 <LinearLayout
                     android:id="@+id/linearLayout7_22"
                     android:layout_width="match_parent"
@@ -533,206 +532,230 @@
         android:id="@+id/linearLayout8"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        app:layout_constraintTop_toBottomOf="@id/guideline_horizontal_bottom"
+        android:orientation="vertical"
         app:layout_constraintBottom_toBottomOf="parent"
-        android:orientation="vertical">
+        app:layout_constraintTop_toBottomOf="@id/guideline_horizontal_bottom">
 
-        <LinearLayout
-            android:id="@+id/linearLayout8_1"
+    <LinearLayout
+        android:id="@+id/linearLayout8_1"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="0.3"
+        android:orientation="vertical"
+        android:padding="3dp">
+
+        <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="0.3"
-            android:orientation="vertical"
-            android:padding="3dp"
-            app:layout_constraintBottom_toTopOf="@+id/guideline_absbottom"
-            app:layout_constraintTop_toBottomOf="@+id/guideline_horizontal_bottom">
+            android:layout_height="match_parent"
+            android:background="@drawable/background1"
+            android:padding="3dp">
 
-            <FrameLayout
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:padding="3dp"
-                android:background="@drawable/background1">
+                android:orientation="horizontal">
 
-                <LinearLayout
-                    android:layout_width="match_parent"
+                <TextView
+                    android:layout_width="0dp"
                     android:layout_height="match_parent"
-                    android:orientation="horizontal">
+                    android:layout_weight="1"
+                    android:autoSizeMaxTextSize="100sp"
+                    android:autoSizeMinTextSize="12sp"
+                    android:autoSizeTextType="uniform"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:padding="3dp"
+                    android:text="Hum:"
+                    android:textColor="@color/black" />
 
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:padding="3dp"
-                        android:text="Hum:"
-                        android:textColor="@color/black"
-                        android:gravity="center"
-                        android:maxLines="1"
-                        android:autoSizeTextType="uniform"
-                        android:autoSizeMinTextSize="12sp"
-                        android:autoSizeMaxTextSize="100sp" />
-                    <TextView
-                        android:id="@+id/devhumADVal"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:padding="3dp"
-                        android:text="15"
-                        android:textColor="@color/black"
-                        android:gravity="center"
-                        android:maxLines="1"
-                        android:autoSizeTextType="uniform"
-                        android:autoSizeMinTextSize="12sp"
-                        android:autoSizeMaxTextSize="100sp" />
+                <TextView
+                    android:id="@+id/devhumADVal"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:autoSizeMaxTextSize="100sp"
+                    android:autoSizeMinTextSize="12sp"
+                    android:autoSizeTextType="uniform"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:padding="3dp"
+                    android:text="15"
+                    android:textColor="@color/black" />
 
-                    <View
-                        android:layout_width="1dp"
-                        android:layout_height="match_parent"
-                        android:background="@color/black" />
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="match_parent"
+                    android:background="@color/black" />
 
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:padding="3dp"
-                        android:text="T1/°C:"
-                        android:maxLines="1"
-                        android:textColor="@color/black"
-                        android:gravity="center"
-                        android:autoSizeTextType="uniform"
-                        android:autoSizeMinTextSize="12sp"
-                        android:autoSizeMaxTextSize="100sp" />
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:autoSizeMaxTextSize="100sp"
+                    android:autoSizeMinTextSize="12sp"
+                    android:autoSizeTextType="uniform"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:padding="3dp"
+                    android:text="T1/°C:"
+                    android:textColor="@color/black" />
 
-                    <TextView
-                        android:id="@+id/devt3"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:padding="3dp"
-                        android:text="24"
-                        android:maxLines="1"
-                        android:textColor="@color/black"
-                        android:gravity="center"
-                        android:autoSizeTextType="uniform"
-                        android:autoSizeMinTextSize="12sp"
-                        android:autoSizeMaxTextSize="100sp" />
+                <TextView
+                    android:id="@+id/devt3"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:autoSizeMaxTextSize="100sp"
+                    android:autoSizeMinTextSize="12sp"
+                    android:autoSizeTextType="uniform"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:padding="3dp"
+                    android:text="24"
+                    android:textColor="@color/black" />
 
-                    <View
-                        android:layout_width="1dp"
-                        android:layout_height="match_parent"
-                        android:background="@color/black" />
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="match_parent"
+                    android:background="@color/black" />
 
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:padding="3dp"
-                        android:text="T2/°C:"
-                        android:maxLines="1"
-                        android:textColor="@color/black"
-                        android:gravity="center"
-                        android:autoSizeTextType="uniform"
-                        android:autoSizeMinTextSize="12sp"
-                        android:autoSizeMaxTextSize="100sp" />
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:autoSizeMaxTextSize="100sp"
+                    android:autoSizeMinTextSize="12sp"
+                    android:autoSizeTextType="uniform"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:padding="3dp"
+                    android:text="T2/°C:"
+                    android:textColor="@color/black" />
 
-                    <TextView
-                        android:id="@+id/devt2"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:padding="3dp"
-                        android:text="24"
-                        android:maxLines="1"
-                        android:textColor="@color/black"
-                        android:gravity="center"
-                        android:autoSizeTextType="uniform"
-                        android:autoSizeMinTextSize="12sp"
-                        android:autoSizeMaxTextSize="100sp" />
+                <TextView
+                    android:id="@+id/devt2"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:autoSizeMaxTextSize="100sp"
+                    android:autoSizeMinTextSize="12sp"
+                    android:autoSizeTextType="uniform"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:padding="3dp"
+                    android:text="24"
+                    android:textColor="@color/black" />
 
-                    <View
-                        android:layout_width="1dp"
-                        android:layout_height="match_parent"
-                        android:background="@color/black" />
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="match_parent"
+                    android:background="@color/black" />
 
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:padding="3dp"
-                        android:text="T3/°C:"
-                        android:maxLines="1"
-                        android:textColor="@color/black"
-                        android:gravity="center"
-                        android:autoSizeTextType="uniform"
-                        android:autoSizeMinTextSize="12sp"
-                        android:autoSizeMaxTextSize="100sp" />
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:autoSizeMaxTextSize="100sp"
+                    android:autoSizeMinTextSize="12sp"
+                    android:autoSizeTextType="uniform"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:padding="3dp"
+                    android:text="T3/°C:"
+                    android:textColor="@color/black" />
 
-                    <TextView
-                        android:id="@+id/devt1"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:padding="3dp"
-                        android:text="19"
-                        android:maxLines="1"
-                        android:textColor="@color/black"
-                        android:gravity="center"
-                        android:autoSizeTextType="uniform"
-                        android:autoSizeMinTextSize="12sp"
-                        android:autoSizeMaxTextSize="100sp" />
-                </LinearLayout>
-            </FrameLayout>
-        </LinearLayout>
-
+                <TextView
+                    android:id="@+id/devt1"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:autoSizeMaxTextSize="100sp"
+                    android:autoSizeMinTextSize="12sp"
+                    android:autoSizeTextType="uniform"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:padding="3dp"
+                    android:text="19"
+                    android:textColor="@color/black" />
+            </LinearLayout>
+        </FrameLayout>
+    </LinearLayout>
         <LinearLayout
             android:id="@+id/linearLayout8_2"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="0.85"
+            android:layout_weight="0.2"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:padding="3dp">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:background="@drawable/background1"
+                android:padding="3dp">
+                <TextView
+                    android:id="@+id/message_box"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:text="Message Box"
+                    android:textColor="@color/black"
+                    android:gravity="center"
+                    android:autoSizeTextType="uniform"
+                    android:textAlignment="center"
+                    android:maxLines="1">
+                </TextView>
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/linearLayout8_3"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="0.5"
             android:orientation="vertical">
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
                 android:orientation="horizontal"
                 android:paddingLeft="@dimen/spacing_middle"
                 android:paddingRight="@dimen/spacing_middle"
-                android:layout_marginTop="20dp"
-                android:visibility="gone">
+                android:visibility="visible">
 
                 <Button
                     android:id="@+id/genSerial"
-                    android:text="t.SaveLog"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:backgroundTint="#f1a833"
-                    />
+                    android:text="t.SaveLog" />
 
                 <Button
                     android:id="@+id/genCommand"
-                    android:text="t.Cmnd"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:backgroundTint="#f1a033"
-                    />
+                    android:text="t.Cmnd" />
 
                 <Button
                     android:id="@+id/testCrash"
-                    android:text="t.Crash"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:backgroundTint="#f1a033"
-                    />
+                    android:text="t.Crash" />
+
                 <Button
                     android:id="@+id/testLolly"
-                    android:text="t.Inst"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:backgroundTint="#f1a033"
-                    android:visibility="gone"
-                    />
+                    android:text="t.Inst"
+                    android:visibility="gone" />
 
             </LinearLayout>
 
