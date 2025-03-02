@@ -419,9 +419,10 @@ public class HomeFragment extends Fragment {
 
                 case tInfo:
                     binding.devhumADVal.setText(String.valueOf(info.humAd));
-                    binding.devt1.setText(String.valueOf(info.t1));
-                    binding.devt2.setText(String.valueOf(info.t2));
-                    binding.devt3.setText(String.valueOf(info.t3));
+                    binding.devt1.setText(String.format("%.1f",info.t1));
+                    binding.devt2.setText(String.format("%.1f",info.t2));
+                    binding.devt3.setText(String.format("%.1f",info.t3));
+
 
                     // teprve ted vim, co mam za zarizeni na sonde a muzu nastavit format do csv
                     csv.SetupFormat(info.devType);

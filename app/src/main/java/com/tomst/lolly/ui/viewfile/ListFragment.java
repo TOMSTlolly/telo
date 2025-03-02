@@ -767,6 +767,8 @@ public class ListFragment extends Fragment implements OnProListener
                     fdet.setName(file.getName());
                     fdet.setFileSize((int) file.length());
                     fdet.setFull(fileUri.toString());
+                    if (fdet.getFileSize()<1)
+                        fdet.errFlag = Constants.PARSER_FILE_EMPTY;
 
                     // je to datovy soubor ?
                     if (fdet.errFlag == Constants.PARSER_OK)

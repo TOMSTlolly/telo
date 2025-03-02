@@ -24,6 +24,7 @@ public class Constants {
     public static final int PARSER_OK=0;
     public static final int PARSER_ERROR=1;
     public static final int PARSER_HOLE_ERR=2;
+    public static final int PARSER_FILE_EMPTY=3;
 
 
 }
