@@ -23,15 +23,19 @@ import android.widget.Toast;
 
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.tomst.lolly.BuildConfig;
+import com.tomst.lolly.LollyApplication;
+
 import androidx.annotation.RequiresApi;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -55,7 +59,7 @@ public class TMSReader extends Thread
     public final int SPI_DOWNLOAD_PREVIEW=4;
     private final int BOOKMARK_DAY_CONVERSION = 848;
 
-   // public static final TDevState devState = TDevState.tStart;
+    private List<String> savelog = null;
 
     // vystupy ven z tridy
     public int capUsed = 0;  // kapacita v %
@@ -76,6 +80,7 @@ public class TMSReader extends Thread
     public String sMeteo;
     public TMeteo meteo;
     private int fAddr;
+    private LocalDateTime fDate; // posledni datova znacka se spravnym CRC
     private final int TmpNan = -200;
     private final String TAG = "TOMST";
     public String SerialNumber;
@@ -149,10 +154,13 @@ public class TMSReader extends Thread
         this.context = context;
         fHer = null;
 
+        savelog = LollyApplication.getInstance().SAVE_LOG;
+
         rfir = new RFirmware();
         mer  = new TMereni(); // mereni
 
         bReadThreadGoing = false;
+
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
@@ -330,19 +338,19 @@ public class TMSReader extends Thread
             rfir.Result = true;
             c = line.charAt(i + 3);
             switch (c) {
-                case '4':
-                case '2':
-                case '#':
-                    rfir.DeviceType = TDeviceType.dLolly4;
-                    break;
-
                 case '3':
                     rfir.DeviceType = TDeviceType.dLolly3;
                     break;
 
+
                 default: {
-                    rfir.DeviceType = TDeviceType.dUnknown;
-                    rfir.Result = false;
+                    if (Character.isDigit(c) || (c == '#'))
+                        rfir.DeviceType = TDeviceType.dLolly4;
+                    else{
+                        rfir.DeviceType = TDeviceType.dUnknown;
+                        rfir.Result = false;
+                    }
+                    break;
                 }
             }
             return rfir.Result;
@@ -434,6 +442,7 @@ public class TMSReader extends Thread
 
             s = str[0].substring(0,2) + str[2].substring(0,2);
             mer.adc = Integer.parseInt(s,16);
+
         }
         else if (mer.dev == TDeviceType.dTermoChron){
             mer.t1 = convertTemp(tt3);
@@ -1166,6 +1175,7 @@ public class TMSReader extends Thread
         return finalHexString;
     }
 
+    /*
     @RequiresApi(api = Build.VERSION_CODES.O)
     private boolean ReadCommand(String AFileName){
         String respond = "";
@@ -1178,10 +1188,12 @@ public class TMSReader extends Thread
         );
         return false;
     }
+     */
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     private boolean ReadData() {
 
+        // chyby pujdou do sdileneho error logu
         String respond = "";
         DecodeTmsFormat parser = new DecodeTmsFormat();
         DecodeTmsFormat.SetHandler(datahandler);
@@ -1292,7 +1304,7 @@ public class TMSReader extends Thread
                 Log.d("SendMessage", respond);
         }
 
-       fAddr = -10000;
+        fAddr = -10000;
         int AdrTest = 0;
         String ss = "";
         boolean ret = false;
@@ -1302,6 +1314,7 @@ public class TMSReader extends Thread
         TReadState rState = TReadState.rsStart;
         parser.ClearMereni();
 
+        int iBlock = 0;
         int iErr=0;
         while (rState != TReadState.rsFinal) {
             switch (rState) {
@@ -1325,10 +1338,18 @@ public class TMSReader extends Thread
                            // extract last address from the data packet
                             iErr =0;
                             fAddr = DecodeTmsFormat.GetSafeAddress();
+                            fDate = parser.GetLastDateTrace();
+
+                            ss = String.format("S=$%s,%s", LineUpHexa(fAddr),fDate.toLocalDate());
+                            savelog.add(ss);
+
                             if (fAddr < lastAddress)
                                 rState = TReadState.rsReadPacket;
                             else
                                 rState = TReadState.rsFinal;
+
+                            SendMeasure(TDevState.tBlockNumber, String.format("Block %d", iBlock));
+                            iBlock++;
                             break;
                         }
                         else
@@ -1350,8 +1371,10 @@ public class TMSReader extends Thread
                     }
 
                     // podezrela hodnota, mozna bude spatny adapter
-                    if (++iErr>10)
-                        SendMeasure(TDevState.tTMDCycling, " Please reflash TMD firmware");
+                    if (++iErr>10) {
+                        SendMeasure(TDevState.tTMDCycling, String.format(" Cannot restart after %d attempts", iErr));
+                        iErr = 0;
+                    }
                     break;
 
                 default:

@@ -150,7 +150,7 @@
             android:layout_height="match_parent">
 
             <ProgressBar
-                android:id="@+id/progressBar2"
+                android:id="@+id/humBar"
                 style="?android:attr/progressBarStyleHorizontal"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -684,7 +684,7 @@
         <LinearLayout
             android:id="@+id/linearLayout8_2"
             android:layout_width="match_parent"
-            android:layout_height="0dp"
+            android:layout_height="match_parent"
             android:layout_weight="0.2"
             android:orientation="vertical"
             android:visibility="gone"
@@ -723,7 +723,7 @@
                 android:orientation="horizontal"
                 android:paddingLeft="@dimen/spacing_middle"
                 android:paddingRight="@dimen/spacing_middle"
-                android:visibility="visible">
+                android:visibility="gone">
 
                 <Button
                     android:id="@+id/genSerial"

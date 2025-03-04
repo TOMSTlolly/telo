@@ -54,6 +54,7 @@ import com.tomst.lolly.core.DmdViewModel;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.google.firebase.auth.FirebaseAuth;
@@ -70,6 +71,8 @@ public class LollyApplication extends AppCompatActivity implements View.OnClickL
     public static String DIRECTORY_TEMP;                         // The directory to store temporary tracks = getCacheDir() + "/Tracks"
     public static String DIRECTORY_URI;              // The directory that contains the empty gpx and kml file = getFilesDir() + "/URI"
     public static String DIRECTORY_LOGS;              // The directory that contains the empty gpx and kml file = getFilesDir() + "/URI"
+
+    public static List<String> SAVE_LOG = new ArrayList<>();       // The list of log messages
 
     // nastaveni preferovane cesty pro ukladani dat
     private String  prefExportFolder            = "";            // The folder for csv exportation

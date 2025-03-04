@@ -19,6 +19,7 @@ public enum TDevState
     tMeasure,
     tNoHardware,
     tTMDCycling,
+    tBlockNumber,
     tProgress,
     tReadData,
     tReadType,

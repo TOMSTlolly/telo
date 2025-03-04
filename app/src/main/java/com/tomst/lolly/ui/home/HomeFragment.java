@@ -90,10 +90,11 @@ public class HomeFragment extends Fragment {
     private String serialNumber = "Unknown";
     private boolean readWasFinished=false;
     private String ALogFileName="";
+    private String AErrFileName="";
 
     //private Handler progressBarHandler = new Handler(Looper.getMainLooper());
     private TMereni merold =null;
-
+    private List<String> savelog;  // logy, ktere se zapisuji do souboru
     private List<TMSRec> logs;  // logy, ktere mi lezou z UARTU
 
     @RequiresApi(api = Build.VERSION_CODES.O)
@@ -123,7 +124,7 @@ public class HomeFragment extends Fragment {
                    String merFormatted = mer.dtm.format(formatter);
                    // Display the error with formatted dates
                    String ss = String.format("Between messages >%d seconds (from %s to %s)", delta, meroFormatted, merFormatted);
-
+                   savelog.add(ss);
                    binding.proMessage.setText(ss);
                }
             }
@@ -389,6 +390,11 @@ public class HomeFragment extends Fragment {
                     binding.proMessage.setTextColor(ContextCompat.getColor(requireContext(), R.color.color_accent)); // Set text color to red
                     break;
 
+                case tBlockNumber:
+                    binding.proMessage.setText(info.msg);
+                    binding.proMessage.setTextColor(ContextCompat.getColor(requireContext(), R.color.black)); // Set text color to red
+                    break;
+
                 case tHead:
                     // nastav info o firmware v lizatku
 
@@ -412,13 +418,20 @@ public class HomeFragment extends Fragment {
                     ALogFileName= "log_"+shared.aft(ACsvFileName,"data_");
                     ALogFileName = LollyApplication.getInstance().getCacheLogPath()+"/"+ALogFileName;
 
+                    AErrFileName= "err_"+shared.aft(ACsvFileName,"data_");
+                    AErrFileName = LollyApplication.getInstance().getCacheLogPath()+"/"+AErrFileName;
+
                     ACsvFileName = ATrackDir + "/" + ACsvFileName;
                     csv = new CSVReader(ACsvFileName);
                     csv.OpenForWrite();  // otevre vystupni stream pro addCsv vyse
                     break;
 
                 case tInfo:
-                    binding.devhumADVal.setText(String.valueOf(info.humAd));
+                    int proc = (int) ((info.humAd / Constants.MAX_HUM) * 100);
+                    binding.humBar.setMax(100);
+                    binding.humBar.setProgress(proc);
+
+                    binding.devhumADVal.setText(String.valueOf(proc));
                     binding.devt1.setText(String.format("%.1f",info.t1));
                     binding.devt2.setText(String.format("%.1f",info.t2));
                     binding.devt3.setText(String.format("%.1f",info.t3));
@@ -531,9 +544,20 @@ public class HomeFragment extends Fragment {
 
         csv.CloseExternalCsv();
         saveLogToFile(ALogFileName);
+        saveLogErr(AErrFileName);
+
     }
 
-
+    private void saveLogErr(String ALogFileName) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(ALogFileName))) {
+            for (String log : savelog) {
+                writer.write(log);
+                writer.newLine();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     private void saveLogToFile(String ALogFileName){
             try (BufferedWriter writer = new BufferedWriter(new FileWriter(ALogFileName))) {
@@ -574,11 +598,15 @@ public class HomeFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
         HomeViewModel homeViewModel = new ViewModelProvider(this).get(HomeViewModel.class);
+
+        savelog  = LollyApplication.getInstance().SAVE_LOG;
+
+        logs  = new ArrayList<>();
+
         // sdileny datovy model
         dmd = new ViewModelProvider(getActivity()).get(DmdViewModel.class);
         dmd.ClearMereni();
 
-        logs  = new ArrayList<>();
 
         // tady vybiram callbacky od jinych fragmentu a aplikace
         dmd.getMessageContainerToFragment().observe(getViewLifecycleOwner(), message -> {
@@ -619,7 +647,6 @@ public class HomeFragment extends Fragment {
         Context mContext = getContext();
 
         // testovaci crash button
-
         Button crashButton = binding.testCrash;
         crashButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
