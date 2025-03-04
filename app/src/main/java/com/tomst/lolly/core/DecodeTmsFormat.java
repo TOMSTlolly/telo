@@ -10,6 +10,8 @@ import android.util.Log;
 
 import androidx.annotation.RequiresApi;
 
+import com.tomst.lolly.LollyApplication;
+
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
@@ -18,6 +20,7 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -36,9 +39,13 @@ public class DecodeTmsFormat {
     static public int GetSafeAddress(){
         return SafeAddress;
     }
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    static public LocalDateTime GetLastDateTrace(){
+        return lastDateTrace != null ? LocalDateTime.ofInstant(lastDateTrace, ZoneOffset.UTC) : null;
+    }
+
     static private int SafeAddress = 0;  // pri vycitani paketu nastavuju start pro kontrolu, ze mi dosel cely paket
-
-
 
     private static String OFFPATTERN = "yyyy.MM.dd HH:mm";
     private static DateTimeFormatter dateTimeFormatter;
@@ -52,6 +59,7 @@ public class DecodeTmsFormat {
     private static final byte CMD_INDEX = 1;
     private static final byte PAR_INDEX = 2;
 
+    public static List<String> savelog = null;   //new ArrayList<String>();
 
     private static Handler handler = null;
     public static void SetHandler(Handler han){
@@ -81,8 +89,14 @@ public class DecodeTmsFormat {
         fMereniList = new java.util.ArrayList<TMereni>();
     }
 
+    static {
+        fMereniAll = new java.util.ArrayList<TMereni>();
+    }
+
+
      //  mezibuffer pro vyparsovane data, odeslu, az kdyz mi sedi napoctena adresa na konci
     private static List<TMereni> fMereniList;
+    private static List<TMereni> fMereniAll;
 
     public static void ClearMereni()
     {
@@ -397,6 +411,8 @@ public class DecodeTmsFormat {
         //fMicroSlope = (double)(8890.0 / (34000.0 - 1279.0));
         fIdx = 0;
 
+        savelog = LollyApplication.getInstance().SAVE_LOG;
+
         fMereni.month = 0;
 
         dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
@@ -546,7 +562,7 @@ public class DecodeTmsFormat {
                         case 'D':
                               // nastaveni posledni casove znacky
                               // @E=$011880;D;2024/03/23,00:00:00+04
-                              //   2024/03/23,00:00:00+04
+                              // 2024/03/23,00:00:00+04
                               DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd,HH:mm:ssX");
                               LocalDateTime dateTime = LocalDateTime.parse(par, formatter);
                               lastDateTrace = dateTime.toInstant(ZoneOffset.UTC);
@@ -563,11 +579,11 @@ public class DecodeTmsFormat {
                         default:
                             break;
                     }
-                    // pro vystup z vystup z prohlizecky bez dat kaslu na kontrolu adresy
+                    // pro vystup z prohlizecky bez dat kaslu na kontrolu adresy
                     // mezi dvouma vystupama ze ctecky nevim, jestli je  offset +1 * 8
                     boolean ret = (i==0);
                     if (!ret) {
-                        // ukazali se mi nejake  udalosti s @D na zacatku
+                        // ukazali se mi nejake  udalosti s @D na zacatku ?
                         int FinComp= (8 * (i + 1) + StartAddr) ;
                         ret = (AdrAfter == FinComp);
                         if (ret)
@@ -582,6 +598,9 @@ public class DecodeTmsFormat {
                     }
                    else
                        lastSafeDtm = null;
+
+                   // vypis datumove znacky
+                   String line = String.format("ret: %d, AdrAfter: %d, SafeAddress: %d, lastSafeDtm: %s",ret ? 1 : 0,AdrAfter,SafeAddress,lastSafeDtm.toString());
 
                     return ret;
                     //E=$000010;M;01
@@ -673,7 +692,8 @@ public class DecodeTmsFormat {
         if (fMereniList.get(0).month == 0)
             correctLeadingNulls();
 
-       String format = "Date: %s, Year: %d, Month: %d, Day: %d, Hour: %d, Minute: %d, Second: %d";
+        // navazujou mi mereni na sebe
+        String format = "Date: %s, Year: %d, Month: %d, Day: %d, Hour: %d, Minute: %d, Second: %d";
         for (TMereni mer : fMereniList) {
             sendMeasure(mer);
 
@@ -687,6 +707,7 @@ public class DecodeTmsFormat {
                     mer.ss);
 
        //     Log.d("TOMSTMereni",formattedString);
+            fMereniAll.add(mer);
         }
         fMereniList.clear();
     }
