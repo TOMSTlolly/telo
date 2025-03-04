@@ -20,6 +20,8 @@ import android.os.Message;
 import android.os.SystemClock;
 import android.util.Log;
 import android.widget.Toast;
+
+import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.tomst.lolly.BuildConfig;
 import androidx.annotation.RequiresApi;
 
@@ -33,7 +35,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-
+// test
 public class TMSReader extends Thread
 {
     private enum TReadState
@@ -176,6 +178,11 @@ public class TMSReader extends Thread
         handler.sendMessage(message);
     }
 
+    private void SendLytics(TDevState stat, String msg) { // Handle Message to database
+        String message = String.format("Msg: %s",stat.toString(),msg);
+        FirebaseCrashlytics.getInstance().log(message);
+    }
+
     private void SendMex(TDevState stat, TMereni mer){
         Message message = handler.obtainMessage();
 
@@ -244,6 +251,8 @@ public class TMSReader extends Thread
     }
 
 
+
+
     public boolean ParseHeader(String line)
     {
         // @ =&93^33%01.80 TMS-A   // dendrometr
@@ -254,82 +263,100 @@ public class TMSReader extends Thread
         if (!rfir.Result)
             return (false);
 
-        // hardware
-        String s = between(line,"&","^");
-        if (s.length()>0) {
-            rfir.Hw = (byte) Integer.parseInt(s);
-            rfir.Striska = between(line, "^", "%");
-        }
+        try {
+            // hardware
+            String s = between(line, "&", "^");
+            if (s.length() > 0) {
+                rfir.Hw = (byte) Integer.parseInt(s);
+                rfir.Striska = between(line, "^", "%");
+            }
 
-        // firmware
-        int i  = line.indexOf("%");
-        if (i>0) {
-            s = line.substring(i + 1, i + 3);
-            rfir.Fw = (byte) Integer.parseInt(s);
+            // firmware
+            int i = line.indexOf("%");
+            if (i > 0) {
+                s = line.substring(i + 1, i + 3);
+                rfir.Fw = (byte) Integer.parseInt(s);
 
-            s = line.substring(i + 4, i + 6);
-            rfir.Sub = (byte) Integer.parseInt(s);
-        }
+                s = line.substring(i + 4, i + 6);
+                rfir.Sub = (byte) Integer.parseInt(s);
+            }
 
-        i = line.indexOf("TMS3");
-        if (i>1) {
-            rfir.DeviceType = TDeviceType.dLolly3;
-            return true;
-        }
+            i = line.indexOf("TMS3");
+            if (i > 1) {
+                rfir.DeviceType = TDeviceType.dLolly3;
+                return true;
+            }
 
-        // kdyz tu neni TMS, je hlavicka blbe
-        i = line.indexOf("TMS");
-        if (i <1)
-            return false;
+            // kdyz tu neni TMS, je hlavicka blbe
+            i = line.indexOf("TMS");
+            if (i < 1)
+                return false;
 
-        //1                     2
-        //123456789012345678
-       // &93^03%01.82 TMS-A
+            //1                     2
+            //123456789012345678
+            // &93^03%01.82 TMS-A
 
-        // TODO : TMS-A, zkontroluj burta
+            // TODO : TMS-A, zkontroluj burta
 
-        // je za TMS pomlcka ?
-       // boolean ret = true;
-        rfir.Result = true;
-        char c = line.charAt(i+3);
-        if (c == '-') {
-            c = line.charAt(i + 4);
-            switch (c){
-                case 'T':
-                    rfir.DeviceType = TDeviceType.dTermoChron;
+            // je za TMS pomlcka ?
+            // boolean ret = true;
+            rfir.Result = true;
+            char c = line.charAt(i + 3);
+            if (c == '-') {
+                c = line.charAt(i + 4);
+                switch (c) {
+                    case 'T':
+                        rfir.DeviceType = TDeviceType.dTermoChron;
+                        break;
+
+                    case 'A':
+                        rfir.DeviceType = TDeviceType.dAD;
+                        break;
+
+                    default:
+                        rfir.DeviceType = TDeviceType.dUnknown;
+                        rfir.Result = false;
+                }
+                return rfir.Result;
+            }
+            else if (c=='x') {
+                rfir.DeviceType = TDeviceType.dLolly4;
+                //return true;
+                i++;
+            }
+
+            // ok bude to TMS3/TMS4
+            rfir.Result = true;
+            c = line.charAt(i + 3);
+            switch (c) {
+                case '4':
+                case '2':
+                case '#':
+                    rfir.DeviceType = TDeviceType.dLolly4;
                     break;
 
-                case 'A':
-                    rfir.DeviceType = TDeviceType.dAD;
+                case '3':
+                    rfir.DeviceType = TDeviceType.dLolly3;
                     break;
 
-                default:
+                default: {
                     rfir.DeviceType = TDeviceType.dUnknown;
                     rfir.Result = false;
+                }
             }
             return rfir.Result;
+
+        } catch (Exception e){
+            e.printStackTrace();
+            Log.e(TAG,e.getMessage());
+            rfir.Result = false;
+
+            String msg = String.format("readHeader error: %s: %s",e.getMessage(),line);
+            SendMeasure(TDevState.tReadType, msg);
+
+            SendLytics(TDevState.tReadType,msg);
+            return false;
         }
-
-        // ok bude to TMS3/TMS4
-        rfir.Result = true;
-        c = line.charAt(i+3);
-        switch (c){
-            case '4':
-            case '2':
-            case '#':
-                rfir.DeviceType = TDeviceType.dLolly4;
-                break;
-
-            case '3':
-                rfir.DeviceType = TDeviceType.dLolly3;
-                break;
-
-            default: {
-                rfir.DeviceType = TDeviceType.dUnknown;
-                rfir.Result = false;
-            }
-        }
-        return rfir.Result;
     }
 
     public  void clearMer()
@@ -749,7 +776,7 @@ public class TMSReader extends Thread
                         devState = TDevState.tSerial;
                     } else {
                         //devState = TDevState.tFinal;
-                        Log.e(TAG, "Wrong Header:!" + s + " reading thread killed !");
+                        Log.e(TAG, "Wrong Header:!" + s + " reading thread killed !"); // mTestLoop
                     }
                     break;
 
@@ -933,8 +960,8 @@ public class TMSReader extends Thread
 
                         SendMex(TDevState.tInfo,mer);  // aktualni mereni
                     }
-                    devState = TDevState.tGetTime;
-
+                    //devState = TDevState.tGetTime;
+                    devState = TDevState.tCapacity;
                     // get option for showing graph
                      fShowMicro = context.getSharedPreferences(
                             "save_options", Context.MODE_PRIVATE
