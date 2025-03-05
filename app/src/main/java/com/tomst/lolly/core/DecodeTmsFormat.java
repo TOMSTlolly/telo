@@ -50,7 +50,8 @@ public class DecodeTmsFormat {
     private static String OFFPATTERN = "yyyy.MM.dd HH:mm";
     private static DateTimeFormatter dateTimeFormatter;
     public static Instant lastDateTrace;
-  //  public static Instant lastSafeDataTrace;
+
+
     public static LocalDateTime lastSafeDtm;
     static private int fIdx =0;
 
@@ -442,6 +443,23 @@ public class DecodeTmsFormat {
     }
 
 
+
+    // pri restartu nastavim posledni korektni cas, ktery byl na konci u podpisu
+    // eventuelne rucne napocitany, ale vzdy po obdrzeni spravneho "D" telegramu
+    public void SetPacketTime(LocalDateTime AValue){
+        lastSafeDtm = AValue;
+        return;
+    }
+
+    /*
+    public void SetPacketTime()
+    {
+      // return lastDateTrace != null ? LocalDateTime.ofInstant(lastDateTrace, ZoneOffset.UTC) : null;
+      LocalDateTime lastDateTrace != null ? LocalDateTime.ofInstant(lastDateTrace, ZoneOffset.UTC) : null;
+    }
+     */
+
+
     @RequiresApi(api = Build.VERSION_CODES.O)
     public boolean dpacket(String reply)
     {
@@ -602,7 +620,7 @@ public class DecodeTmsFormat {
                    // vypis datumove znacky
                    String line = String.format("ret: %d, AdrAfter: %d, SafeAddress: %d, lastSafeDtm: %s",ret ? 1 : 0,AdrAfter,SafeAddress,lastSafeDtm.toString());
 
-                    return ret;
+                   return ret;
                     //E=$000010;M;01
                     //E=$06D5F8;C;2023/10/20,09:14:49+04
                     //E=$06E700;D;2023/10/26,00:00:00+04

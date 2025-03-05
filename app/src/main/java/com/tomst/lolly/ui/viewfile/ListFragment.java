@@ -166,6 +166,9 @@ public class ListFragment extends Fragment implements OnProListener
         );
         rootView = binding.getRoot();
 
+        // trik, kterym si aplikace rekne o opravneni pri vytvareni formulare
+        Location location = LollyApplication.getInstance().getLocation();
+
         binding.proBar.setMin(0);
         binding.proBar.setMax(100);
         binding.proBar.setProgress(5);

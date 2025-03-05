@@ -1358,6 +1358,8 @@ public class TMSReader extends Thread
                     break;
 
                 case rsPacketFalse:
+                    parser.SetPacketTime(fDate);  // posledni date cast, kdy dorazilo "D" v poradku
+
                     // prenastavim adresu a zkontroluju, jestli se prenastavila
                     fAddr = DecodeTmsFormat.GetSafeAddress()+8;
                     ss = "S=$" + LineUpHexa(fAddr);

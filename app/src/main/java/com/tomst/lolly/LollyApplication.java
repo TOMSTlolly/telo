@@ -78,6 +78,15 @@ public class LollyApplication extends AppCompatActivity implements View.OnClickL
     private String  prefExportFolder            = "";            // The folder for csv exportation
     public DatabaseHandler gpsDataBase;
 
+    private static Location location = null;  // GPS souradnice
+
+    /*
+    public static Location getLocation(){
+        return location;
+    }
+
+     */
+
     private static String SerialNumber;
     public String getSerialNumber() {
         return SerialNumber;
@@ -415,6 +424,10 @@ public class LollyApplication extends AppCompatActivity implements View.OnClickL
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         singleton = this;
+
+
+       location = LollyApplication.getInstance().getLocation();
+
 
         // Initialize Firebase and crashlytics for collecting crash reports and analytics
         FirebaseApp.initializeApp(this);
