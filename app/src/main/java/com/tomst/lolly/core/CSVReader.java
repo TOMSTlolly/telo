@@ -547,17 +547,33 @@ public class CSVReader extends Thread
             minHm = Mer.hum;
     }
 
+    private void copyMerToMol(TMereni Mer) {
+        Mol.dtm = Mer.dtm;
+        Mol.day = Mer.day;
+        Mol.idx = Mer.idx;
+        Mol.t1 = Mer.t1;
+        Mol.t2 = Mer.t2;
+        Mol.t3 = Mer.t3;
+        Mol.hum = Mer.hum;
+        Mol.mvs = Mer.mvs;
+        Mol.dev = Mer.dev;
+        Mol.Err = Mer.Err;
+    }
+
     @RequiresApi(api = Build.VERSION_CODES.O)
     private boolean WasHole(TMereni Mer)
     {
         // zjisti zda je mezera v datech
         if (Mol.dtm==null) {
-            Mol = Mer; // presun do starych dat
+            //Mol = Mer; // presun do starych dat
+            copyMerToMol(Mer);
             return false;
         }
-        Duration duration = Duration.between(Mer.dtm, Mol.dtm);
-        Mol=Mer;
-        if (duration.getSeconds() > 60) {
+        Duration duration = Duration.between(Mol.dtm, Mer.dtm);
+        //Mol=Mer;
+        copyMerToMol(Mer);
+        // rozdil > 1 hod je podezrely
+        if (duration.getSeconds() > 60*60) {
             Mer.Err = Constants.PARSER_HOLE_ERR;
             return true;
         }
@@ -740,13 +756,8 @@ public class CSVReader extends Thread
 
         DoProgress(-totalBytes);  // vynuluj progress bar
 
-        /*
-        if (progressListener != null) {
-            progressListener.OnProEvent(-idx);
-        }
-         */
-
         Mer.Err = 0;
+        copyMerToMol(Mer);
         while ((currentline = reader.readLine()) != null)
         {
             //  vysledek je v lokalni promenne Mer
@@ -763,7 +774,7 @@ public class CSVReader extends Thread
             sendMessage(Mer);
 
             if (progressBarHandler != null)
-                    DoProgress(idx);
+              DoProgress(idx);
 
             stringBuilder.append(currentline).append("\n");
         }

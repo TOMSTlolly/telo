@@ -716,8 +716,6 @@ public class ListFragment extends Fragment implements OnProListener
         csv.SetFinListener(value -> {
             Log.d(TAG, "Finished");
             binding.proBar.setProgress(0);
-
-
         });
 
         try{
@@ -774,7 +772,7 @@ public class ListFragment extends Fragment implements OnProListener
                         fdet.errFlag = Constants.PARSER_FILE_EMPTY;
 
                     // je to datovy soubor ?
-                    if (fdet.errFlag == Constants.PARSER_OK)
+                    if ((fdet.errFlag == Constants.PARSER_OK) || (fdet.errFlag == Constants.PARSER_HOLE_ERR))
                         db.addFile(fdet, location);
                 }
                 // predelej radek v recycleru

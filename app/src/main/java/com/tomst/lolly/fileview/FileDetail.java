@@ -35,7 +35,7 @@ public class FileDetail
     private double minT3, maxT3;
     private double minHum,maxHum;
 
-    public int errFlag;  // znacka chyby
+    public Integer errFlag;  // znacka chyby
     private LocalDateTime created;
 
     public String getSerialNumber() { return SerialNumber; }
@@ -51,6 +51,11 @@ public class FileDetail
     // getter & setter
     public TDeviceType getDeviceType() { return deviceType; }
     public void setDeviceType(TDeviceType deviceType) { this.deviceType = deviceType; }
+
+    public int getErrFlag() { return errFlag; }
+    public void setErrFlag(int errFlag) {
+        this.errFlag = errFlag;
+    }
 
     public double getMinT1() { return minT1; }
     public double getMaxT1() {

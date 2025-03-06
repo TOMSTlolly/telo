@@ -58,6 +58,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     private static final String KEY_LOCATION_NUMBEROFSATELLITES = "number_of_satellites";
     private static final String KEY_LOCATION_TYPE = "loctype";
     private static final String KEY_LOCATION_NUMBEROFSATELLITESUSEDINFIX = "number_of_satellites_used_in_fix";
+    private static final String KEY_CLIST_ERR = "err";
 
     public DatabaseHandler(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -95,7 +96,8 @@ public class DatabaseHandler extends SQLiteOpenHelper {
                 + KEY_LOCATION_TIME + " DATETIME,"
                 + KEY_LOCATION_NUMBEROFSATELLITES + " INTEGER,"
                 + KEY_LOCATION_TYPE + " INTEGER,"
-                + KEY_LOCATION_NUMBEROFSATELLITESUSEDINFIX + " INTEGER)";
+                + KEY_LOCATION_NUMBEROFSATELLITESUSEDINFIX + " INTEGER,"
+                + KEY_CLIST_ERR + " INTEGER)";
         db.execSQL(CREATE_CLIST_TABLE);
     }
 
@@ -114,6 +116,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         ContentValues values = new ContentValues();
 
         // Populate ContentValues with FileDetail data
+        values.put(KEY_CLIST_ERR,fileDetail.getErrFlag());
         values.put(KEY_CLIST_NAME, fileDetail.getName());
         values.put(KEY_CLIST_URL, fileDetail.getFull());
         values.put(KEY_CLIST_TYPE, fileDetail.getDeviceType().ordinal()); // ordinalni hodnota typu zarizeni
@@ -155,6 +158,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         ContentValues values = new ContentValues();
 
         // Populate ContentValues with FileDetail data
+        values.put(KEY_CLIST_ERR, fileDetail.getErrFlag());
         values.put(KEY_CLIST_NAME, fileDetail.getName());
         values.put(KEY_CLIST_URL, fileDetail.getFull());
         values.put(KEY_CLIST_TYPE, 0); // Assuming type is 0, adjust as needed
@@ -182,6 +186,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     public FileDetail copyCursorToFileDetail(Cursor cursor)
     {
         FileDetail fileDetail = new FileDetail(cursor.getLong(cursor.getColumnIndex(KEY_ID)));
+        fileDetail.setErrFlag(cursor.getInt(cursor.getColumnIndex(KEY_CLIST_ERR)));
         fileDetail.setName(cursor.getString(cursor.getColumnIndex(KEY_CLIST_NAME)));
         fileDetail.setDeviceType(TDeviceType.values()[cursor.getInt(cursor.getColumnIndex(KEY_CLIST_TYPE))]);
         fileDetail.setFull(cursor.getString(cursor.getColumnIndex(KEY_CLIST_URL)));

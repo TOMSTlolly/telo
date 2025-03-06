@@ -6,7 +6,7 @@ import static com.tomst.lolly.core.shared.convToMicro;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Message;
-import android.util.Log;
+//import android.util.Log;
 
 import androidx.annotation.RequiresApi;
 
@@ -485,7 +485,7 @@ public class DecodeTmsFormat {
             fMereni.year = lastSafeDtm.getYear();
             fMereni.month = lastSafeDtm.getMonthValue();
             fMereni.day = lastSafeDtm.getDayOfMonth();
-            Log.d("TOMSTLolly","Setting year, month, day from lastSafeDtm"+fMereni.year+" "+fMereni.month+" "+fMereni.day);
+            //Log.d("TOMSTLolly","Setting year, month, day from lastSafeDtm"+fMereni.year+" "+fMereni.month+" "+fMereni.day);
         }
 
         fMereniList.clear();
@@ -545,7 +545,7 @@ public class DecodeTmsFormat {
                                     String meroFormatted = fMerBefore.dtm.format(formatter);
                                     String merFormatted = fMereni.dtm.format(formatter);
                                     String ss = String.format("Between messages  (from %s to %s)", meroFormatted, merFormatted);
-                                    Log.e("TOMSTLolly", "[#] " + ss);
+                                    //Log.e("TOMSTLolly", "[#] " + ss);
                                 }
                             }
                         }
@@ -632,7 +632,7 @@ public class DecodeTmsFormat {
          }
 
         catch (Exception e) {
-            Log.e("TAG",e.toString());
+          //  Log.e("TAG",e.toString());
         };
 
         return false;
@@ -652,7 +652,7 @@ public class DecodeTmsFormat {
 
         if (i>=fMereniList.size())
         {
-            Log.d("TOMSTLolly","Suspect index out of range i,size"+i+" "+fMereniList.size());
+            //Log.d("TOMSTLolly","Suspect index out of range i,size"+i+" "+fMereniList.size());
             return;
         }
 

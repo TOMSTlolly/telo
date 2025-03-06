@@ -103,6 +103,11 @@ public class FileViewerAdapter extends BaseAdapter
 
 
         // doplnim statistiku, pokud je to znamy datovy soubor
+        if (currentFile.errFlag == null)
+        {
+            currentFile.errFlag = Constants.PARSER_ERROR;
+        }
+
         if (currentFile.errFlag==Constants.PARSER_OK)
         {
            // DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneId.of("UTC"));
