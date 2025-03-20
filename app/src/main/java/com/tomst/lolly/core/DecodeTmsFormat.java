@@ -468,7 +468,7 @@ public class DecodeTmsFormat {
 
         int iCnt = 0;
         String str = "";
-        reply =reply.replaceAll("(\\r|\\n)", "");
+        reply =reply.replaceAll("(\\r|\\n| )", "");
 
         int StartAddr   = SafeAddress;
 

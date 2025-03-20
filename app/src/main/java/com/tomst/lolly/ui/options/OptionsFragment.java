@@ -1,5 +1,7 @@
 package com.tomst.lolly.ui.options;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.RequiresApi;
 import androidx.core.widget.NestedScrollView;
 import androidx.lifecycle.ViewModelProvider;
@@ -51,6 +53,7 @@ public class OptionsFragment extends Fragment implements AdapterView.OnItemSelec
 
     private static final int REQUEST_ACTION_OPEN_DOCUMENT_TREE = 3;
 
+    private ActivityResultLauncher<Intent> openDocumentTreeLauncher;
 
     private NestedScrollView nested_scroll_view;
     private ImageButton bt_toggle_info = null;  //  (ImageButton) findViewById(R.id.bt_toggle_info);
@@ -351,6 +354,8 @@ public class OptionsFragment extends Fragment implements AdapterView.OnItemSelec
     }
 
 
+
+    /*
     @Override
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     public void onActivityResult(int requestCode, int resultCode, Intent resultData) {
@@ -362,11 +367,11 @@ public class OptionsFragment extends Fragment implements AdapterView.OnItemSelec
                 Uri treeUri = resultData.getData();
                 getActivity().grantUriPermission(getActivity().getPackageName(), treeUri, Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
 
-                /*
-                GPSApplication.getInstance().getContentResolver().takePersistableUriPermission(treeUri, Intent
-                        .FLAG_GRANT_READ_URI_PERMISSION | Intent
-                        .FLAG_GRANT_WRITE_URI_PERMISSION);
-                 */
+
+                // GPSApplication.getInstance().getContentResolver().takePersistableUriPermission(treeUri, Intent
+                //        .FLAG_GRANT_READ_URI_PERMISSION | Intent
+                //        .FLAG_GRANT_WRITE_URI_PERMISSION);
+
                 getContext().getContentResolver().takePersistableUriPermission(treeUri, Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
 
                 Log.w("myApp", "[#] GPSActivity.java - onActivityResult URI: " + treeUri.toString());
@@ -380,6 +385,9 @@ public class OptionsFragment extends Fragment implements AdapterView.OnItemSelec
         }
         super.onActivityResult(resultCode, resultCode, resultData);
     }
+
+     */
+
 
     public void setPrefExportFolder(String folder) {
         //SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
@@ -477,6 +485,32 @@ public class OptionsFragment extends Fragment implements AdapterView.OnItemSelec
         root = binding.getRoot();
         Resources res = getResources();
 
+
+        // Initialize the ActivityResultLauncher
+        openDocumentTreeLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == Activity.RESULT_OK) {
+                        Intent resultData = result.getData();
+                        if (resultData != null) {
+                            Uri treeUri = resultData.getData();
+                            if (treeUri != null) {
+                                getActivity().grantUriPermission(getActivity().getPackageName(), treeUri, Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                                getContext().getContentResolver().takePersistableUriPermission(treeUri, Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+
+                                Log.w("myApp", "[#] OptionsFragment.java - onActivityResult URI: " + treeUri.toString());
+                                Log.w("myApp", "[#] OptionsFragment.java - onActivityResult URI: " + treeUri.getPath());
+                                Log.w("myApp", "[#] OptionsFragment.java - onActivityResult URI: " + treeUri.getEncodedPath());
+
+                                setPrefExportFolder(treeUri.toString());
+                                LollyApplication.getInstance().setPrefExportFolder(treeUri.toString()); // Save to LollyApplication cache
+                                SetupPreferences();
+                            }
+                        }
+                    }
+                });
+
+
         // user auth
 
         // odkud vycitam
@@ -571,7 +605,8 @@ public class OptionsFragment extends Fragment implements AdapterView.OnItemSelec
                             | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                             | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
 
-                    startActivityForResult(intent, REQUEST_ACTION_OPEN_DOCUMENT_TREE);
+                   // startActivityForResult(intent, REQUEST_ACTION_OPEN_DOCUMENT_TREE);
+                    openDocumentTreeLauncher.launch(intent);
                 }
 
             }

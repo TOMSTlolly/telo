@@ -376,16 +376,33 @@ public class Tools {
         return Build.VERSION.RELEASE + "";
     }
 
+    /*
     public static int getVersionCode(Context ctx) {
         try {
             PackageManager manager = ctx.getPackageManager();
             PackageInfo info = manager.getPackageInfo(ctx.getPackageName(), 0);
-            return info.versionCode;
+            //return info.versionCode;
+            return (int) info.getLongVersionCode();
         } catch (PackageManager.NameNotFoundException e) {
             return -1;
         }
     }
+     */
 
+    @SuppressWarnings("deprecation")
+    public static int getVersionCode(Context ctx) {
+        try {
+            PackageManager manager = ctx.getPackageManager();
+            PackageInfo info = manager.getPackageInfo(ctx.getPackageName(), 0);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                return (int) info.getLongVersionCode();
+            } else {
+                return info.versionCode;
+            }
+        } catch (PackageManager.NameNotFoundException e) {
+            return -1;
+        }
+    }
 
     public static String getVersionName(Context ctx) {
         try {
@@ -416,12 +433,19 @@ public class Tools {
         return deviceInfo;
     }
 
+    @SuppressWarnings("deprecation")
     public static String getDeviceID(Context context) {
-        String deviceID = Build.SERIAL;
-        if (deviceID == null || deviceID.trim().isEmpty() || deviceID.equals("unknown")) {
+        String deviceID;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             try {
+                deviceID = Build.getSerial();
+            } catch (SecurityException e) {
                 deviceID = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
-            } catch (Exception e) {
+            }
+        } else {
+            deviceID = Build.SERIAL;
+            if (deviceID == null || deviceID.trim().isEmpty() || deviceID.equals("unknown")) {
+                deviceID = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
             }
         }
         return deviceID;

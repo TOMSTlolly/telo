@@ -9,8 +9,6 @@ import static org.junit.Assert.*;
 
 import com.tomst.lolly.core.TMSSim;
 
-
-
 /**
  * Instrumented test, which will execute on an Android device.
  *
@@ -28,8 +26,9 @@ public class ExampleInstrumentedTest {
     @Test
     public void test_parser()
     {
-        // projde command_ soubory ve vybranem adresari a data pretahne do zvlastniho adresare
-        // TMSSim sim = new TMSSim("test.csv");
+       // projde command_ soubory ve vybranem adresari a data pretahne do zvlastniho adresare
+        Context appContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
+//        TMSSim sim = new TMSSim("test.csv");
 
     }
 }

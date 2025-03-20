@@ -356,7 +356,7 @@ public class HomeFragment extends Fragment {
         @Override
         public void handleMessage(Message msg) {
             if (binding == null) {
-                Log.d(Constants.TAG, "binding is null, clean better !");
+              //  Log.d(Constants.TAG, "binding is null, clean better !");
                 return;
             }
 
@@ -634,7 +634,7 @@ public class HomeFragment extends Fragment {
         genCommand.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
                 String ALogName = LollyApplication.getInstance().DIRECTORY_LOGS + "/command.csv.";
-                TMSSim sim = new TMSSim(ALogName);
+                //TMSSim sim = new TMSSim(ALogName);
                 //  dmd.sendMessageToFragment("TMD");
                 // Message message = handler.obtainMessage();
                 // message.obj = "Hello from HomeFragment";

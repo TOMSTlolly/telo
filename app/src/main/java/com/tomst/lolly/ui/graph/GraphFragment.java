@@ -313,7 +313,7 @@ public class GraphFragment extends Fragment {
         //FileDetail fileDetail = null;
         // progress bar
         csv.SetProgressListener(value -> {
-                 Log.d(TAG, "Bar: " + value);
+               //  Log.d(TAG, "Bar: " + value);
                 if (value<0) {
                     binding.proBar.setMax((int) -value); // posledni adresa
                     MaxPos = -value;
