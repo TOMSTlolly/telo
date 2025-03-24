@@ -261,13 +261,13 @@ public class TMSReader extends Thread
 
 
 
-
     public boolean ParseHeader(String line)
     {
         // @ =&93^33%01.80 TMS-A   // dendrometr
         // @ =&93^A0%01.80 TMSx1#
         boolean result = false;
         line = aft(line,"=");
+
         rfir.Result = line.length()>0;
         if (!rfir.Result)
             return (false);
@@ -304,9 +304,7 @@ public class TMSReader extends Thread
             //1                     2
             //123456789012345678
             // &93^03%01.82 TMS-A
-
             // TODO : TMS-A, zkontroluj burta
-
             // je za TMS pomlcka ?
             // boolean ret = true;
             rfir.Result = true;
@@ -779,6 +777,7 @@ public class TMSReader extends Thread
                     s = "@=&93^33%01.80 TMS-A";
                     if (s.length() < 2)
                         break;
+
 
                     if (ParseHeader(s)) {
                         info.msg = String.format("%d.%d.%d", rfir.Hw, rfir.Fw, rfir.Sub);

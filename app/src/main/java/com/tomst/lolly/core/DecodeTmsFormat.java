@@ -459,6 +459,138 @@ public class DecodeTmsFormat {
     }
      */
 
+    public enum TPacketType {
+        pUnknown(0),TimePacket(1), DataPacket(2), dAppend(3);
+
+        private final int value;
+
+        private TPacketType(int value) {
+            this.value = value;
+        }
+
+        static TPacketType fromValue(int value) {
+            for (TPacketType my : TPacketType.values()) {
+                if (my.value == value) {
+                    return my;
+                }
+            }
+            return null;
+        }
+
+        int value() {
+            return value;
+        }
+    }
+
+
+    private int ActAddr = 0;
+    public int GetActAddr(){
+        return ActAddr;
+    }
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    public boolean dpack(int AStartAddr,String reply)
+    {
+        ActAddr     = AStartAddr;  // aktualni pocitadlo
+        int iPack       = 0;
+        TPacketType packType = TPacketType.pUnknown;
+        for (String val : reply.split("@")) {
+
+            // prazdny retezec vyhod
+            if (val.length() == 0)
+                continue;
+
+            // zjisti, jaky paket mam
+            if (val.startsWith("DD")) {
+                //*************************** je to datum
+                disassembleDate(val, fMereni);  // doesnt calculate LocalDateTime, only setup year, month, day, hh, mm, ss, gtm
+                fMereni.dtm = LocalDateTime.of(fMereni.year, fMereni.month, fMereni.day, fMereni.hh, fMereni.mm, fMereni.ss, 0);
+                lastSafeDtm = fMereni.dtm;;
+                if (fMereni.dtm != null)
+                    lastDateTrace = fMereni.dtm.toInstant(ZoneOffset.UTC);
+                else {
+                    fMereni.dtm = LocalDateTime.of(fMerBefore.year, fMerBefore.month, fMerBefore.day, fMerBefore.hh, fMerBefore.mm, fMerBefore.ss, 0);
+                }
+                //*************************** konec je to datum
+                packType = TPacketType.TimePacket;
+                iPack = iPack + 8;
+            }
+            else if (val.startsWith("D")) {
+                //*****************************************************************************
+                disassembleData(val, fMereni);
+                if (fMereni.month >0) {  // calculate date time only if it makes sense
+                    fMereni.dtm = LocalDateTime.of(fMereni.year, fMereni.month, fMereni.day, fMereni.hh, fMereni.mm, fMereni.ss, 0);
+                    // correct date part if there is no date mark (DD) before, this is a bug inside TMS firmware
+                    if (fMerBefore.dtm != null) {
+                        if ((fMerBefore.hh == 23) && (fMereni.hh == 0)) {
+                            if (fMerBefore.mm > fMereni.mm)
+                                if (isSameDay(fMerBefore.dtm, fMereni.dtm)) {
+                                    fMereni.dtm = fMereni.dtm.plusDays(1);
+                                    fMereni.year = fMereni.dtm.getYear();
+                                    fMereni.month = fMereni.dtm.getMonthValue();
+                                    fMereni.day = fMereni.dtm.getDayOfMonth();
+
+                                    lastDateTrace = fMereni.dtm.toInstant(ZoneOffset.UTC);
+                                }
+                        }
+                        Duration duration = Duration.between(fMerBefore.dtm, fMereni.dtm);
+                        if (duration.getSeconds() > Constants.MAX_DELTA) {
+                            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                            String meroFormatted = fMerBefore.dtm.format(formatter);
+                            String merFormatted = fMereni.dtm.format(formatter);
+                            String ss = String.format("Between messages  (from %s to %s)", meroFormatted, merFormatted);
+                            //Log.e("TOMSTLolly", "[#] " + ss);
+                        }
+                    }
+                }
+                else {
+                    if (fMerBefore.dtm!=null)
+                        fMereni.dtm = LocalDateTime.of(fMerBefore.year, fMerBefore.month, fMerBefore.day, fMereni.hh, fMereni.mm, fMereni.ss, 0);
+                }
+                fMerBefore = new TMereni(fMereni);
+                fMereni.idx = fIdx;
+                fMereniList.add(new TMereni(fMereni));
+                fIdx++;
+                // *****************************************************************************
+
+                packType = TPacketType.DataPacket;
+                iPack = iPack + 8;
+            }
+            else {
+                packType = TPacketType.dAppend;
+            }
+
+            // zajimaji me jenom adresy
+            if (packType == TPacketType.dAppend) {
+                //@E=$000010;M;01
+                //@E=$000FA0;&;&93%01.80#91190110
+                //@E=$000FB0;M;01
+                //@E=$000FB8;&;&93%01.80#91190110  // po velkem packu s "D"
+                //@E=$000FC8;M;01
+                //@E=$001008;&;&93%01.80#9119011
+
+                String[] view = val.split(";");
+                if (view.length < 3)
+                    return false;
+
+                int AdrAfter = StrToHex(aft(view[ADR_INDEX], "="));
+                ActAddr = ActAddr + iPack; // tohle jsem si napocital z poctu packetu
+
+                // command
+                String adr = view[ADR_INDEX];
+                char cmd = (view[CMD_INDEX]).charAt(0);
+                String par = view[PAR_INDEX];
+
+                boolean ret = (AdrAfter == ActAddr); // kontrola adresy
+                ActAddr = ActAddr+8; // finalni vypocteny ukazatel na konec telegramu
+
+                if (!ret) {
+                    Log.w("TAG", String.format("Packet: %s addr($%s) != AdrAfter($%s)", val, iPack, AdrAfter));
+                }
+                return ret;
+            }
+        }
+        return true;
+    }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     public boolean dpacket(String reply)
@@ -471,6 +603,7 @@ public class DecodeTmsFormat {
         reply =reply.replaceAll("(\\r|\\n| )", "");
 
         int StartAddr   = SafeAddress;
+        int ActAddr     = StartAddr;
 
         fMereni.year = 0;
         fMereni.month=0;
@@ -571,11 +704,20 @@ public class DecodeTmsFormat {
                     // command
                     char cmd = (view[CMD_INDEX]).charAt(0);
                     String par = view[PAR_INDEX];
+                    String adr = view[ADR_INDEX];
+                    // je ve druhem parametru adresa ?
 
-                    // parameter
+
+
+
+
+                        // parameter
                     switch(cmd){
                         case 'M':
                             //i = -1;
+                            if (adr.contains("E=")==true)
+                                if (i==1)
+                                   i = i-1;
                             break;
                         case 'D':
                               // nastaveni posledni casove znacky
@@ -625,14 +767,15 @@ public class DecodeTmsFormat {
                     //E=$06D5F8;C;2023/10/20,09:14:49+04
                     //E=$06E700;D;2023/10/26,00:00:00+04
                     //E=$06D5D8;&;&93%01.80#94232790
-                }
+                }  // konec k (if elseif else)
                 i++;
-            }
+                ActAddr = ActAddr + 8;
+            }  // konec k for
             //return (str);
          }
 
         catch (Exception e) {
-          //  Log.e("TAG",e.toString());
+            Log.e("TAG",e.toString());
         };
 
         return false;

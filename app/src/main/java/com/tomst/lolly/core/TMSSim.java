@@ -2,16 +2,11 @@ package com.tomst.lolly.core;
 
 import static com.tomst.lolly.LollyApplication.DIRECTORY_LOGS;
 import static com.tomst.lolly.core.shared.aft;
-import com.tomst.lolly.core.Log;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.net.Uri;
-import android.util.Base64;
-//import android.util.Log;
 
-import com.tomst.lolly.LollyApplication;
-import com.tomst.lolly.fileview.FileDetail;
+//import android.util.Log;
 
 
 import java.io.BufferedReader;
@@ -20,6 +15,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.time.LocalDateTime;
 
 public class TMSSim {
 
@@ -49,6 +45,7 @@ public class TMSSim {
         this.context = context;
         //this.context = LollyApplication.getInstance().getApplicationContext();
         //InputStream inputStream = getClass().getClassLoader().getResourceAsStream("testFile.txt"
+
 
         File cacheDir = new File(DIRECTORY_LOGS);
         if (cacheDir.isDirectory()) {
@@ -84,14 +81,8 @@ public class TMSSim {
 
     @SuppressLint("NewApi")
     public boolean LoadCommand(String AFileName) throws IOException{
-        int  idx = 0;
-
-        /*
-        InputStream inputStream =
-                this.context.getContentResolver().openInputStream(uri);
-        BufferedReader reader =
-                new BufferedReader(new InputStreamReader(inputStream));
-       */
+        //int  idx = 0;
+        int fAddr=0;
         File file = new File(AFileName);
         InputStream inputStream = new FileInputStream(file);
         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
@@ -99,51 +90,85 @@ public class TMSSim {
         Integer totalBytes = inputStream.available();  // pocet dostupnych bytu
         StringBuilder stringBuilder = new StringBuilder();
 
-        int  iline = 0;
+
         // cas prvniho mereni
        // FileDetail fileDetail = new FileDetail(uri.getLastPathSegment());
         String currentline = reader.readLine();
         if (currentline == null)
             return false;
 
-     String respond = "";
-     DecodeTmsFormat parser = new DecodeTmsFormat();
-     // DecodeTmsFormat.SetHandler(datahandler);
-     // DecodeTmsFormat.SetDeviceType(rfir.DeviceType);
-     //DoProgress(-totalBytes);  // vynuluj progress bar
+        String respond = "";
+        DecodeTmsFormat parser = new DecodeTmsFormat();
+        // DecodeTmsFormat.SetHandler(datahandler);
+        // DecodeTmsFormat.SetDeviceType(rfir.DeviceType);
+        //DoProgress(-totalBytes);  // vynuluj progress bar
         String s = "";
         TMSRec rec = new TMSRec();
         TSimState state = TSimState.tWfc;
         boolean pok = false;
-        while ((currentline = reader.readLine()) != null) {
-            // odpoved z TMS
-            if (currentline.contains(">>@D")==true){
-                currentline = currentline.replace(">>@D","");
+        LocalDateTime fDate= null;
 
-               pok = parser.dpacket(currentline);
-               Log.e("TAG",Boolean.toString(pok));
+        boolean nextLineIsReadData = false;
+        int  iline = 1;
+        while ((currentline = reader.readLine()) != null) {
+            // jsou to data
+            iline++;
+
+            if (currentline.contains("<<D")==true){
+                nextLineIsReadData = true;
+                //iline++;
+                continue;
+            }
+
+            currentline = currentline.replace(">>","");
+
+            if (nextLineIsReadData ==true)
+            {
+               nextLineIsReadData = false;
+               //currentline = currentline.replace(">>","");
+
+               pok = parser.dpack(fAddr,currentline);
+               if (pok == false){
+                   Log.e("PAR",String.format("%s, i=[%d] err: %s",AFileName,iline,currentline));
+                   continue;
+               }
+               fAddr =parser.GetActAddr();
+               // Log.e("TAG",Boolean.toString(pok));
                // state = TSimState.tRespond;
             }
+
             // hlidej si nastaveni adresy, pro kontrolu na konci bloku
             // <<@S=$06D5D8
-            else if (currentline.startsWith("<<@S=")){
+            else if (currentline.startsWith("@S=")){
               String pom  = aft(currentline,"@S=");
-
-              //DecodeTmsFormat.CheckAddress = Integer.parseInt(pom.substring(1),16);
               int i = Integer.parseInt(pom.substring(1),16);
               DecodeTmsFormat.SetSafeAddress(i);
+              fAddr = i;
               // parser.CheckAddress =  Integer.parseInt(pom);
             }
 
-            // tohle jsem posilal do TMS
-            // odvysilam do home formy teploty a vsechno co se da
-            else if (currentline.startsWith(">>")){
+            //
+            else if (currentline.startsWith("@ =")){
                // state = TSimState.tWfc;
+               String line = aft(currentline,"@ ");
+               if (shared.ParseHeader(line) == false){
+                   Log.e("TAG",String.format("ParseHeader err: %s",line));
+                   continue;
+               }
+               parser.SetDeviceType(shared.rfir.DeviceType);
             }
 
-            iline++;
-
-           // DoProgress(iline);
+            else if (currentline.startsWith("@S"))
+            {
+                //@E=$000FB8;&;&93%01.80#91190110
+                if (currentline.length() > 1) {
+                    fAddr = shared.getaddr(currentline);
+                    DecodeTmsFormat.SetSafeAddress(fAddr);
+                    //rState = TMSReader.TReadState.rsReadPacket;
+                }
+            }
+           // iline++;
+            // DoProgress(iline);
         }
     return true;
     }

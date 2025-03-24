@@ -23,8 +23,11 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 
+
+
 public class shared {
 
+    public static RFirmware rfir;
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     public static  String CompileFileName(String Prefix,String Serial, String ADir){
@@ -222,4 +225,113 @@ public class shared {
         return
           permissionManager.havePermission(new String[]{READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE});
     }
+
+
+    public static boolean ParseHeader(String line)
+    {
+        // @ =&93^33%01.80 TMS-A   // dendrometr
+        // @ =&93^A0%01.80 TMSx1#
+        boolean result = false;
+        line = aft(line,"=");
+
+        rfir = new RFirmware();
+
+
+        rfir.Result = line.length()>0;
+        if (!rfir.Result)
+            return (false);
+
+        try {
+            // hardware
+            String s = between(line, "&", "^");
+            if (s.length() > 0) {
+                rfir.Hw = (byte) Integer.parseInt(s);
+                rfir.Striska = between(line, "^", "%");
+            }
+
+            // firmware
+            int i = line.indexOf("%");
+            if (i > 0) {
+                s = line.substring(i + 1, i + 3);
+                rfir.Fw = (byte) Integer.parseInt(s);
+
+                s = line.substring(i + 4, i + 6);
+                rfir.Sub = (byte) Integer.parseInt(s);
+            }
+
+            i = line.indexOf("TMS3");
+            if (i > 1) {
+                rfir.DeviceType = TDeviceType.dLolly3;
+                return true;
+            }
+
+            // kdyz tu neni TMS, je hlavicka blbe
+            i = line.indexOf("TMS");
+            if (i < 1)
+                return false;
+
+            //1                     2
+            //123456789012345678
+            // &93^03%01.82 TMS-A
+            // TODO : TMS-A, zkontroluj burta
+            // je za TMS pomlcka ?
+            // boolean ret = true;
+            rfir.Result = true;
+            char c = line.charAt(i + 3);
+            if (c == '-') {
+                c = line.charAt(i + 4);
+                switch (c) {
+                    case 'T':
+                        rfir.DeviceType = TDeviceType.dTermoChron;
+                        break;
+
+                    case 'A':
+                        rfir.DeviceType = TDeviceType.dAD;
+                        break;
+
+                    default:
+                        rfir.DeviceType = TDeviceType.dUnknown;
+                        rfir.Result = false;
+                }
+                return rfir.Result;
+            }
+            else if (c=='x') {
+                rfir.DeviceType = TDeviceType.dLolly4;
+                //return true;
+                i++;
+            }
+
+            // ok bude to TMS3/TMS4
+            rfir.Result = true;
+            c = line.charAt(i + 3);
+            switch (c) {
+                case '3':
+                    rfir.DeviceType = TDeviceType.dLolly3;
+                    break;
+
+
+                default: {
+                    if (Character.isDigit(c) || (c == '#'))
+                        rfir.DeviceType = TDeviceType.dLolly4;
+                    else{
+                        rfir.DeviceType = TDeviceType.dUnknown;
+                        rfir.Result = false;
+                    }
+                    break;
+                }
+            }
+            return rfir.Result;
+
+        } catch (Exception e){
+            e.printStackTrace();
+   //       Log.e(TAG,e.getMessage());
+            rfir.Result = false;
+
+   //       String msg = String.format("readHeader error: %s: %s",e.getMessage(),line);
+   //       SendMeasure(TDevState.tReadType, msg);
+   //       SendLytics(TDevState.tReadType,msg);
+            return false;
+        }
+    }
+
 }
