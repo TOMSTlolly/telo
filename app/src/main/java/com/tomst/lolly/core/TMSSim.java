@@ -60,16 +60,15 @@ public class TMSSim {
                         continue;
                     }
 
-                    if (file.getPath().contains("log_")==false){
-                       // Log.d(TAG, "File " + file.getName() + " is not a log file.");
+                    boolean ret = (file.getName().contains("log") || file.getName().contains("command"));
+                    if (ret==false){
+                        Log.d(TAG, "File " + file.getName() + " is not a log file.");
                         continue;
                     }
-
 
                     //Uri fileUri = Uri.fromFile(file);  // Convert File to Uri
                     try {
                         LoadCommand(file.getPath());
-                        //LoadCommand(fileUri);
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -107,6 +106,7 @@ public class TMSSim {
         TSimState state = TSimState.tWfc;
         boolean pok = false;
         LocalDateTime fDate= null;
+        TMereni fbef=null,faft=null;
 
         boolean nextLineIsReadData = false;
         int  iline = 1;
@@ -114,27 +114,26 @@ public class TMSSim {
             // jsou to data
             iline++;
 
-            if (currentline.contains("<<D")==true){
+            //s = currentline.replaceAll("(\\r|\\n| )", "");
+            if ((currentline.contains("<<D")==true) || (currentline.contains(">> D"))){
                 nextLineIsReadData = true;
                 //iline++;
                 continue;
             }
 
-            currentline = currentline.replace(">>","");
-
+            //currentline = currentline.replace(">>","");
+            currentline = currentline.replaceAll("(\\r|\\n|>>|<<)", "");
             if (nextLineIsReadData ==true)
             {
                nextLineIsReadData = false;
-               //currentline = currentline.replace(">>","");
-
+               //fbef = parser.GetLastMeasure();
                pok = parser.dpack(fAddr,currentline);
                if (pok == false){
                    Log.e("PAR",String.format("%s, i=[%d] err: %s",AFileName,iline,currentline));
                    continue;
                }
                fAddr =parser.GetActAddr();
-               // Log.e("TAG",Boolean.toString(pok));
-               // state = TSimState.tRespond;
+               //faft = parser.GetLastMeasure();
             }
 
             // hlidej si nastaveni adresy, pro kontrolu na konci bloku

@@ -48,7 +48,7 @@ public class ExampleUnitTest {
     @Test
     public void SimTest()
     {
-        DIRECTORY_LOGS = "/home/krata/db/lola";  // adresar, kde je otisk komunikace s TMs
+        DIRECTORY_LOGS = "c:\\krata\\src\\telo\\db";  // adresar, kde je otisk komunikace s TMs
         TMSSim sim = new TMSSim(mockContext,"test.csv");
     }
 

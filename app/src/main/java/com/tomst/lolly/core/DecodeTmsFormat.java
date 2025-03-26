@@ -75,7 +75,10 @@ public class DecodeTmsFormat {
         fMereni.dev = dev;
     }
 
-    //@ struct
+    // posledni mereni pro kontrolu, jestli mi navazuji casove znacky mezi blokama
+    static public TMereni GetLastMeasure (){
+        return fMereni;
+    }
     static private TMereni fMereni;
     static {
         fMereni = new TMereni();
@@ -516,6 +519,12 @@ public class DecodeTmsFormat {
             }
             else if (val.startsWith("D")) {
                 //*****************************************************************************
+                if (val.length()!=18)
+                {
+                    Log.e("TOMSTLolly", "Invalid packet length: " + val);
+                    return false;
+                }
+
                 disassembleData(val, fMereni);
                 if (fMereni.month >0) {  // calculate date time only if it makes sense
                     fMereni.dtm = LocalDateTime.of(fMereni.year, fMereni.month, fMereni.day, fMereni.hh, fMereni.mm, fMereni.ss, 0);
@@ -528,7 +537,6 @@ public class DecodeTmsFormat {
                                     fMereni.year = fMereni.dtm.getYear();
                                     fMereni.month = fMereni.dtm.getMonthValue();
                                     fMereni.day = fMereni.dtm.getDayOfMonth();
-
                                     lastDateTrace = fMereni.dtm.toInstant(ZoneOffset.UTC);
                                 }
                         }
@@ -538,7 +546,7 @@ public class DecodeTmsFormat {
                             String meroFormatted = fMerBefore.dtm.format(formatter);
                             String merFormatted = fMereni.dtm.format(formatter);
                             String ss = String.format("Between messages  (from %s to %s)", meroFormatted, merFormatted);
-                            //Log.e("TOMSTLolly", "[#] " + ss);
+                            Log.e("TOMSTLolly", "[#] " + ss);
                         }
                     }
                 }
