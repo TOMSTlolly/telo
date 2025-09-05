@@ -621,36 +621,36 @@ public class ListFragment extends Fragment implements OnProListener
         fFriends.clear();
         File cacheDir = new File(DIRECTORY_TEMP);
         if (cacheDir.isDirectory()) {
-        File[] files = cacheDir.listFiles();
-        if (files == null || files.length == 0)
-            return;
+            File[] files = cacheDir.listFiles();
+            if (files == null || files.length == 0)
+                return;
 
-        FileDetail fdet = null;
-        CSVReader reader = new CSVReader();
-        for (File file : files) {
-            if (file != null) {
-                if (file.length() == 0) {
-                    Log.d(TAG, "File " + file.getName() + " is empty.");
-                    continue;
+            FileDetail fdet = null;
+            CSVReader reader = new CSVReader();
+            for (File file : files) {
+                if (file != null) {
+                    if (file.length() == 0) {
+                        Log.d(TAG, "File " + file.getName() + " is empty.");
+                        continue;
+                    }
+
+                    Uri fileUri = Uri.fromFile(file);  // Convert File to Uri
+                    try {
+                        fdet = reader.FirstLast(fileUri);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                    fdet.setFull(fileUri.toString());
+                    fdet.setName(file.getName());
+                    fdet.setNiceName(getNiceName(file.getName()));
+
+                    fdet.setFileSize((int) file.length());
+                     fFriends.add(fdet);
                 }
-
-                Uri fileUri = Uri.fromFile(file);  // Convert File to Uri
-                try {
-                    fdet = reader.FirstLast(fileUri);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-                fdet.setFull(fileUri.toString());
-                fdet.setName(file.getName());
-                fdet.setNiceName(getNiceName(file.getName()));
-
-
-                fdet.setFileSize((int) file.length());
-                 fFriends.add(fdet);
             }
         }
-        }
     }
+
     // _data_98765432_2024_10_28_5.csv
     // 1
     // 2  data

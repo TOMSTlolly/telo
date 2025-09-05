@@ -1,40 +1,20 @@
-buildscript {
-    repositories {
-        // Make sure that you have the following two repositories
-        google()  // Google's Maven repository
-        mavenCentral()  // Maven Central repository
-    }
-
-    dependencies {
-        // Import the BoM for the Firebase platform
-
-
-        classpath 'com.android.tools.build:gradle:8.9.1'
-
-        // Make sure that you have the Google services Gradle plugin dependency
-        classpath 'com.google.gms:google-services:4.4.1'
-
-        // Add the dependency for the Crashlytics Gradle plugin
-        classpath 'com.google.firebase:firebase-crashlytics-gradle:2.9.5'
-        classpath 'com.google.firebase:perf-plugin:1.4.2'
-    }
-}
-
-
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
+
+// TOTO JE JEDINÝ SPRÁVNÝ ZPŮSOB DEKLARACE PLUGINŮ.
+// STARÝ 'buildscript' BLOK MUSÍ BÝT PRYČ.
 plugins {
+    // Android Gradle Plugin pro aplikační moduly
+    id("com.android.application") version '8.12.2' apply false
 
-    // Make sure that you have the AGP plugin 8.1+ dependency
-    id("com.android.application") version "8.1.4" apply false
-    // ...
+    // Android Gradle Plugin pro knihovní moduly (pokud je máte)
+    id("com.android.library") version '8.12.2' apply false
 
-    // Make sure that you have the Google services Gradle plugin 4.4.1+ dependency
+    // Google Services Plugin
     id("com.google.gms.google-services") version "4.4.2" apply false
 
-    // Add the dependency for the Crashlytics Gradle plugin
+    // Firebase Crashlytics Plugin
     id("com.google.firebase.crashlytics") version "3.0.3" apply false
 
-    //id("com.google.gms.google-services") version "4.4.0" apply false
-    //id 'com.android.application' version '8.8.0' apply false
-    id 'com.android.library' version '8.9.1' apply false
+    // Firebase Performance Plugin
+    id("com.google.firebase.firebase-perf") version "1.4.2" apply false
 }

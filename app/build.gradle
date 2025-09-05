@@ -7,6 +7,8 @@ plugins {
     // Add the Crashlytics Gradle plugin
     id 'com.google.firebase.crashlytics'
     id 'com.google.firebase.firebase-perf'
+
+
 }
 
 allprojects{
@@ -21,54 +23,65 @@ ext {
 
 android {
 
-    // soubeh zavislosti  - org.apache.httpcomponents:httpclient:4.5.13/ s httpserverem
-    // bez tohoto nelze kompilovat s balickem pro pristup ke google disku
-    // com.google.api-client:google-api-client-android:1.33.0'
     packagingOptions {
         exclude "META-INF/DEPENDENCIES"
         exclude 'META-INF/INDEX.LIST'
     }
 
     namespace 'com.tomst.lolly'
-    compileSdk 34
+
+    // JEDEN SPRÁVNÝ DEFAULTCONFIG BLOK
+    compileSdk 36 // Or 33, to match your targetSdk initially
     defaultConfig {
         applicationId "com.tomst.lolly"
         minSdk 24
-        targetSdk 33
+        targetSdk 36 // Doporučuji brzy aktualizovat na 34
         versionCode 1
         versionName "1.1"
         multiDexEnabled true
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        // Klíčová nastavení pro NDK a CMake
+        ndk {
+            abiFilters 'arm64-v8a'
+        }
+
         externalNativeBuild {
             cmake {
                 cppFlags ''
+                arguments "-DANDROID_PLATFORM=android-24", "-DANDROID_ABI=arm64-v8a", "-DANDROID_ARM_NEON=TRUE"
             }
         }
     }
 
     buildTypes {
-        debug{
+        debug {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             buildConfigField "Boolean", "SIMULATE_HARDWARE", "${simulateHardware}"
         }
-
     }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+
     buildFeatures {
         viewBinding true
         buildConfig true
     }
+
+    ndkVersion '27.0.12077973'
+
     externalNativeBuild {
         cmake {
             path file('src/main/cpp/CMakeLists.txt')
             version '3.22.1'
         }
     }
+    buildToolsVersion '36.0.0'
 }
 
 dependencies {

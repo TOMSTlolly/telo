@@ -7,6 +7,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.ActivityInfo;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -160,7 +161,7 @@ public class HomeFragment extends Fragment {
            LollyService.LollyBinder odometerBinder =
                    (LollyService.LollyBinder) iBinder;
            odometer = odometerBinder.getOdometer();
-           odometer.SetHandler(handler);                      // info o pozici ve stavovem stroji
+           odometer.SetHandler(handler);           // info o pozici ve stavovem stroji
            odometer.SetDataHandler(datahandler);   // do tohoto handleru posilam naparsovane data
            odometer.SetLogHandler(loghandler);
            odometer.SetContext(getContext());      // az tady muze startovat hardware
@@ -332,6 +333,9 @@ public class HomeFragment extends Fragment {
                 break;
 
             case dAD:
+                img.setImageResource(R.drawable.dev_ad);
+                break;
+
             case dAdMicro:
                 img.setImageResource(R.drawable.dev_ad);
                 break;
@@ -374,12 +378,18 @@ public class HomeFragment extends Fragment {
 
                 case tWaitForAdapter:
                     // if (ftTMS.AdapterNumber.length()>MIN_ADANUMBER) ;
-
                     // tady je zobrazeni cisla adapteru
                     if (info.msg.length()>MIN_ADANUMBER) {
                         binding.proMessage.setText(info.msg);
 
                         ImageView adapterImage = getActivity().findViewById(R.id.adapterImage);
+
+                        Drawable adapterGreenDrawable = ContextCompat.getDrawable(requireContext(), R.drawable.adapter_green);
+                        if (adapterGreenDrawable == null) {
+                            Log.e("TOMST", "R.drawable.adapter_green is null");
+                        } else {
+                            Log.d("TOMST", "R.drawable.adapter_green is not null");
+                        }
                         adapterImage.setImageResource(R.drawable.adapter_green);
                     }
                     break;
@@ -399,6 +409,11 @@ public class HomeFragment extends Fragment {
                     // nastav info o firmware v lizatku
 
                     // nastav obrazek zarizeni
+                    if (info.fw.DeviceType == null)
+                    {
+                        Log.e("TOMST","tHeade fw.devicetype=null");
+                        break;
+                    }
                     setDeviceImage(info.fw.DeviceType);
 
                     // nastav typ zarizeni do dmdViewModel a tim i LollyApplication

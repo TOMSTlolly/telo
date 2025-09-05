@@ -54,9 +54,9 @@ public class TMSReader extends Thread
     public final int SPI_DOWNLOAD_NONE = 100;
     public final int SPI_DOWNLOAD_ALL = 0;
     public final int SPI_DOWNLOAD_BOOKMARK = 1;
-    public final int SPI_DOWNLOAD_BOOKMARK_DAYS = 2;
-    public final int SPI_DOWNLOAD_DATE = 3;
-    public final int SPI_DOWNLOAD_PREVIEW=4;
+    public final int SPI_DOWNLOAD_DATE = 2;
+    public final int SPI_DOWNLOAD_PREVIEW=3;
+    public final int SPI_DOWNLOAD_BOOKMARK_DAYS = 4;
     private final int BOOKMARK_DAY_CONVERSION = 848;
 
     private List<String> savelog = null;
@@ -986,6 +986,10 @@ public class TMSReader extends Thread
                     s = fHer.doCommand("P");
                     if (s.length() <8)
                         continue;
+
+                    //info.msg = String.format("%d.%d.%d",rfir.Hw,rfir.Fw,rfir.Sub);
+                    info.msg = String.format("%s",s);
+                    Log.d("TOMST",info.msg);
 
                     s = aft(s,"=");
 
