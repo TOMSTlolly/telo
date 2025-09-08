@@ -7,50 +7,45 @@ plugins {
     // Add the Crashlytics Gradle plugin
     id 'com.google.firebase.crashlytics'
     id 'com.google.firebase.firebase-perf'
-
-
 }
 
-allprojects{
-    tasks.withType(JavaCompile){
-        options.compilerArgs<<"-Xlint:unchecked"<<"-Xlint:deprecation"
+allprojects {
+    tasks.withType(JavaCompile) {
+        options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
     }
 }
 
 ext {
- simulateHardware = false
+    simulateHardware = false
 }
 
 android {
-
     packagingOptions {
         exclude "META-INF/DEPENDENCIES"
         exclude 'META-INF/INDEX.LIST'
     }
 
     namespace 'com.tomst.lolly'
+    compileSdk 34
 
-    // JEDEN SPRÁVNÝ DEFAULTCONFIG BLOK
-    compileSdk 36 // Or 33, to match your targetSdk initially
     defaultConfig {
         applicationId "com.tomst.lolly"
-        minSdk 24
-        targetSdk 36 // Doporučuji brzy aktualizovat na 34
+        minSdk 23
+        targetSdk 34
         versionCode 1
-        versionName "1.1"
+        versionName "1.0"
         multiDexEnabled true
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
-        // Klíčová nastavení pro NDK a CMake
         ndk {
-            abiFilters 'arm64-v8a'
+            abiFilters 'arm64-v8a'  // Přidej 'armeabi-v7a' později, pokud potřebuješ 32-bit
         }
 
         externalNativeBuild {
             cmake {
                 cppFlags ''
-                arguments "-DANDROID_PLATFORM=android-24", "-DANDROID_ABI=arm64-v8a", "-DANDROID_ARM_NEON=TRUE"
+                arguments "-DANDROID_PLATFORM=android-23", "-DANDROID_ABI=arm64-v8a", "-DANDROID_ARM_NEON=TRUE"  // Sladil s minSdk 23
             }
         }
     }
@@ -73,15 +68,17 @@ android {
         buildConfig true
     }
 
-    ndkVersion '27.0.12077973'
-
+ //   ndkVersion '27.3.13750724'  // Nejnovější LTS (r27d) – nainstaluj v SDK Manager, pokud nemáš. Alternativa: '28.2.13676358' pro stable r28.
+    ndkVersion '29.0.14033849'
     externalNativeBuild {
         cmake {
             path file('src/main/cpp/CMakeLists.txt')
-            version '3.22.1'
+            version '3.22.1'  // OK, ale pokud máš novější v SDK Manager, upgraduj na 3.28+
         }
     }
-    buildToolsVersion '36.0.0'
+
+    // Odstraň buildToolsVersion, pokud máš AGP 8.0+ – není potřebné
+    // buildToolsVersion '36.0.0'
 }
 
 dependencies {

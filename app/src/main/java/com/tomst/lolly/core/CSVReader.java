@@ -222,8 +222,8 @@ public class CSVReader extends Thread
 
     public CSVReader()
     {
-        this.context = LollyApplication.getInstance().getApplicationContext();
-        this.FileName = null;
+       this.context = LollyApplication.getInstance().getApplicationContext();
+       this.FileName = null;
        ClearPrivate();
        ClearAvg();
     }
