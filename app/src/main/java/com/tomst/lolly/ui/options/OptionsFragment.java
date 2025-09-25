@@ -39,7 +39,7 @@ import com.google.android.material.radiobutton.MaterialRadioButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.tomst.lolly.LoginActivity;
-import com.tomst.lolly.LollyApplication;
+import com.tomst.lolly.LollyActivity;
 import com.tomst.lolly.R;
 import com.tomst.lolly.databinding.FragmentOptionsBinding;
 
@@ -283,7 +283,7 @@ public class OptionsFragment extends Fragment implements AdapterView.OnItemSelec
         SharedPreferences prefs = context.getSharedPreferences(getString(R.string.save_options), context.MODE_PRIVATE);
         //SharedPreferences.Editor editor = prefs.edit();
 
-        LollyApplication.getInstance().setPrefExportFolder(prefs.getString("prefExportFolder", ""));
+        LollyActivity.getInstance().setPrefExportFolder(prefs.getString("prefExportFolder", ""));
         // adresar, kam se budou ukladat soubory
 
     }
@@ -503,7 +503,7 @@ public class OptionsFragment extends Fragment implements AdapterView.OnItemSelec
                                 Log.w("myApp", "[#] OptionsFragment.java - onActivityResult URI: " + treeUri.getEncodedPath());
 
                                 setPrefExportFolder(treeUri.toString());
-                                LollyApplication.getInstance().setPrefExportFolder(treeUri.toString()); // Save to LollyApplication cache
+                                LollyActivity.getInstance().setPrefExportFolder(treeUri.toString()); // Save to LollyApplication cache
                                 SetupPreferences();
                             }
                         }

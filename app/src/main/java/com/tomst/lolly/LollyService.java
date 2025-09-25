@@ -48,7 +48,9 @@ public class LollyService extends Service {
     private Handler dataHandler;
     private static Handler handler = null;
     private static Handler loghandler=null;
-    public  void SetHandler(Handler han){ this.handler = han;}
+    public  void SetHandler(Handler han){
+        this.handler = han;
+    }
     public void SetDataHandler(Handler han) {
         this.dataHandler=han;
     }
@@ -68,8 +70,7 @@ public class LollyService extends Service {
             super(looper);
         }
 
-        @Override
-        public void handleMessage(Message msg) {
+        @Override public void handleMessage(Message msg) {
             // Normally we would do some work here, like download a file.
             // For our sample, we just sleep for 5 seconds.
             try {
@@ -80,7 +81,9 @@ public class LollyService extends Service {
                     sendDataProgress(TDevState.tReadData, i);
                 }
                 */
+
                 ftTMS.start();
+
                 Thread.sleep(1000);
 
             } catch (InterruptedException e) {
@@ -165,12 +168,11 @@ public class LollyService extends Service {
         ftTMS.ConnectDevice();  // beware, first setup callback handlers before calling this
           sharedPref.getBoolean("checkoxBookmark", false);
 
-
         Message msg = serviceHandler.obtainMessage();
         msg.arg1 = 12;
         serviceHandler.sendMessage(msg);
         ftTMS.SetRunning(true); // povol provoz v mLoop
-        //ftTMS.start();
+ //       ftTMS.start();
     }
 
     @Override

@@ -47,12 +47,14 @@ public class DmdViewModel extends ViewModel
     }
 
 
-    public ArrayList<Entry> getT3(){
+    public ArrayList<Entry> getT3()
+    {
         return valT3;
     }
 
 
-    public ArrayList<Entry> getHA(){
+    public ArrayList<Entry> getHA()
+    {
         return valHA;
     }
 

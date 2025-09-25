@@ -1,6 +1,6 @@
 package com.tomst.lolly.core;
 
-import static com.tomst.lolly.LollyApplication.DIRECTORY_LOGS;
+import static com.tomst.lolly.LollyActivity.DIRECTORY_LOGS;
 import static com.tomst.lolly.core.shared.aft;
 
 import android.annotation.SuppressLint;

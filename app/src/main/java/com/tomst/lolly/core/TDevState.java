@@ -10,6 +10,10 @@ public enum TDevState
     tFinal,
     tFinishedData,
     tFirmware,
+    tFirmwareIsActual,
+    tFirmwareFileError,
+    tFirmwareFlashFine,
+    tFirmwareFlashError,
     tGetTime,
     tGetTimeError,
     tHead,
@@ -35,6 +39,5 @@ public enum TDevState
     tWaitForAdapter,
     tWaitForMeasure,
     tWaitInLimbo,
-
     tSimulateSerial
 }

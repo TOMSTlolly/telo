@@ -1,6 +1,6 @@
 package com.tomst.lolly;
 
-import static com.tomst.lolly.LollyApplication.DIRECTORY_LOGS;
+import static com.tomst.lolly.LollyActivity.DIRECTORY_LOGS;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -9,6 +9,8 @@ import static org.junit.Assert.*;
 
 import android.content.Context;
 import org.mockito.Mock;
+import com.tomst.lolly.BuildConfig;
+
 
 
 import com.tomst.lolly.core.TMSSim;
@@ -48,7 +50,7 @@ public class ExampleUnitTest {
     @Test
     public void SimTest()
     {
-        DIRECTORY_LOGS = "c:\\krata\\src\\telo\\db";  // adresar, kde je otisk komunikace s TMs
+        DIRECTORY_LOGS = "/home/krata/db/telo";  // adresar, kde je otisk komunikace s TMs
         TMSSim sim = new TMSSim(mockContext,"test.csv");
     }
 

@@ -23,10 +23,15 @@ import android.widget.Toast;
 
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.tomst.lolly.BuildConfig;
-import com.tomst.lolly.LollyApplication;
+import com.tomst.lolly.LollyActivity;
 
 import androidx.annotation.RequiresApi;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -38,6 +43,8 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import com.tomst.lolly.BuildConfig;
 
 // test
 // test3
@@ -51,6 +58,8 @@ public class TMSReader extends Thread
         rsPacketFalse,
         rsFinal
     }
+    public boolean started = false;
+
     public final int SPI_DOWNLOAD_NONE = 100;
     public final int SPI_DOWNLOAD_ALL = 0;
     public final int SPI_DOWNLOAD_BOOKMARK = 1;
@@ -86,6 +95,7 @@ public class TMSReader extends Thread
     public String SerialNumber;
     public String AdapterNumber;
     public RFirmware rfir;
+    public TupoHeader tupoHeader;
     private TDevState devState = TDevState.tStart;
 
 
@@ -153,14 +163,14 @@ public class TMSReader extends Thread
     public TMSReader(Context context){
         this.context = context;
         fHer = null;
+        started = false;
 
-        savelog = LollyApplication.getInstance().SAVE_LOG;
+        savelog = LollyActivity.getInstance().SAVE_LOG;
 
         rfir = new RFirmware();
         mer  = new TMereni(); // mereni
 
         bReadThreadGoing = false;
-
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
@@ -724,6 +734,54 @@ public class TMSReader extends Thread
         return (hi);
     }
 
+    private int countLines(File file) throws IOException {
+        int lines = 0;
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            while (reader.readLine() != null) {
+                lines++;
+            }
+        }
+        return lines;
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    private boolean mFlashLoop(Uri uri){
+        Path path = new File(uri.getPath()).toPath();
+
+        File file = new File(uri.getPath());
+        String lineFromFile="";
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            int idx = 0;
+            int iErr= 0;
+            int count = countLines(file);
+            DoProgress(-count);
+            // otestuj prvni radek
+            lineFromFile = reader.readLine();
+            if (lineFromFile==null)
+                return false;
+            // nahrej tam po radcich vsechno
+            do {
+                // nandam radek do lizatka a pockam na odpoved
+                System.out.println("Read line: " + lineFromFile); // Or Log.d for Android
+                boolean b = fHer.flashLine(lineFromFile);
+                if (b) {
+                    lineFromFile = reader.readLine();
+                    DoProgress(idx);
+                    idx++;
+                }
+                else iErr++;
+
+            } while ((lineFromFile != null) );
+            DoProgress(0);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+        return true;
+    }
+
     private void mTestLoop() {
         String s = "";
         TInfo info;
@@ -867,10 +925,6 @@ public class TMSReader extends Thread
                         devState = TDevState.tFinal;  // tady by melo byt, ze jsem nenasel adapter
                     break;
 
-                case tFirmware:
-                    break;
-
-
                 case tSerialDuplicity:
                     s = fHer.doCommand("#");
                     if (s.length()<3) {
@@ -903,13 +957,72 @@ public class TMSReader extends Thread
 
                         // TMereni is copied to TInfo in SendMex
                         SendMex(TDevState.tHead,mer,rfir);   // Hlavicka
-                        devState = TDevState.tSerial;
+                        devState = TDevState.tFirmware;
                     }
                     else {
                         //devState = TDevState.tFinal;
                         Log.e(TAG,"Wrong Header:!"+s+" reading thread killed !");
                     }
                     break;
+
+                case tFirmware:
+                    // tady bych mel mit uz rfir nastaveny, tedy vim, co je v lizatku za FW
+                    File fwFile = new File(LollyActivity.DIRECTORY_FW, "TMS3.txt");
+                    if (!fwFile.exists()) {
+                        Log.e(TAG, "Firmware file not found: " + fwFile.getAbsolutePath());
+                        SendMeasure(TDevState.tError, "FW file not found: " + fwFile.getAbsolutePath());
+                        return ;
+                    }
+
+                    // nacti hlavicku z fw souboru
+                    TupoHeader tupoHeader = TupoHeader.loadFromFile(fwFile);
+                    if (tupoHeader == null) {
+                        Log.e(TAG, "Failed to load TupoHeader from file: " + fwFile.getAbsolutePath());
+                        SendMeasure(TDevState.tError, "Error processing FW file: " + fwFile.getName());
+                        devState = TDevState.tSerial; // Nebo jiný vhodný chybový stav
+                        break; // Ukončíme case tFirmware
+                    }
+
+                    // hardware
+                    if (rfir.Hw != tupoHeader.Hw) {
+                        SendMeasure(TDevState.tFirmware, "HW mismatch, wrong update file");
+                        devState = TDevState.tSerial;
+                        break;
+                    }
+
+                    // v lizatku musi byt starsi FW nez v souboru
+                    if (rfir.Fw > tupoHeader.Fw) {
+                        String line = String.format("Fw %s.%s is actual", tupoHeader.Fw,tupoHeader.Sub);
+                        //String line = String.format("tup %s.%s <= %s.%s", tupoHeader.Fw,tupoHeader.Sub,rfir.Fw,rfir.Sub);
+                        SendMeasure(TDevState.tFirmwareIsActual, line);
+                        devState = TDevState.tSerial;
+                        break;
+                    }
+
+                    // kdyz je v souboru mensi verze, neflashuju
+                    if (tupoHeader.Sub <= rfir.Sub)
+                    {
+                        String line = String.format("Fw %s.%s is actual", tupoHeader.Fw,tupoHeader.Sub);
+                        //String line = String.format("tup %s.%s <= %s.%s", tupoHeader.Fw,tupoHeader.Sub,rfir.Fw,rfir.Sub);
+                        SendMeasure(TDevState.tFirmwareIsActual, line);
+                        devState = TDevState.tSerial;
+                        break;
+                    }
+
+                    // jdeme hrat firmware
+                    String line = String.format("Flashing FW %s.%s", tupoHeader.Fw,tupoHeader.Sub);
+                    SendMeasure(TDevState.tFirmware, line);
+                    Uri uri = Uri.fromFile(fwFile);
+                    if (mFlashLoop(uri)) {
+                        SendMeasure(TDevState.tFirmwareFlashFine, "FW updated");
+                        devState = TDevState.tStart;
+                    }
+                    else {
+                        SendMeasure(TDevState.tFirmwareFlashError, "FW update error");
+                        devState = TDevState.tFinal;
+                    }
+                    break;
+
 
                 case tSerial:
                     s = fHer.doCommand("#");
@@ -1335,7 +1448,6 @@ public class TMSReader extends Thread
                 case rsReadPacket:
                     respond = fHer.doCommand("D");
                     if (respond.length() > 1) {
-
                         ret = parser.dpacket(respond);  // data are send into HomeFragment
                         if (ret) {
                            // extract last address from the data packet
@@ -1398,40 +1510,7 @@ public class TMSReader extends Thread
 
         return true;
     }
-        /*
-        while ((fAddr < lastAddress) && (mRunning))
-        {
-            // performing operation
-            respond = fHer.doCommand("D");
-            if (respond.length()>1) {
-                ret = parser.dpacket(respond);
-            }
-            // jakou mam aktualne adresu
-            respond = fHer.doCommand("S");
 
-            if (respond.length()>1)
-                fAddr = getaddr(respond);
-            // Updating the progress bar
-            DoProgress(fAddr);
-        }
-        if (!mRunning)
-        {
-            mRunning=true;
-            return false;
-        }
-        return true;
-    }
-  */
-
-   /*
-    private String MeteoToString(TMeteo met){
-        String ret = met.toString();
-        if (ret.length()>0)
-            ret = ret.substring(1);
-
-        return ret;
-    }
-    */
 
     private TMeteo getMeteo(String line){
         if (line.length() <1 )

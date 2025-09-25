@@ -4,7 +4,7 @@
 xmlns:app="http://schemas.android.com/apk/res-auto"
 xmlns:tools="http://schemas.android.com/tools"
 android:id="@+id/id_main_menu"
-tools:context="com.tomst.lolly.LollyApplication">
+tools:context="com.tomst.lolly.LollyActivity">
 <item
     android:id="@+id/action_settings"
     android:orderInCategory="100"

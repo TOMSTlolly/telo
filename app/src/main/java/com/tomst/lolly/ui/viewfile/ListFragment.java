@@ -3,7 +3,7 @@ package com.tomst.lolly.ui.viewfile;
 
 import static android.app.Activity.RESULT_CANCELED;
 import static android.os.Environment.*;
-import static com.tomst.lolly.LollyApplication.DIRECTORY_TEMP;
+import static com.tomst.lolly.LollyActivity.DIRECTORY_TEMP;
 import static com.tomst.lolly.core.shared.bef;
 
 import android.content.Context;
@@ -46,7 +46,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageMetadata;
 import com.google.firebase.storage.StorageReference;
-import com.tomst.lolly.LollyApplication;
+import com.tomst.lolly.LollyActivity;
 import com.tomst.lolly.R;
 import com.tomst.lolly.core.CSVReader;
 import com.tomst.lolly.core.Constants;
@@ -167,16 +167,16 @@ public class ListFragment extends Fragment implements OnProListener
         rootView = binding.getRoot();
 
         // trik, kterym si aplikace rekne o opravneni pri vytvareni formulare
-        Location location = LollyApplication.getInstance().getLocation();
+        Location location = LollyActivity.getInstance().getLocation();
 
         binding.proBar.setMin(0);
         binding.proBar.setMax(100);
         binding.proBar.setProgress(5);
 
         //  cesty pro export do SAF
-        String sharedPath = LollyApplication.getInstance().getPrefExportFolder();
+        String sharedPath = LollyActivity.getInstance().getPrefExportFolder();
         if (sharedPath.startsWith("content"))
-            sharedFolder = DocumentFile.fromTreeUri(LollyApplication.getInstance(), Uri.parse(sharedPath));
+            sharedFolder = DocumentFile.fromTreeUri(LollyActivity.getInstance(), Uri.parse(sharedPath));
         else
             sharedFolder = DocumentFile.fromFile(new File(sharedPath));
         String privatePath = getContext().getFilesDir().toString();
@@ -187,7 +187,7 @@ public class ListFragment extends Fragment implements OnProListener
         TextView folderName = binding.tvFolderDest;
        //  folderName.setText("Folder: " + sharedFolder.getUri().getPath());
         //folderName.setText("Folder: " + DIRECTORY_TEMP);
-        folderName.setText(LollyApplication.getInstance().getCacheCsvPath());
+        folderName.setText(LollyActivity.getInstance().getCacheCsvPath());
 
         // Saving folder destination
         Button btn_reload = binding.btnLoadFolder;
@@ -233,7 +233,7 @@ public class ListFragment extends Fragment implements OnProListener
 
                 // Get a content URI for the zip file using FileProvider
                 Context context = getContext();
-                context = context != null ? context : LollyApplication.getInstance().getApplicationContext();
+                context = context != null ? context : LollyActivity.getInstance().getApplicationContext();
                 Uri zipUri = FileProvider.getUriForFile(
                     getContext(),
                     BuildConfig.APPLICATION_ID + ".provider",
@@ -308,7 +308,7 @@ public class ListFragment extends Fragment implements OnProListener
             }
         });
 
-        Button select_sets_btn = binding.selectSets;
+        Button select_sets_btn = binding.selectGraph;
         select_sets_btn.setOnClickListener(new View.OnClickListener()
         {
             @Override
@@ -362,7 +362,7 @@ public class ListFragment extends Fragment implements OnProListener
 
 
         // add listener for loading selected datasets to graph fragment
-        Button select_sets_btn = binding.selectSets;
+        Button select_sets_btn = binding.selectGraph;
         select_sets_btn.setOnClickListener(new View.OnClickListener()
         {
             @Override
@@ -393,6 +393,7 @@ public class ListFragment extends Fragment implements OnProListener
         });
     }
 
+    /*
     private void loadFromStorage()
     {
         // show the loading icon
@@ -461,6 +462,7 @@ public class ListFragment extends Fragment implements OnProListener
                     Log.e(TAG, "Failed to list files: " + e.getMessage());
                 });
     }
+     */
 
     private void downloadCSVFile(String fileName, String filePath)
     {
@@ -615,6 +617,10 @@ public class ListFragment extends Fragment implements OnProListener
     }
 
 
+    // naplni seznam fFriends podle csv souboru v adresari
+    // bez nacitani podrobnosti
+    // jen jmeno, velikost, datum
+    // pro rychle zobrazeni seznamu
     @RequiresApi(api = Build.VERSION_CODES.O)
     public void DoLoadFil()
     {
@@ -696,6 +702,9 @@ public class ListFragment extends Fragment implements OnProListener
     }
 
 
+    // zjisti podrobnosti o csv souboru
+    // nacte hlavicku, prvni a posledni zaznam
+    // vrati FileDetail
     @RequiresApi(api = Build.VERSION_CODES.O)
     private FileDetail LoadCsvFile(Uri fileUri)
     {
@@ -719,6 +728,7 @@ public class ListFragment extends Fragment implements OnProListener
         });
 
         try{
+            // precte cele CSV, zjisti Maxima, minima, diry v datech
             fdet = csv.readFileContent(fileUri);
 
         } catch (IOException e) {
@@ -738,8 +748,8 @@ public class ListFragment extends Fragment implements OnProListener
             if (files == null || files.length == 0)
                 return;
 
-            Context context = LollyApplication.getInstance().getApplicationContext();
-            DatabaseHandler db = LollyApplication.getInstance().gpsDataBase;
+            Context context = LollyActivity.getInstance().getApplicationContext();
+            DatabaseHandler db = LollyActivity.getInstance().gpsDataBase;
 
             // remove not used files from db
             String[] usedFiles = new String[files.length];
@@ -749,7 +759,7 @@ public class ListFragment extends Fragment implements OnProListener
             }
             db.ClearUnusedFiles(usedFiles);
 
-            Location location = LollyApplication.getInstance().getLocation();
+            Location location = LollyActivity.getInstance().getLocation();
             FileDetail fdet = null;
 
             for (File file : files) {
@@ -816,9 +826,7 @@ public class ListFragment extends Fragment implements OnProListener
             //LoadDmdData();
               binding.proBar.setProgress(0);
         });
-
         csv.start();
-
         /*
         try {
             csv.start();

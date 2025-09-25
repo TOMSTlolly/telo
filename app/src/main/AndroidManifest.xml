@@ -44,11 +44,13 @@
         </provider>
 
         <activity
-            android:name=".LollyApplication"
-            android:launchMode="standard"
+            android:name=".LollyActivity"
+            android:launchMode="singleTask"
             android:exported="true"
             android:configChanges="orientation|screenSize"
             android:label="@string/app_name">
+
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -57,7 +59,6 @@
             <intent-filter android:exported="true">
                 <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
             </intent-filter>
-
 
             <meta-data
                 android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"

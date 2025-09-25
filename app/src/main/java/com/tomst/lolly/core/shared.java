@@ -14,7 +14,7 @@ import android.util.Log;
 import androidx.annotation.RequiresApi;
 import androidx.documentfile.provider.DocumentFile;
 
-import com.tomst.lolly.LollyApplication;
+import com.tomst.lolly.LollyActivity;
 
 import java.io.File;
 import java.time.Instant;
@@ -45,7 +45,7 @@ public class shared {
             DocumentFile pickedDir;
             if (ADir.startsWith("content")) {
                 Uri uri = Uri.parse(ADir);
-                pickedDir = DocumentFile.fromTreeUri(LollyApplication.getInstance().getApplicationContext(), uri);
+                pickedDir = DocumentFile.fromTreeUri(LollyActivity.getInstance().getApplicationContext(), uri);
             } else {
                 pickedDir = DocumentFile.fromFile(new File(ADir));
             }

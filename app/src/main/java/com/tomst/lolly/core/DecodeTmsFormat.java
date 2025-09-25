@@ -10,7 +10,7 @@ import android.os.Message;
 
 import androidx.annotation.RequiresApi;
 
-import com.tomst.lolly.LollyApplication;
+import com.tomst.lolly.LollyActivity;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -20,7 +20,6 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -415,7 +414,7 @@ public class DecodeTmsFormat {
         //fMicroSlope = (double)(8890.0 / (34000.0 - 1279.0));
         fIdx = 0;
 
-        savelog = LollyApplication.getInstance().SAVE_LOG;
+        savelog = LollyActivity.getInstance().SAVE_LOG;
 
         fMereni.month = 0;
 
@@ -519,6 +518,7 @@ public class DecodeTmsFormat {
             }
             else if (val.startsWith("D")) {
                 //*****************************************************************************
+                val = val.replaceAll("(\\r|\\n| )", "");
                 if (val.length()!=18)
                 {
                     Log.e("TOMSTLolly", "Invalid packet length: " + val);

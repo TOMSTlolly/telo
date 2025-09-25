@@ -36,7 +36,7 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
-import com.tomst.lolly.LollyApplication;
+import com.tomst.lolly.LollyActivity;
 import com.tomst.lolly.LollyService;
 import com.tomst.lolly.R;
 import com.tomst.lolly.core.CSVReader;
@@ -49,7 +49,6 @@ import com.tomst.lolly.core.TDevState;
 import com.tomst.lolly.core.TDeviceType;
 import com.tomst.lolly.core.TInfo;
 import com.tomst.lolly.core.TMSRec;
-import com.tomst.lolly.core.TMSSim;
 import com.tomst.lolly.core.TMereni;
 import com.tomst.lolly.core.TMeteo;
 import com.tomst.lolly.core.shared;
@@ -68,8 +67,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class HomeFragment extends Fragment {
-    LollyApplication lollyApp = LollyApplication.getInstance();
-
+    LollyActivity lollyApp = LollyActivity.getInstance();
+    private Context mContext =  null;
     static final byte MIN_ADANUMBER = 5;  // pozaduju, aby mel adapter minimalne 5 znaku
     private FragmentHomeBinding binding;
 
@@ -131,6 +130,13 @@ public class HomeFragment extends Fragment {
             }
             merold = mer;
             dmd.AddMereni(mer);   // array of values for graph
+
+            if (csv == null) {
+                //String ss = String.format("Between messages >%d seconds (from %s to %s)", delta, meroFormatted, merFormatted);
+                String ss = "CSV is null, cannot save data";
+                savelog.add(ss);
+                binding.proMessage.setText(ss);
+            }
             csv.AddMerToCsv(mer); // add to csv file
             //csv.AppendStat(mer);  // statistics, we'll omit this in the next version
         }
@@ -153,6 +159,9 @@ public class HomeFragment extends Fragment {
     public void onCreate(Bundle savedInstanceState){
         super.onCreate(savedInstanceState);
         Log.i("| DEBUG |", "Home Fragment, right above jni string");
+        if (savedInstanceState != null) {
+            Log.d("TOMST", "Activity being recreated after configuration change or process death");
+        }
   }
 
     private ServiceConnection connection = new ServiceConnection() {
@@ -164,7 +173,9 @@ public class HomeFragment extends Fragment {
            odometer.SetHandler(handler);           // info o pozici ve stavovem stroji
            odometer.SetDataHandler(datahandler);   // do tohoto handleru posilam naparsovane data
            odometer.SetLogHandler(loghandler);
-           odometer.SetContext(getContext());      // az tady muze startovat hardware
+
+           //Context mContext = getContext();
+           odometer.SetContext(mContext);      // az tady muze startovat hardware
            odometer.startBindService();
            bound = true;
        }
@@ -175,6 +186,12 @@ public class HomeFragment extends Fragment {
            bound = false;
        }
     };
+
+    @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+        mContext = context;
+    }
 
      @Override
      public void onResume() {
@@ -200,6 +217,15 @@ public class HomeFragment extends Fragment {
         //getActivity().startService(intent);
         getContext().bindService(intent, connection, Context.BIND_AUTO_CREATE);
      }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        if (bound) {
+            getContext().unbindService(connection);
+            bound = false;
+        }
+    }
 
     /*
      public void LogMsg(String msg)
@@ -267,8 +293,6 @@ public class HomeFragment extends Fragment {
         }
         return true;
     }
-
-    // 2024-04-24_92225141_0.csv
 
 
     private void setMeteoImage(ImageView img, TMeteo met)
@@ -419,6 +443,23 @@ public class HomeFragment extends Fragment {
                     // nastav typ zarizeni do dmdViewModel a tim i LollyApplication
                     dmd.setDeviceType(info.fw.DeviceType);
 
+                    // vypis cislo firmware zarizeni
+                    binding.devver.setText("Device fw: "+info.fw.Fw+"."+info.fw.Sub);
+                    break;
+
+                case tError:
+                    binding.proMessage.setText(info.msg);
+                    binding.proMessage.setTextColor(ContextCompat.getColor(requireContext(), R.color.color_accent)); // Set text color to red
+                    savelog.add(info.msg);
+                    break;
+
+                case tFirmwareIsActual:
+                    binding.devver.setText(info.msg);
+                    break;
+
+                case tFirmware:
+                    binding.proMessage.setText(info.msg);
+                    savelog.add(info.msg);
                     break;
 
                 case tSerial:
@@ -426,15 +467,15 @@ public class HomeFragment extends Fragment {
                     binding.devser.setText(info.msg);
 
                     // csv file output, it should be unique for each device and each download
-                    LollyApplication.getInstance().setSerialNumber(serialNumber);
+                    LollyActivity.getInstance().setSerialNumber(serialNumber);
 
-                    String ATrackDir = LollyApplication.getInstance().getCacheCsvPath();
+                    String ATrackDir = LollyActivity.getInstance().getCacheCsvPath();
                     String ACsvFileName =   CompileFileName("data_",serialNumber,ATrackDir);
                     ALogFileName= "log_"+shared.aft(ACsvFileName,"data_");
-                    ALogFileName = LollyApplication.getInstance().getCacheLogPath()+"/"+ALogFileName;
+                    ALogFileName = LollyActivity.getInstance().getCacheLogPath()+"/"+ALogFileName;
 
                     AErrFileName= "err_"+shared.aft(ACsvFileName,"data_");
-                    AErrFileName = LollyApplication.getInstance().getCacheLogPath()+"/"+AErrFileName;
+                    AErrFileName = LollyActivity.getInstance().getCacheLogPath()+"/"+AErrFileName;
 
                     ACsvFileName = ATrackDir + "/" + ACsvFileName;
                     csv = new CSVReader(ACsvFileName);
@@ -450,7 +491,6 @@ public class HomeFragment extends Fragment {
                     binding.devt1.setText(String.format("%.1f",info.t1));
                     binding.devt2.setText(String.format("%.1f",info.t2));
                     binding.devt3.setText(String.format("%.1f",info.t3));
-
 
                     // teprve ted vim, co mam za zarizeni na sonde a muzu nastavit format do csv
                     csv.SetupFormat(info.devType);
@@ -614,7 +654,7 @@ public class HomeFragment extends Fragment {
                              ViewGroup container, Bundle savedInstanceState) {
         HomeViewModel homeViewModel = new ViewModelProvider(this).get(HomeViewModel.class);
 
-        savelog  = LollyApplication.getInstance().SAVE_LOG;
+        savelog  = LollyActivity.getInstance().SAVE_LOG;
 
         logs  = new ArrayList<>();
 
@@ -639,7 +679,7 @@ public class HomeFragment extends Fragment {
         Button testLollyInstance = binding.testLolly;
         testLollyInstance.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
-                lollyApp = LollyApplication.getInstance();
+                lollyApp = LollyActivity.getInstance();
                 String exportPath = lollyApp.getPrefExportFolder();
                 //binding.expPath.setText(exportPath);
             }
@@ -648,7 +688,7 @@ public class HomeFragment extends Fragment {
         Button genCommand=binding.genCommand;
         genCommand.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
-                String ALogName = LollyApplication.getInstance().DIRECTORY_LOGS + "/command.csv.";
+                String ALogName = LollyActivity.getInstance().DIRECTORY_LOGS + "/command.csv.";
                 //TMSSim sim = new TMSSim(ALogName);
                 //  dmd.sendMessageToFragment("TMD");
                 // Message message = handler.obtainMessage();
@@ -673,7 +713,7 @@ public class HomeFragment extends Fragment {
         Button sendSerial =binding.genSerial;
         sendSerial.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
-                ALogFileName = LollyApplication.getInstance().getCacheLogPath()+"/"+"testlog.csv";
+                ALogFileName = LollyActivity.getInstance().getCacheLogPath()+"/"+"testlog.csv";
                 saveLogAndData();
                 //odometer.SetState(TDevState.tSerial);
                 // dmd.sendMessageToFragment("TSN");

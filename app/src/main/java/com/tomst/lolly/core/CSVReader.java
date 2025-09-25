@@ -32,7 +32,7 @@ package com.tomst.lolly.core;
  import java.io.FileOutputStream;
  import java.time.LocalDateTime;
 
- import com.tomst.lolly.LollyApplication;
+ import com.tomst.lolly.LollyActivity;
  import com.tomst.lolly.fileview.FileDetail;
 
 public class CSVReader extends Thread
@@ -110,6 +110,8 @@ public class CSVReader extends Thread
 
     private static FileDetail det= null;
 
+    // posledni vycteny detail souboru
+    // zodpovidam za volani fce readFileContent() predtim
     public FileDetail getFileDetail(){
         return det;
     }
@@ -161,7 +163,7 @@ public class CSVReader extends Thread
         String filePath = "";
         String[] projection = { MediaStore.Images.Media.DATA };
        // Cursor cursor = getContentResolver().query(uri, projection, null, null, null);
-        Cursor cursor = LollyApplication.getInstance().getContentResolver().query(uri, projection, null, null, null);
+        Cursor cursor = LollyActivity.getInstance().getContentResolver().query(uri, projection, null, null, null);
         if (cursor != null) {
             cursor.moveToFirst();
             int columnIndex = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
@@ -181,7 +183,7 @@ public class CSVReader extends Thread
     }
 
     public void OpenForRead(String AFileName){
-        this.context = LollyApplication.getInstance().getApplicationContext();
+        this.context = LollyActivity.getInstance().getApplicationContext();
        // String AFileName = this.FileName;
         try {
             if (AFileName.startsWith("content")) {
@@ -215,6 +217,7 @@ public class CSVReader extends Thread
     // constructor
     public CSVReader(String AFileName)
     {
+        super("CSVReaderThread"); // nazev vlakna pro debugger
         this.FileName = AFileName;
         ClearPrivate();
         ClearAvg();
@@ -222,7 +225,8 @@ public class CSVReader extends Thread
 
     public CSVReader()
     {
-       this.context = LollyApplication.getInstance().getApplicationContext();
+        super("CSVReaderThread"); // nazev vlakna pro debugger<
+       this.context = LollyActivity.getInstance().getApplicationContext();
        this.FileName = null;
        ClearPrivate();
        ClearAvg();
@@ -263,7 +267,7 @@ public class CSVReader extends Thread
     {
         InputStream fin;
         try {
-            fin  = LollyApplication.getInstance().getContentResolver().openInputStream(docFile.getUri());
+            fin  = LollyActivity.getInstance().getContentResolver().openInputStream(docFile.getUri());
         } catch (FileNotFoundException e) {
             Log.w("myApp", "[#] EGM96.java - FileNotFoundException");
             //Toast.makeText(getApplicationContext(), "Oops", Toast.LENGTH_SHORT).show();
@@ -319,7 +323,7 @@ public class CSVReader extends Thread
 
 
     public void OpenForWrite(){
-        this.context = LollyApplication.getInstance().getApplicationContext();
+        this.context = LollyActivity.getInstance().getApplicationContext();
         String AFileName = this.FileName;
         try {
             if (AFileName.startsWith("content")) {
@@ -741,6 +745,7 @@ public class CSVReader extends Thread
         LocalDateTime creationDate = LocalDateTime.ofInstant(fileTime.toInstant(), ZoneId.systemDefault());
         fileDetail.setCreated(creationDate);
 
+        // je soubor prazdny ?
         String currentline = reader.readLine();
         if (currentline == null)
             return fileDetail;
@@ -794,6 +799,9 @@ public class CSVReader extends Thread
         fileDetail.setDeviceType(Mer.dev);
         fileDetail.setErr(Mer.Err);
 
+        // pozor ! musi byt pred DoProgress
+        det = fileDetail;  // ulozime si detail pro GetFileDetail()
+
         //return stringBuilder.toString();
         DoProgress(-1);
         return fileDetail;
@@ -801,7 +809,7 @@ public class CSVReader extends Thread
 
     public void Prepare()
     {
-        this.context = LollyApplication.getInstance().getApplicationContext();
+        this.context = LollyActivity.getInstance().getApplicationContext();
         this.FileName = null;
         ClearPrivate();
         ClearAvg();
@@ -819,7 +827,7 @@ public class CSVReader extends Thread
         if (!this.FileName.contains(".csv") )
             return;
 
-        Context context = LollyApplication.getInstance().getApplicationContext();
+        Context context = LollyActivity.getInstance().getApplicationContext();
         Uri uri = Uri.parse(this.FileName);
         try {
             //FileDetail det = readFileContent(uri);

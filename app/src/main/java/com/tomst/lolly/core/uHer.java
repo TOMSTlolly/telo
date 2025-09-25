@@ -1,19 +1,25 @@
 package com.tomst.lolly.core;
 
-import static com.tomst.lolly.core.shared.aft;
 import static java.lang.System.currentTimeMillis;
 
+import android.net.Uri;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Message;
 
+import androidx.annotation.RequiresApi;
+
 import com.ftdi.j2xx.D2xxManager;
 import com.ftdi.j2xx.FT_Device;
-import com.tomst.lolly.LollyApplication;
+import com.tomst.lolly.LollyActivity;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Path;
 
 //import java.nio.charset.StandardCharsets;
 
@@ -21,12 +27,12 @@ import java.io.IOException;
 public class uHer extends Thread {
     // common buffer before writing
     static private byte[] fBuf;
-    static private byte INBUF = 32;
+    static private byte INBUF = 80;
     static private int WTIME = 200;
-    static private int k =0; // pozice pri cteni textovych dat
+    static private int k = 0; // pozice pri cteni textovych dat
     static private StringBuilder ous = new StringBuilder();
 
-    private String ALogName = LollyApplication.getInstance().DIRECTORY_LOGS + "/command.csv.";
+    private String ALogName = LollyActivity.getInstance().DIRECTORY_LOGS + "/command.csv.";
 
     public FT_Device ftDev = null;  // ukazatel na hardware
     public boolean bReadThreadGoing = false;
@@ -47,12 +53,12 @@ public class uHer extends Thread {
     }
 
     // jmeno log souboru
-    public void setLogName(String ALogX){
-        this.ALogName = LollyApplication.getInstance().DIRECTORY_LOGS + "/"+ALogX;
+    public void setLogName(String ALogX) {
+        this.ALogName = LollyActivity.getInstance().DIRECTORY_LOGS + "/" + ALogX;
         File log = new File(this.ALogName);
     }
 
-    public int getPigCnt(){
+    public int getPigCnt() {
         return (k);
     }
 
@@ -101,7 +107,7 @@ public class uHer extends Thread {
             i++;
         }
         // vypis, co zapisuju
-      //  dumps(fBuf);
+        //  dumps(fBuf);
 
         // zapis prevedeny buffer
         j = ftDev.write(fBuf, i);
@@ -109,7 +115,7 @@ public class uHer extends Thread {
     }
 
     private boolean readbuf(byte[] b, int cnt) {
-        int i;
+        int i=0;
         long start, diff;
 
         start = getTickCount();
@@ -123,7 +129,7 @@ public class uHer extends Thread {
             return (false);
 
         ftDev.read(b, cnt);
-       // dumps(b);
+        // dumps(b);
         return (true);
     }
 
@@ -179,7 +185,7 @@ public class uHer extends Thread {
         fid[6] = b[4];
 
         fid[7] = calc8(fid);
-       // dumps(b);
+        // dumps(b);
 
         String Adapter = "";
         for (int i = 1; i <= 6; i++) {
@@ -195,26 +201,23 @@ public class uHer extends Thread {
     }
 
     private int tuxCommand(String cmd, byte[] ou) {
-        k =0;
+        k = 0;
         if (!writebuf(cmd))
             return (-1);
 
         int i = readTextData(ou);
-        return(i);
+        return (i);
     }
 
     private enum tuxstate {
         xCMD, xASCIIDATA, xACK, xNOTIMPLEMENTED, xFINAL
     }
 
-
     private int readTextData(byte[] ou) {
         int firstbyte = 0;
         int j;
 
         byte[] o1 = new byte[1];
-
-
         try {
 
             tuxstate tux = tuxstate.xCMD;
@@ -254,7 +257,7 @@ public class uHer extends Thread {
                             return (255);
 
                         // boolean error = false;
-                        ou[k++] = (byte)firstbyte;
+                        ou[k++] = (byte) firstbyte;
 
                         do {
                             // ctu byte po byte a
@@ -262,8 +265,8 @@ public class uHer extends Thread {
                             if (j != 1)
                                 return (255);
 
-                            firstbyte =(byte)o1[0];
-                            ou[k++] = (byte)firstbyte;
+                            firstbyte = (byte) o1[0];
+                            ou[k++] = (byte) firstbyte;
 
                             if ((byte) (firstbyte) > 0x7F)
                                 return (256);
@@ -315,9 +318,7 @@ public class uHer extends Thread {
 
             } while (tux != tuxstate.xFINAL);
 
-        }
-        catch(Exception e)
-        {
+        } catch (Exception e) {
             System.out.println(e);
         }
 
@@ -325,9 +326,96 @@ public class uHer extends Thread {
     }
 
     private enum twstate {
-        xSTART,xPESCIP,xPLATTOUCH,xNOADAPTER,xTIMEOUT,xUX,xREPEAT,
-        xSETSTATE,xFINAL,xERROR
+        xSTART, xPESCIP, xPLATTOUCH, xPUTTEXT, xNOADAPTER, xTIMEOUT, xUX, xREPEAT,
+        xSETSTATE, xFINAL, xERROR
     }
+
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    public boolean flashTux(Uri uri) {
+        Path path = new File(uri.getPath()).toPath();
+
+        // nejdriv poslat prikaz pro zahajeni flashovani
+        twstate xst = twstate.xPLATTOUCH;
+        int plat = 0;  // vysledek platform touche
+        byte[] ou = new byte[128];
+        File file = new File(uri.getPath());
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String lineFromFile = null;
+
+            // prvni radek
+            lineFromFile = reader.readLine();
+            do {
+                switch (xst) {
+                    case xSTART:
+                        // restart adapteru
+                        String a = getAdapter();
+                        if (!a.isEmpty()) {
+                            xst = twstate.xPLATTOUCH;
+                        }
+                        break;
+
+                    case xPLATTOUCH:
+                        plat = platformTouch();
+                        if (plat < 0)
+                            break;
+
+                        switch (plat) {
+                            case 0x55:
+                                xst = twstate.xPUTTEXT;
+                                break;
+                            case 255:
+                                xst = twstate.xSTART;
+                                break;
+                            case 254:
+                                xst = twstate.xTIMEOUT;
+                                break;
+                            default:
+                                xst = twstate.xERROR;
+                                break;
+                        }
+                        break;
+
+                    case xPUTTEXT:
+                        if (lineFromFile != null) {
+                            // nandam radek do lizatka a pockam na odpoved
+                            System.out.println("Read line: " + lineFromFile); // Or Log.d for Android
+                            boolean b = flashLine(lineFromFile);
+                            if (b)
+                                lineFromFile = reader.readLine();
+                                if (lineFromFile == null)
+                                    xst = twstate.xFINAL;
+                        }
+
+                        break;
+                    //
+                    case xFINAL:
+                        break;
+
+                    case xTIMEOUT:
+                        xst = twstate.xFINAL;
+                        break;
+
+                    case xERROR:
+                        xst = twstate.xFINAL;
+                        break;
+                }
+            } while ((xst != twstate.xFINAL));
+
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+        return true;
+    }
+
+    private String chewLine(String ALine)
+    {
+
+        return "";
+    }
+
 
     private boolean pigCommand(String cmd, byte[] ou) {
         twstate xst = twstate.xPLATTOUCH;
@@ -472,6 +560,33 @@ public class uHer extends Thread {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+
+    // posle do lizatka jeden radek, vstupem je ASCII line
+    public boolean flashLine(String cmd){
+        byte[] chr = new byte[cmd.length()+4]; // delka + ridici znaky + pocet znaku na zacatku
+        chr[0] = (byte)(cmd.length()+3);
+        chr[1] = (byte)0x55;
+        chr[2] = (byte)0x40;
+        for (int i =0;i<cmd.length();i++){
+            chr[i+3] = (byte) cmd.charAt(i);
+        }
+        chr[3+cmd.length()] = (byte)0x0D;
+        // poskladam do stringu
+        String command = "";
+        for (int i=0;i<chr.length;i++)
+            command = command+String.format("0x%02X",chr[i]) +';';
+
+        byte[] ou = new byte[2];
+        boolean ret = pigCommand(command,ou);
+        if (!ret)
+              return(false);
+
+        if (ou[0]==127)
+          return(true);
+
+        return(false);
     }
 
     // cmd prevedu na array of char a predradim TK magicke znaky

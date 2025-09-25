@@ -37,7 +37,7 @@ public class RegisterActivity extends AppCompatActivity
         // Check if user is signed in (non-null) and update UI accordingly.
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if(currentUser != null){
-            Intent intent = new Intent(getApplicationContext(), LollyApplication.class);
+            Intent intent = new Intent(getApplicationContext(), LollyActivity.class);
             startActivity(intent);
             finish();
         }
@@ -72,7 +72,7 @@ public class RegisterActivity extends AppCompatActivity
             @Override
             public void onClick(View view)
             {
-                Intent intent = new Intent(getApplicationContext(), LollyApplication.class);
+                Intent intent = new Intent(getApplicationContext(), LollyActivity.class);
                 startActivity(intent);
                 finish();
             }

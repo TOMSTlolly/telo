@@ -88,7 +88,7 @@
 
     <string name="dash">-</string>
     <string name="fileViewer">FileViewer</string>
-    <string name="graph">Graph</string>
+    <string name="graph">Graphx</string>
     <string name="options">Options</string>
     <string name="please_choose_mode">Please choose measurement mode</string>
     <string name="app_version">Version</string>
@@ -120,5 +120,227 @@
         <item>ahoj </item>
         <item>nazdar</item>
     </string-array>
+
+
+
+    <!-- Tabs -->
+    <string name="tab_gpsfix">GPS Fix</string>
+    <string name="tab_track">Track</string>
+    <string name="tab_tracklist">Tracklist</string>
+
+    <!-- GPS Fix -->
+    <string name="latitude">Latitude</string>
+    <string name="longitude">Longitude</string>
+    <string name="altitude">Altitude</string>
+    <string name="speed">Speed</string>
+    <string name="direction">Direction</string>
+    <string name="accuracy">Accuracy</string>
+    <string name="time">Time</string>
+    <string name="satellites">Satellites</string>
+
+    <string name="north">N</string>
+    <string name="north_northeast">NNE</string>
+    <string name="northeast">NE</string>
+    <string name="east_northeast">ENE</string>
+    <string name="east">E</string>
+    <string name="east_southeast">ESE</string>
+    <string name="southeast">SE</string>
+    <string name="south_southeast">SSE</string>
+    <string name="south">S</string>
+    <string name="south_southwest">SSW</string>
+    <string name="southwest">SW</string>
+    <string name="west_southwest">WSW</string>
+    <string name="west">W</string>
+    <string name="west_northwest">WNW</string>
+    <string name="northwest">NW</string>
+    <string name="north_northwest">NNW</string>
+
+
+    <!-- GPS Status messages -->
+    <string name="gps_not_accessible">GPS not accessible</string>
+    <string name="gps_disabled">GPS disabled</string>
+    <string name="gps_out_of_service">GPS out of service</string>
+    <string name="gps_searching">Looking for GPS</string>
+    <string name="gps_stabilizing">Stabilizing signal</string>
+
+    <string name="warning_location_denied">The App cannot access the Location</string>
+    <string name="warning_background_restricted">The App cannot work in Background.\nClick here to go to System Settings where, in battery Section, you can allow the Background Activity</string>
+    <string name="warning_enable_location_service">The GPS Sensor is Disabled.\nClick here to go to System Settings, where you can enable the Location Service and set a Locating Method that uses the GPS sensor</string>
+
+    <!-- Track -->
+    <string name="track_id">Track</string>
+    <string name="duration">Duration</string>
+    <string name="max_speed">Max Speed</string>
+    <string name="average_speed">Avg Speed</string>
+    <string name="distance">Distance</string>
+    <string name="overall_direction">Overall Dir</string>
+    <string name="altitude_gap">Altitude Gap</string>
+
+    <!-- Track Status message -->
+    <string name="track_empty">New Track</string>
+    <string name="track_start_with_button_below">Start recording Trackpoints\nor add an Annotation\nusing one of the buttons below</string>
+
+    <!-- Recording buttons (bottom side) -->
+    <string name="record">Record</string>
+    <string name="pause">Pause</string>
+    <string name="annotate">Annotate</string>
+    <string name="stop">Stop</string>
+    <string name="lock">Lock</string>
+    <string name="unlock">Unlock</string>
+
+    <string name="finalize_track">Finalize Track</string>
+    <string name="toast_bottom_bar_locked">The bottom bar is locked</string>
+    <string name="toast_nothing_to_save">Nothing to save</string>
+    <string name="toast_recording_when_gps_found">The recording will begin when the GPS signal is found</string>
+    <string name="toast_annotate_when_gps_found">The annotation will be taken when the GPS signal is found</string>
+
+    <string name="toast_coordinates_copied_to_clipboard">Coordinates copied to clipboard</string>
+
+    <string name="ok">OK</string>
+
+    <string name="annotations">Annotations</string>
+    <string name="trackpoints">Trackpoints</string>
+
+    <!-- Main menu -->
+    <string name="toast_track_saved_into_tracklist">Track saved into the Tracklist</string>
+    <string name="toast_track_exported">Tracks exported to \"%1$s\" folder</string>
+
+    <!-- Annotation Creation dialog -->
+    <string name="dlg_add_annotation">Add annotation</string>
+    <string name="dlg_enter_the_description">Enter the description</string>
+    <string name="dlg_button_add">Add</string>
+
+    <!-- Tracklist -->
+    <string name="tracklist_empty">Tracklist Empty</string>
+
+    <string name="card_trackinfo_length">Length</string>
+    <string name="card_trackinfo_duration">Duration</string>
+    <string name="card_trackinfo_altitude_gap">Alt gap</string>
+    <string name="card_trackinfo_max_speed">Max spd</string>
+    <string name="card_trackinfo_average_speed">Avg spd</string>
+    <string name="card_trackinfo_geopoints">Points</string>
+
+    <!-- Context menu of Tracklist -->
+    <string name="card_menu_export">Export</string>
+    <string name="card_menu_view_selector">View in ...</string>
+    <string name="card_menu_view">View in %1$s</string>
+    <string name="card_menu_delete">Delete</string>
+    <string name="card_menu_share">Share with ...</string>
+    <string name="card_menu_edit">Edit details</string>
+
+    <!-- Tracklist toasts and messagebox -->
+    <string name="card_message_delete_confirmation">Do you really want to delete the selected tracks?</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="cancel">Cancel</string>
+    <string name="export_unable_to_write_file">Unable to write the file</string>
+
+    <!-- Activity categories -->
+    <string name="category_fitness">Fitness</string>
+    <string name="category_water_snow">Water &amp; Snow</string>
+    <string name="category_air">Air</string>
+    <string name="category_wheel">Wheels</string>
+    <string name="category_other">Other</string>
+
+    <!-- Notification App killed messagebox -->
+    <string name="dlg_app_killed">The App has been killed during background recording.</string>
+    <string name="dlg_app_killed_description">Please check in Android Settings that the app is not Battery optimized and not even Background restricted.</string>
+    <string name="open_android_app_settings">Open Settings</string>
+
+    <!-- Preferences -->
+    <string name="pref_category_interface">INTERFACE</string>
+    <string name="pref_keep_screen_on">Keep Screen On</string>
+    <string name="pref_keep_screen_on_summary">Battery drains faster</string>
+    <string name="pref_color_theme">Color Theme</string>
+    <string name="pref_color_theme_dark">Dark</string>
+    <string name="pref_color_theme_light">Light</string>
+    <string name="pref_show_decimal_coordinates">Show Decimal Coordinates</string>
+    <string name="pref_show_decimal_coordinates_summary">Fractional part in decimal notation</string>
+    <string name="pref_show_gps_time_local">Show GPS Time in local Timezone</string>
+    <string name="pref_show_gps_time_local_summary">instead of global GPS Time</string>
+    <string name="pref_show_directions">Show Directions using</string>
+    <string name="pref_show_directions_angle">Degrees East of North</string>
+    <string name="pref_show_directions_cardinal">Cardinal Points</string>
+    <string name="pref_unit_of_measurement">System of Measurement</string>
+    <string name="pref_unit_of_measurement_metric">Metric</string>
+    <string name="pref_unit_of_measurement_imperial">Imperial</string>
+    <string name="pref_unit_of_measurement_aerial_nautical">Aerial / Nautical</string>
+    <string name="pref_unit_of_measurement_speed">Show Speeds in</string>
+    <string name="pref_exportation_folder">Local Exportation Folder</string>
+    <string name="pref_not_set">Not set</string>
+
+    <string name="pref_track_viewer">Track Viewer</string>
+    <string name="pref_track_viewer_not_installed">No GPX/KML Viewer installed</string>
+    <string name="pref_track_viewer_select_every_time">Ask every Time</string>
+
+    <string name="pref_category_tracking">TRACKING</string>
+    <string name="pref_GPS_distance_filter">Distance Filter</string>
+    <string name="pref_GPS_interval_filter">Interval Filter</string>
+    <string name="pref_GPS_filter_disabled">Disabled</string>
+
+    <string name="pref_GPS_update_frequency">GPS Update Interval</string>
+    <string name="pref_GPS_update_frequency_max">The shortest available</string>
+    <string name="pref_GPS_update_frequency_1s">1 second (best accuracy)</string>
+    <string name="pref_GPS_update_frequency_2s">2 seconds</string>
+    <string name="pref_GPS_update_frequency_3s">3 seconds (less accurate)</string>
+
+    <string name="pref_category_altitude_corrections">ALTITUDE CORRECTIONS</string>
+    <string name="pref_EGM96AltitudeCorrection">EGM96 Correction</string>
+    <string name="pref_EGM96AltitudeCorrection_summary">Automatic altitude correction, based on NGA Earth Geoid Model</string>
+    <string name="pref_EGM96AltitudeCorrection_download_progress">Downloading 2028kB file:\nEGM96 Geoid Heights..</string>
+    <string name="pref_AltitudeCorrection">Manual Correction</string>
+    <string name="pref_AltitudeCorrection_summary_not_defined">No offset defined</string>
+
+    <string name="pref_category_exporting">EXPORTATION</string>
+    <string name="pref_export_TXT">Export Tracks in TXT</string>
+    <string name="pref_export_TXT_summary">Plain text, comma-separated values</string>
+    <string name="pref_export_KML">Export Tracks in KML</string>
+    <string name="pref_export_KML_summary">Keyhole Markup Language (v.2.2)</string>
+    <string name="pref_export_GPX">Export Tracks in GPX</string>
+    <string name="pref_export_GPX_summary">Standard GPS eXchange Format</string>
+    <string name="pref_GPX_version">Version of GPX Standard</string>
+    <string name="pref_GPX_version_1_0">GPX 1.0</string>
+    <string name="pref_GPX_version_1_1">GPX 1.1</string>
+    <string name="pref_KML_altitude_mode">KML Altitude mode</string>
+    <string name="pref_KML_altitude_mode_absolute">Absolute</string>
+    <string name="pref_KML_altitude_mode_projected">Projected to Ground</string>
+    <string name="pref_track_stats">Track Stats based on</string>
+    <string name="pref_track_stats_totaltime">Total time</string>
+    <string name="pref_track_stats_movingtime">Time in Movement</string>
+
+    <!-- Preferences toasts -->
+    <string name="toast_download_error">Download error</string>
+    <string name="toast_download_completed">Download completed</string>
+    <string name="toast_download_failed">Download failed. Try again later</string>
+    <string name="toast_active_track_not_empty">The active track is not empty</string>
+    <string name="toast_no_browser_installed">No Internet browser installed</string>
+
+    <!-- About Dialog -->
+    <string name="about_version">ver.</string>
+    <string name="about_description">Copyright © 2016–%1$s BasicAirData\nhttps://www.basicairdata.eu\n\nBasicAirData GPS Logger records your tracks using GPS. You can view them in your preferred viewer, share, and export them to your device in KML, GPX, and TXT format.\n\nThis program is free software, released under the terms of the GNU General Public License.\nFor more details see: https://www.gnu.org/licenses/gpl.txt</string>
+    <string name="about_description_googleplaystore">If You enjoy using this app, please take a moment to rate GPS Logger in the Google Play Store.</string>
+    <string name="about_ok">Close</string>
+    <string name="about_rate_this_app">Rate this App</string>
+    <string name="about_unable_to_rate">Unable to reach the Store</string>
+
+    <!-- Notification icon -->
+    <string name="notification_contenttext">is active</string>
+
+    <!-- Exit confirmation -->
+    <string name="message_exit_finalizing">You are closing the app.\nDo you want to finalize the current track now?</string>
+
+    <!-- Units of Measurement -->
+    <string name="UM_m">m</string>
+    <string name="UM_km">km</string>
+    <string name="UM_m_s">m/s</string>
+    <string name="UM_km_h">km/h</string>
+    <string name="UM_ft">ft</string>
+    <string name="UM_mi">mi</string>
+    <string name="UM_fps">fps</string>
+    <string name="UM_mph">mph</string>
+    <string name="UM_nm">NM</string>
+    <string name="UM_kn">kn</string>
+    <string name="UM_s">s</string>
+
 
 </resources>
