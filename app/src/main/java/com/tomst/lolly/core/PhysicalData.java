@@ -1,8 +1,8 @@
 package com.tomst.lolly.core;
 
 
-class PhysicalData {
-    String value;       // The Numerical value of the Physical Quantity
-    String um;          // The Unit of Measurement
+public class PhysicalData {
+    public String value;       // The Numerical value of the Physical Quantity
+    public String um;          // The Unit of Measurement
 }
 

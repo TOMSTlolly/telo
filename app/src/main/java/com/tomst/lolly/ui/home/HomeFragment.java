@@ -164,6 +164,19 @@ public class HomeFragment extends Fragment {
         }
   }
 
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    @Override
+    public void onDestroyView() {
+
+        // save if we skipped the tFinishedData
+        if (!readWasFinished)
+            saveLogAndData();
+
+//        odometer.pauseReading();
+        super.onDestroyView();
+        binding = null;
+    }
+
     private ServiceConnection connection = new ServiceConnection() {
        @Override
        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
@@ -176,7 +189,8 @@ public class HomeFragment extends Fragment {
 
            //Context mContext = getContext();
            odometer.SetContext(mContext);      // az tady muze startovat hardware
-           odometer.startBindService();
+           odometer.startBindService();        // tady se mi rozbiha servis
+           odometer.enableLoop(true);
            bound = true;
        }
 
@@ -193,14 +207,30 @@ public class HomeFragment extends Fragment {
         mContext = context;
     }
 
+    @Override
+    public void onPause() {
+        super.onPause();
+
+        /*
+        if (odometer != null) {
+            odometer.enableLoop(false);
+        }
+         */
+
+    }
+
      @Override
      public void onResume() {
         super.onResume();
 
+
+        /*
         if (odometer != null) {
             odometer.SetServiceState(TDevState.tStart);
-
+            odometer.enableLoop(true);
         }
+         */
+
          // Set the orientation to landscape (90 degrees)
          getActivity().setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 
@@ -216,15 +246,23 @@ public class HomeFragment extends Fragment {
         Intent intent = new Intent(getContext(), LollyService.class);
         //getActivity().startService(intent);
         getContext().bindService(intent, connection, Context.BIND_AUTO_CREATE);
+        /*
+        if (odometer != null) {
+            odometer.SetServiceState(TDevState.tStart);
+            odometer.enableLoop(true);
+        }
+         */
      }
 
     @Override
     public void onStop() {
-        super.onStop();
-        if (bound) {
+
+        if (bound && odometer != null) {
+            odometer.enableLoop(false);
             getContext().unbindService(connection);
             bound = false;
         }
+        super.onStop();
     }
 
     /*
@@ -804,15 +842,5 @@ public class HomeFragment extends Fragment {
        }
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.O)
-    @Override
-    public void onDestroyView() {
 
-        // save if we skipped the tFinishedData
-        if (!readWasFinished)
-           saveLogAndData();
-
-        super.onDestroyView();
-        binding = null;
-    }
 }

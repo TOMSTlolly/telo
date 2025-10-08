@@ -82,7 +82,7 @@
                     android:layout_weight="9"
                     android:checked="true"
                     android:tag="4"
-                    android:text="Growth/Soil Moisture:" />
+                    android:text="Soil" />
 
         </LinearLayout>
 </LinearLayout>

@@ -1,5 +1,8 @@
 package com.tomst.lolly;
 
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -7,20 +10,41 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Binder;
 import android.os.Looper;
 import android.os.Message;
+import android.os.PowerManager;
+import android.util.Log;
 import android.widget.Toast;
+
+import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
+
 import com.tomst.lolly.core.BoundServiceListener;
 import com.tomst.lolly.core.TDevState;
 import com.tomst.lolly.core.TInfo;
 import com.tomst.lolly.core.TMSReader;
+import com.tomst.lolly.core.EventBusMSG;
+import com.tomst.lolly.core.PhysicalData;
+import com.tomst.lolly.core.PhysicalDataFormatter;
+
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
 
 public class LollyService extends Service {
+
+    private static final int ID = 1;                        // The id of the notification
+    private String oldNotificationText = "";
+    private NotificationCompat.Builder builder;
+    private NotificationManager mNotificationManager;
+    private boolean recordingState;
+    private PowerManager.WakeLock wakeLock;                 // PARTIAL_WAKELOCK
+
 
     public void SetRunning(boolean val){
         ftTMS.SetRunning(val);
@@ -28,7 +52,12 @@ public class LollyService extends Service {
 
     private Context mContext;
 
+    public void enableLoop(boolean Enable){
+        ftTMS.Enable(Enable);
+    }
+
     public void SetServiceState(TDevState devState){
+
         ftTMS.SetDevState(devState);
     }
 
@@ -65,6 +94,8 @@ public class LollyService extends Service {
         handler.sendMessage(message);
     }
 
+
+
     private final class ServiceHandler extends Handler {
         public ServiceHandler(Looper looper) {
             super(looper);
@@ -75,16 +106,14 @@ public class LollyService extends Service {
             // For our sample, we just sleep for 5 seconds.
             try {
                 sendDataProgress(TDevState.tLollyService, -1000);
-                /*
-                for (int i=0;i<3600;i++) {
-                    Thread.sleep(1000);
-                    sendDataProgress(TDevState.tReadData, i);
-                }
-                */
 
-                ftTMS.start();
+                Log.w("lollyService", "[#] LollyService.java - handleMessage " + msg.arg1);
 
-                Thread.sleep(1000);
+                ftTMS.Enable(true);
+                if (!ftTMS.started)
+                   ftTMS.start();
+
+                Thread.sleep(500);
 
             } catch (InterruptedException e) {
                 // Restore interrupt status.
@@ -128,6 +157,19 @@ public class LollyService extends Service {
 
         serviceLooper = thread.getLooper();
         serviceHandler = new ServiceHandler(serviceLooper);
+
+
+        PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
+        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"GPSLogger:wakelock");
+        Log.w("myApp", "[#] GPSService.java - CREATE = onCreate");
+        // Workaround for Nokia Devices, Android 9
+        // https://github.com/BasicAirData/GPSLogger/issues/77
+        if (EventBus.getDefault().isRegistered(this)) {
+            //Log.w("myApp", "[#] GPSActivity.java - EventBus: GPSActivity already registered");
+            EventBus.getDefault().unregister(this);
+        }
+        EventBus.getDefault().register(this);
+
     }
 
 
@@ -161,7 +203,8 @@ public class LollyService extends Service {
         SharedPreferences sharedPref = mContext.getSharedPreferences(getString(R.string.save_options), mContext.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPref.edit();
 
-        ftTMS = new TMSReader(mContext);
+        if (ftTMS==null)
+          ftTMS = new TMSReader(mContext);
         ftTMS.SetHandler(handler);
         ftTMS.SetDataHandler(this.dataHandler);
         ftTMS.SetLogHandler(this.loghandler);
@@ -172,12 +215,128 @@ public class LollyService extends Service {
         msg.arg1 = 12;
         serviceHandler.sendMessage(msg);
         ftTMS.SetRunning(true); // povol provoz v mLoop
- //       ftTMS.start();
+     //  ftTMS.start();
+    }
+
+    /**
+     * Creates and gets the Notification.
+     *
+     * @return the Notification
+     */
+    private Notification getNotification() {
+        final String CHANNEL_ID = "GPSLoggerServiceChannel";
+
+        recordingState = isIconRecording();
+        builder = new NotificationCompat.Builder(this, CHANNEL_ID);
+        builder.setSmallIcon(R.drawable.ic_launcher_foreground)
+       // builder.setSmallIcon(recordingState ? R.mipmap.ic_notify_recording_24dp : R.mipmap.ic_notify_24dp)
+                .setColor(getResources().getColor(R.color.colorPrimaryLight))
+                .setContentTitle(getString(R.string.app_name))
+                .setShowWhen(false)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setCategory(NotificationCompat.CATEGORY_SERVICE)
+                .setOngoing(true)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setContentText(composeContentText());
+
+        final Intent startIntent = new Intent(getApplicationContext(), LollyActivity.class);
+        startIntent.setAction(Intent.ACTION_MAIN);
+        startIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+        startIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+        PendingIntent contentIntent = PendingIntent.getActivity(getApplicationContext(), 1, startIntent, PendingIntent.FLAG_IMMUTABLE);
+        builder.setContentIntent(contentIntent);
+        return builder.build();
+    }
+
+    /**
+     * @return true if the icon should be the filled one, indicating that the app is recording.
+     */
+    private boolean isIconRecording () {
+        return ((LollyActivity.getInstance().getGPSStatus() == LollyActivity.GPS_OK) && LollyActivity.getInstance().isRecording());
+    }
+
+
+
+    /**
+     * @return The string to use as Notification description.
+     */
+    private String composeContentText () {
+        String notificationText = "";
+        int gpsStatus = LollyActivity.getInstance().getGPSStatus();
+        switch (gpsStatus) {
+            case LollyActivity.GPS_DISABLED:
+                notificationText = getString(R.string.gps_disabled);
+                break;
+            case LollyActivity.GPS_OUTOFSERVICE:
+                notificationText = getString(R.string.gps_out_of_service);
+                break;
+            case LollyActivity.GPS_TEMPORARYUNAVAILABLE:
+            case LollyActivity.GPS_SEARCHING:
+                notificationText = getString(R.string.gps_searching);
+                break;
+            case LollyActivity.GPS_STABILIZING:
+                notificationText = getString(R.string.gps_stabilizing);
+                break;
+            case LollyActivity.GPS_OK:
+                if (LollyActivity.getInstance().isRecording() && (LollyActivity.getInstance().getCurrentTrack() != null)) {
+                    PhysicalDataFormatter phdformatter = new PhysicalDataFormatter();
+                    PhysicalData phdDuration;
+                    PhysicalData phdDistance;
+
+                    // Duration
+                    phdDuration = phdformatter.format(LollyActivity.getInstance().getCurrentTrack().getPrefTime(), PhysicalDataFormatter.FORMAT_DURATION);
+                    if (phdDuration.value.isEmpty()) phdDuration.value = "00:00";
+                    notificationText = getString(R.string.duration) + ": " + phdDuration.value;
+
+                    // Distance (if available)
+                    phdDistance = phdformatter.format(LollyActivity.getInstance().getCurrentTrack().getEstimatedDistance(), PhysicalDataFormatter.FORMAT_DISTANCE);
+                    if (!phdDistance.value.isEmpty()) {
+                        notificationText += " - " + getString(R.string.distance) + ": " + phdDistance.value + " " + phdDistance.um;
+                    }
+                } else {
+                    notificationText = getString(R.string.notification_contenttext);
+                }
+        }
+        return notificationText;
+    }
+
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        mNotificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        startForeground(ID, getNotification());
+        Log.w("myApp", "[#] GPSService.java - START = onStartCommand");
+        return START_NOT_STICKY;
+    }
+
+
+    /**
+     * The EventBus receiver for Short Messages.
+     */
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void onEvent(Short msg) {
+        if ((msg == EventBusMSG.UPDATE_FIX) && (builder != null)
+                && ((Build.VERSION.SDK_INT < Build.VERSION_CODES.N) || (mNotificationManager.areNotificationsEnabled()))) {
+            String notificationText = composeContentText();
+            if (!oldNotificationText.equals(notificationText)) {
+                builder.setContentText(notificationText);
+                builder.setOngoing(true);                   // https://developer.android.com/develop/background-work/services/foreground-services#user-dismiss-notification
+                if (isIconRecording() != recordingState) {
+                    recordingState = isIconRecording();
+//                    builder.setSmallIcon(recordingState ? R.mipmap.ic_notify_recording_24dp : R.mipmap.ic_notify_24dp);
+                     builder.setSmallIcon(recordingState ? R.mipmap.ic_launcher_adaptive_fore : R.mipmap.ic_launcher_adaptive_back);
+
+                }
+                mNotificationManager.notify(ID, builder.build());
+                oldNotificationText = notificationText;
+                //Log.w("myApp", "[#] GPSService.java - Update Notification Text");
+            }
+        }
     }
 
     @Override
     public void onDestroy() {
-        super.onDestroy();
+
         if (locManager != null && listener != null) {
             if (ContextCompat.checkSelfPermission(this, PERMISSION_STRING)
                     == PackageManager.PERMISSION_GRANTED) {
@@ -186,7 +345,20 @@ public class LollyService extends Service {
             locManager = null;
             listener = null;
         }
+
+        // NAKOPIROVANO Z GPSLogger
+        if (wakeLock != null && wakeLock.isHeld()) {
+            wakeLock.release();
+            Log.w("myApp", "[#] GPSService.java - WAKELOCK released");
+        }
+        EventBus.getDefault().unregister(this);
+        Log.w("myApp", "[#] GPSService.java - DESTROY = onDestroy");
+        // THREAD FOR DEBUG PURPOSE
+        //if (t.isAlive()) t.interrupt();
+        super.onDestroy();
+
         Toast.makeText(this, "service done", Toast.LENGTH_SHORT).show();
     }
+
 
 }

@@ -631,6 +631,25 @@ public class CSVReader extends Thread
         return (true);
     }
 
+    // nakopiruje soubor do temp a vrati prvni a posledni radek
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    public FileDetail FirstLast(DocumentFile file)
+    {
+        try {
+            // Copy DocumentFile to a temporary file
+            File tempFile = FileUtils.copyDocumentFileToTempFile(context, file);
+            // Get Uri from the temp file
+            Uri tempUri = Uri.fromFile(tempFile);
+            // Call the existing FirstLast(Uri uri) method
+            return FirstLast(tempUri);
+        } catch (IOException e) {
+            Log.e(TAG, "Error copying DocumentFile to temp file", e);
+            FileDetail fdet = new FileDetail(file.getName());
+            fdet.setErr(Constants.PARSER_ERROR);
+            return fdet;
+        }// nakopiruj do temp
+    }
+
     // nacte prvni a posledni radek ze souboru
     @RequiresApi(api = Build.VERSION_CODES.O)
     public FileDetail FirstLast(Uri uri) throws IOException {

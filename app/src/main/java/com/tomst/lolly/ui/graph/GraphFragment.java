@@ -240,6 +240,9 @@ public class GraphFragment extends Fragment {
             );
         }
 
+        if ((dataSets == null) || (dataSets.size()<1))
+             return;
+
         do {
             dataSets.get(tag - 1).setVisible(checked);
             chart.invalidate();

@@ -18,8 +18,8 @@ public class EventBusMSG {
         static final short REFRESH_TRACKLIST                =  16;  // Refresh the tracklist, without update it from DB
         static final short REFRESH_TRACKTYPE                =  17;  // Refresh the track type on the Edit Details dialog
 
-        static final short TRACKLIST_DESELECT               =  24;  // The user deselect (into the tracklist) the track with a given id
-        static final short TRACKLIST_SELECT                 =  25;  // The user select (into the tracklist) the track with a given id
+        public static final short TRACKLIST_DESELECT               =  24;  // The user deselect (into the tracklist) the track with a given id
+        public static final short TRACKLIST_SELECT                 =  25;  // The user select (into the tracklist) the track with a given id
         static final short INTENT_SEND                      =  26;  // Request to share
         static final short TOAST_UNABLE_TO_WRITE_THE_FILE   =  27;  // Exporter fails to export the Track (given id)
 

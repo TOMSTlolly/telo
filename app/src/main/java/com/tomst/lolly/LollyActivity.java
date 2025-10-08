@@ -6,6 +6,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 
 import android.Manifest;
+import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -31,6 +32,7 @@ import android.os.IBinder;
 import android.os.Vibrator;
 import android.provider.Settings;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -66,6 +68,7 @@ import com.tomst.lolly.core.EventBusMSG;
 import com.tomst.lolly.core.PhysicalDataFormatter;
 import com.tomst.lolly.core.Track;
 import com.tomst.lolly.core.EGM96;
+import com.tomst.lolly.core.EventBusMSGNormal;
 
 
 import java.io.File;
@@ -85,44 +88,106 @@ import org.greenrobot.eventbus.Subscribe;
 
 
 public class LollyActivity extends AppCompatActivity implements View.OnClickListener, LocationListener {
-    public static final int JOB_TYPE_NONE       = 0;                // No operation
-    public static final int JOB_TYPE_EXPORT     = 1;                // Bulk Exportation
-    public static final int JOB_TYPE_VIEW       = 2;                // Bulk View
-    public static final int JOB_TYPE_SHARE      = 3;                // Bulk Share
-    public static final int JOB_TYPE_DELETE     = 4;                // Bulk Delete
+    public static final int JOB_TYPE_NONE = 0;                // No operation
+    public static final int JOB_TYPE_EXPORT = 1;                // Bulk Exportation
+    public static final int JOB_TYPE_VIEW = 2;                // Bulk View
+    public static final int JOB_TYPE_SHARE = 3;                // Bulk Share
+    public static final int JOB_TYPE_DELETE = 4;                // Bulk Delete
 
-    public static final int GPS_DISABLED                = 0;
-    public static final int GPS_OUTOFSERVICE            = 1;
-    public static final int GPS_TEMPORARYUNAVAILABLE    = 2;
-    public static final int GPS_SEARCHING               = 3;
-    public static final int GPS_STABILIZING             = 4;
-    public static final int GPS_OK                      = 5;
-
+    public static final int GPS_DISABLED = 0;
+    public static final int GPS_OUTOFSERVICE = 1;
+    public static final int GPS_TEMPORARYUNAVAILABLE = 2;
+    public static final int GPS_SEARCHING = 3;
+    public static final int GPS_STABILIZING = 4;
+    public static final int GPS_OK = 5;
+    public static final String FLAG_RECORDING = "flagRecording";      // The persistent Flag is set when the app is recording, in order to detect Background Crashes
+    public static final String FILETYPE_KML = ".kml";
+    public static final String FILETYPE_GPX = ".gpx";
+    //private static final float M_TO_FT = 3.280839895f;
+    public static final int NOT_AVAILABLE = -100000;
     private static final int STABILIZER_TIME = 3000;                // The application discards fixes for 3000 ms (minimum)
     private static final int DEFAULT_SWITCHOFF_HANDLER_TIME = 5000; // Default time for turning off GPS on exit
     private static final int GPS_UNAVAILABLE_HANDLER_TIME = 7000;   // The "GPS temporary unavailable" time
-
     private static final int MAX_ACTIVE_EXPORTER_THREADS = 3;       // The maximum number of Exporter threads to run simultaneously
     private static final int EXPORTING_STATUS_CHECK_INTERVAL = 16;  // The app updates the progress of exportation every 16 milliseconds
-
-    private static final String TASK_SHUTDOWN       = "TASK_SHUTDOWN";      // The AsyncTodo Type to Shut down the DB connection
-    private static final String TASK_NEWTRACK       = "TASK_NEWTRACK";      // The AsyncTodo Type to create a new track into DB
-    private static final String TASK_ADDLOCATION    = "TASK_ADDLOCATION";   // The AsyncTodo Type to create a new track into DB
-    private static final String TASK_ADDPLACEMARK   = "TASK_ADDPLACEMARK";  // The AsyncTodo Type to create a new placemark into DB
-    private static final String TASK_UPDATEFIX      = "TASK_UPDATEFIX";     // The AsyncTodo Type to update the current FIX
-    private static final String TASK_DELETETRACKS   = "TASK_DELETETRACKS";  // The AsyncTodo Type to delete some tracks
-
-    public static final String FLAG_RECORDING       = "flagRecording";      // The persistent Flag is set when the app is recording, in order to detect Background Crashes
-    public static final String FILETYPE_KML         = ".kml";
-    public static final String FILETYPE_GPX         = ".gpx";
-
+    private static final String TASK_SHUTDOWN = "TASK_SHUTDOWN";      // The AsyncTodo Type to Shut down the DB connection
+    private static final String TASK_NEWTRACK = "TASK_NEWTRACK";      // The AsyncTodo Type to create a new track into DB
+    private static final String TASK_ADDLOCATION = "TASK_ADDLOCATION";   // The AsyncTodo Type to create a new track into DB
+    private static final String TASK_ADDPLACEMARK = "TASK_ADDPLACEMARK";  // The AsyncTodo Type to create a new placemark into DB
+    private static final String TASK_UPDATEFIX = "TASK_UPDATEFIX";     // The AsyncTodo Type to update the current FIX
+    private static final String TASK_DELETETRACKS = "TASK_DELETETRACKS";  // The AsyncTodo Type to delete some tracks
     private static final float[] NEGATIVE = {
-            -1.0f,      0,      0,     0,  248,         // red
-            0,  -1.0f,      0,     0,  248,         // green
-            0,      0,  -1.0f,     0,  248,         // blue
-            0,      0,      0, 1.00f,    0          // alpha
+            -1.0f, 0, 0, 0, 248,         // red
+            0, -1.0f, 0, 0, 248,         // green
+            0, 0, -1.0f, 0, 248,         // blue
+            0, 0, 0, 1.00f, 0          // alpha
     };
+    private static final int PERMISSION_REQUEST_CODE = 200;
+    private static final int STORAGE_PERMISSION_CODE = 100;
+    public static String DIRECTORY_TEMP;             // The directory to store temporary tracks = getCacheDir() + "/Tracks"
+    public static String DIRECTORY_FW;              // The directory that contains the empty gpx and kml file = getFilesDir() + "/URI"
+    public static String DIRECTORY_LOGS;             // The directory that contains the empty gpx and kml file = getFilesDir() + "/URI"
+    public static List<String> SAVE_LOG = new ArrayList<>();       // The list of log messages
+    private static Location location = null;  // GPS souradnice
+    private static String SerialNumber;
+    private static LollyActivity singleton;
+    private final BlockingQueue<AsyncTODO> asyncTODOQueue
+            = new LinkedBlockingQueue<>();                      // The FIFO for asynchronous DB operations
+    // The Handler that sets the GPS Status to GPS_TEMPORARYUNAVAILABLE
+    private final Handler gpsUnavailableHandler = new Handler();
+    private final FileOpener fopen;
+    private final String TAG = "TOMST";
+    // The Handler that try to enable location updates after a time delay.
+    // It is used when the GPS provider is not available, to periodically check
+    // if there is a new one available (for example when a Bluetooth GPS antenna is connected)
+    private final Handler enableLocationUpdatesHandler = new Handler();
+    private final Satellites satellites = new Satellites();      // The class that contains all the information about satellites
+    // The Handler that switches off the location updates after a time delay:
+    private final Handler disableLocationUpdatesHandler = new Handler();
+    // nastaveni preferovane cesty pro ukladani dat
+//    private String  prefExportFolder            = "";            // The folder for csv exportation
+    public DatabaseHandler gpsDataBase;
+    public int jobType = JOB_TYPE_NONE;                          // The type of job that is pending
+    // ---- Moje cast LollyActivity
+    SharedPreferences sharedPref = null;
+    private Uri directoryUri;
 
+
+    // for user authentication
+    FirebaseAuth auth;
+    FirebaseUser user;
+
+    public int getGPSStatus() {
+        return gpsStatus;
+    }
+
+    public Track getCurrentTrack() {
+        return currentTrack;
+    }
+
+    Intent gpsServiceIntent;                            // The intent for GPSService
+    //    GPSService gpsService;                              // The Foreground Service that keeps the app alive in Background
+    LollyService gpsService;
+    boolean isGPSServiceBound = false;                  // True if the GPSService is bound
+    private final ServiceConnection gpsServiceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName className,
+                                       IBinder service) {
+//            GPSService.LocalBinder binder = (GPSService.LocalBinder) service;
+            LollyService.LollyBinder binder = (LollyService.LollyBinder) service;
+
+            //gpsService = binder.getServiceInstance();                     //Get instance of your service!
+            gpsService = binder.getOdometer();
+            Log.w("myApp", "[#] GPSApplication.java - GPSSERVICE CONNECTED - onServiceConnected event");
+            isGPSServiceBound = true;
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName arg0) {
+            Log.w("myApp", "[#] GPSApplication.java - GPSSERVICE DISCONNECTED - onServiceDisconnected event");
+            isGPSServiceBound = false;
+        }
+    };
     private String placemarkDescription = "";                    // The description of the Placemark (annotation) set by PlacemarkDialog
     private boolean isPlacemarkRequested;                        // True if the user requested to add a placemark (Annotation)
     private boolean isQuickPlacemarkRequest;                     // True if the user requested to add a placemark in a quick way (no annotation dialog)
@@ -131,51 +196,121 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
     private boolean isGPSLocationUpdatesActive;                  // True if the Location Manager is active (is requesting FIXes)
     private boolean isForcedTrackpointsRecording = false;        // if True, the current fix is recorded into the track;
     private int gpsStatus = GPS_SEARCHING;                       // The status of the GPS: GPS_DISABLED, GPS_OUTOFSERVICE,
-
     // Preferences Variables
     private boolean prefShowDecimalCoordinates;                  // If true the coordinates are shows in decimal notation
-    private int     prefUM                      = PhysicalDataFormatter.UM_METRIC;     // The units of measurement to use for visualization
-    private int     prefUMOfSpeed               = PhysicalDataFormatter.UM_SPEED_KMH;  // The units of measurement to use for visualization of the speeds
-    private float   prefGPSdistance             = 0f;            // The distance filter value
-    private float   prefGPSinterval             = 0f;            // The interval filter value
-    private long    prefGPSupdatefrequency      = 1000L;         // The GPS Update frequency in milliseconds
+    private int prefUM = PhysicalDataFormatter.UM_METRIC;     // The units of measurement to use for visualization
+    private int prefUMOfSpeed = PhysicalDataFormatter.UM_SPEED_KMH;  // The units of measurement to use for visualization of the speeds
+    private float prefGPSdistance = 0f;            // The distance filter value
+    private float prefGPSinterval = 0f;            // The interval filter value
+    private long prefGPSupdatefrequency = 1000L;         // The GPS Update frequency in milliseconds
     private boolean prefEGM96AltitudeCorrection;                 // True if the EGM96 altitude correction is active
-    private double  prefAltitudeCorrection      = 0d;            // The manual offset for the altitude correction, in meters
-    private boolean prefExportKML               = true;          // If true the KML file are exported on Share/Export
-    private boolean prefExportGPX               = true;          // If true the GPX file are exported on Share/Export
-    private int     prefGPXVersion              = 100;           // The version of the GPX schema
+    private double prefAltitudeCorrection = 0d;            // The manual offset for the altitude correction, in meters
+    private boolean prefExportKML = true;          // If true the KML file are exported on Share/Export
+    private boolean prefExportGPX = true;          // If true the GPX file are exported on Share/Export
+    private int prefGPXVersion = 100;           // The version of the GPX schema
     private boolean prefExportTXT;                               // If true the TXT file are exported on Share/Export
-    private int     prefKMLAltitudeMode         = 0;             // The altitude mode for KML files: 1="clampToGround"; 0="absolute"
-    private int     prefShowTrackStatsType      = 0;             // What shown stats are based on: 0="Total time"; 1="Time in movement"
-    private int     prefShowDirections          = 0;             // Visualization of headings: 0="NSWE"; 1="Degrees"
+    private int prefKMLAltitudeMode = 0;             // The altitude mode for KML files: 1="clampToGround"; 0="absolute"
+    private int prefShowTrackStatsType = 0;             // What shown stats are based on: 0="Total time"; 1="Time in movement"
+    private int prefShowDirections = 0;             // Visualization of headings: 0="NSWE"; 1="Degrees"
     private boolean prefGPSWeekRolloverCorrected;                // A flag for Week Rollover correction
-    private boolean prefShowLocalTime           = true;          // I true the app shows GPS Time instead of local time
-    private String  prefExportFolder            = "";            // The folder for tracks exportation
+    private boolean prefShowLocalTime = true;          // I true the app shows GPS Time instead of local time
+    private String prefExportFolder = "";            // The folder for tracks exportation
+    private boolean isMockProvider;
+    private LocationManager locationManager = null;              // GPS LocationManager
+    private int numberOfSatellitesTotal = 0;                     // The total Number of Satellites
+    private int numberOfSatellitesUsedInFix = 0;                 // The Number of Satellites used in Fix
+    private int isAccuracyDecimalCounter = 0;             // 0 = The GPS has accuracy rounded to the meter (not precise antennas)
+    private int gpsActivityActiveTab = 1;                       // The active tab on GPSActivity
+    private int jobProgress = 0;
+    private int jobsPending = 0;                                 // The number of jobs to be done
+    private int numberOfStabilizationSamples = 3;
+    private int stabilizer = numberOfStabilizationSamples;       // The number of stabilization FIXes before the first valid Location
+    private final Runnable gpsUnavailableRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if ((gpsStatus == GPS_OK) || (gpsStatus == GPS_STABILIZING)) {
+                gpsStatus = GPS_TEMPORARYUNAVAILABLE;
+                stabilizer = numberOfStabilizationSamples;
+                EventBus.getDefault().post(EventBusMSG.UPDATE_FIX);
+            }
+        }
+    };
+    private int handlerTime = DEFAULT_SWITCHOFF_HANDLER_TIME;              // The time for the GPS update requests deactivation
+    private LocationExtended currentLocationExtended = null;     // The current Location
+    private LocationExtended currentPlacemark = null;            // The location used to add the Placemark (Annotation)
+    //    private Track currentTrack = null;                           // The current track. Used for adding Trackpoints and Annotations
+//    private Track trackToEdit = null;                            // The Track that the user selected to edit with the "Track Properties" Dialog
+    private int selectedTrackTypeOnDialog = NOT_AVAILABLE;       // The Activity type selected into the Edit Details dialog.
+    //   private int gpsStatus = GPS_SEARCHING;                       // The status of the GPS: GPS_DISABLED, GPS_OUTOFSERVICE,
+    private boolean isPrevFixRecorded;                           // true if the previous fix has been recorded
+    private boolean isFirstFixFound;                             // True if at less one fix has been obtained
+//    private int selectedTrackTypeOnDialog = NOT_AVAILABLE;       // The Activity type selected into the Edit Details dialog.
+    private LocationExtended prevFix = null;          // The previous fix
+    private LocationExtended prevRecordedFix = null;          // The previous recorded fix
+    //    private LocationExtended currentPlacemark = null;            // The location used to add the Placemark (Annotation)
+    private Track currentTrack = null;                           // The current track. Used for adding Trackpoints and Annotations
+    private Track trackToEdit = null;                            // The Track that the user selected to edit with the "Track Properties" Dialog
+    private boolean prefShowGraph = true;                         // Show the graph in the main activity
+    private boolean prefRotateGraph = true;                         // Rotate the graph in the main activity
+    private View view;
+    private ActivityMainBinding binding;
+    private DmdViewModel dmdViewModel;
+    private LollyService lolly;
+    private ServiceConnection connection = new ServiceConnection() {
+        private boolean bound;
+
+        @Override
+        public void onServiceConnected(ComponentName componentName, IBinder binder) {
+            LollyService.LollyBinder lollyBinder =
+                    (LollyService.LollyBinder) binder;
+            lolly = lollyBinder.getOdometer();
+            bound = true;
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+            bound = false;
+        }
+    };
+    private ActivityResultLauncher<Intent> storageActivityResultLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            new ActivityResultCallback<ActivityResult>() {
+                @Override
+                public void onActivityResult(ActivityResult result) {
+                    Log.d(Constants.TAG, "onActivityResult: ");
+                    //here we will handle the result of our intent
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        //Android is 11(R) or above
+                        if (Environment.isExternalStorageManager()) {
+                            //Manage External Storage Permission is granted
+                            Log.d(Constants.TAG, "onActivityResult: Manage External Storage Permission is granted");
+                            createFolder();
+                        } else {
+                            //Manage External Storage Permission is denied
+                            Log.d(Constants.TAG, "onActivityResult: Manage External Storage Permission is denied");
+                            Toast.makeText(LollyActivity.this, "Manage External Storage Permission is denied", Toast.LENGTH_SHORT).show();
+                        }
+                    } else {
+                        //Android is below 11(R)
+                    }
+                }
+            }
+    );
+    private boolean isScreenOn = true;          // True if the screen of the device is ON
+    private MyGPSStatus gpsStatusListener;                       // The listener for the GPS Status changes events
+    private boolean mustUpdatePrefs = true;          // True if preferences needs to be updated
+    private boolean isBackgroundActivityRestricted;              // True if the App is Background Restricted
+    private boolean isBatteryOptimisedWarningVisible = true;     // True if the App shows the warning when the battery optimisation is active
+
+    public LollyActivity() {
+        fopen = new FileOpener(this);
+    }
 
 
-
-    // ---- Moje cast LollyActivity
-    SharedPreferences sharedPref = null;
-    private static final int PERMISSION_REQUEST_CODE = 200;
-    private static final int STORAGE_PERMISSION_CODE = 100;
-
-    public static String DIRECTORY_TEMP;             // The directory to store temporary tracks = getCacheDir() + "/Tracks"
-    public static String DIRECTORY_FW;              // The directory that contains the empty gpx and kml file = getFilesDir() + "/URI"
-    public static String DIRECTORY_LOGS;             // The directory that contains the empty gpx and kml file = getFilesDir() + "/URI"
-
-    public static List<String> SAVE_LOG = new ArrayList<>();       // The list of log messages
-
-    // nastaveni preferovane cesty pro ukladani dat
-//    private String  prefExportFolder            = "";            // The folder for csv exportation
-    public DatabaseHandler gpsDataBase;
-
-    private static Location location = null;  // GPS souradnice
-
-
-    private static String SerialNumber;
     public String getSerialNumber() {
         return SerialNumber;
     }
+
     public void setSerialNumber(String serialNumber) {
         SerialNumber = serialNumber;
     }
@@ -183,6 +318,7 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
     public String getPrefExportFolder() {
         return prefExportFolder;                                 // The folder for csv exportation
     }
+
     public void setPrefExportFolder(String prefExportFolder) {
         this.prefExportFolder = prefExportFolder;                 // The folder for csv exportation
     }
@@ -215,46 +351,6 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
         return prefShowTrackStatsType;
     }
 
-
-    //private static final float M_TO_FT = 3.280839895f;
-    public static final int NOT_AVAILABLE = -100000;
-    private boolean isMockProvider;
-
-    private LocationManager locationManager = null;              // GPS LocationManager
-    private int numberOfSatellitesTotal = 0;                     // The total Number of Satellites
-    private int numberOfSatellitesUsedInFix = 0;                 // The Number of Satellites used in Fix
-    private int isAccuracyDecimalCounter        = 0;             // 0 = The GPS has accuracy rounded to the meter (not precise antennas)
-
-    private int gpsActivityActiveTab = 1;                       // The active tab on GPSActivity
-    private int jobProgress = 0;
-    private int jobsPending = 0;                                 // The number of jobs to be done
-    public int jobType = JOB_TYPE_NONE;                          // The type of job that is pending
-
-    private int numberOfStabilizationSamples = 3;
-    private int stabilizer = numberOfStabilizationSamples;       // The number of stabilization FIXes before the first valid Location
-    private int handlerTime = DEFAULT_SWITCHOFF_HANDLER_TIME;              // The time for the GPS update requests deactivation
-
-    private LocationExtended currentLocationExtended = null;     // The current Location
-    private LocationExtended currentPlacemark = null;            // The location used to add the Placemark (Annotation)
-
-//    private Track currentTrack = null;                           // The current track. Used for adding Trackpoints and Annotations
-//    private Track trackToEdit = null;                            // The Track that the user selected to edit with the "Track Properties" Dialog
-    private int selectedTrackTypeOnDialog = NOT_AVAILABLE;       // The Activity type selected into the Edit Details dialog.
-
-    private boolean isPrevFixRecorded;                           // true if the previous fix has been recorded
-    private boolean isFirstFixFound;                             // True if at less one fix has been obtained
-
-    private LocationExtended prevFix            = null;          // The previous fix
-    private LocationExtended prevRecordedFix    = null;          // The previous recorded fix
- //   private int gpsStatus = GPS_SEARCHING;                       // The status of the GPS: GPS_DISABLED, GPS_OUTOFSERVICE,
-
-//    private LocationExtended currentPlacemark = null;            // The location used to add the Placemark (Annotation)
-    private Track currentTrack = null;                           // The current track. Used for adding Trackpoints and Annotations
-    private Track trackToEdit = null;                            // The Track that the user selected to edit with the "Track Properties" Dialog
-//    private int selectedTrackTypeOnDialog = NOT_AVAILABLE;       // The Activity type selected into the Edit Details dialog.
-
-
-
     public int getNumberOfSatellitesTotal() {
         return numberOfSatellitesTotal;
     }
@@ -263,35 +359,9 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
         return numberOfSatellitesUsedInFix;
     }
 
-    /**
-     * The Class defines a Database transaction to be enqueued
-     */
-    private static class AsyncTODO {
-        String taskType;
-        LocationExtended location;
-    }
-
-    private final BlockingQueue<AsyncTODO> asyncTODOQueue
-            = new LinkedBlockingQueue<>();                      // The FIFO for asynchronous DB operations
-
     public void setPlacemarkDescription(String Description) {
         this.placemarkDescription = Description;
     }
-
-    // The Handler that sets the GPS Status to GPS_TEMPORARYUNAVAILABLE
-    private final Handler gpsUnavailableHandler = new Handler();
-    private final Runnable gpsUnavailableRunnable = new Runnable() {
-        @Override
-        public void run() {
-            if ((gpsStatus == GPS_OK) || (gpsStatus == GPS_STABILIZING)) {
-                gpsStatus = GPS_TEMPORARYUNAVAILABLE;
-                stabilizer = numberOfStabilizationSamples;
-                EventBus.getDefault().post(EventBusMSG.UPDATE_FIX);
-            }
-        }
-    };
-
-
 
     @RequiresPermission(Manifest.permission.VIBRATE)
     @Override
@@ -306,7 +376,8 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
                         isAccuracyDecimalCounter = 0;
                     }
                     isMockProvider = loc.isFromMockProvider();
-                    if (isMockProvider) Log.w("myApp", "[#] GPSApplication.java - Provider Type = MOCK PROVIDER");
+                    if (isMockProvider)
+                        Log.w("myApp", "[#] GPSApplication.java - Provider Type = MOCK PROVIDER");
                     else Log.w("myApp", "[#] GPSApplication.java - Provider Type = GPS PROVIDER");
                 }
             }
@@ -317,7 +388,8 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
                 isAccuracyDecimalCounter -= isAccuracyDecimalCounter > 0 ? 1 : 0;       // If the accuracy is integer for 10 samples, we start to show it rounded to the meter
 
             //Log.w("myApp", "[#] GPSApplication.java - onLocationChanged: provider=" + loc.getProvider());
-            if (loc.hasSpeed() && (loc.getSpeed() == 0)) loc.removeBearing();           // Removes bearing if the speed is zero
+            if (loc.hasSpeed() && (loc.getSpeed() == 0))
+                loc.removeBearing();           // Removes bearing if the speed is zero
             // --------- Workaround for old GPS that are affected to Week Rollover
             //loc.setTime(loc.getTime() - 619315200000L);                               // Commented out, it simulate the old GPS hardware Timestamp
             if (loc.getTime() <= 1388534400000L)                                        // if the Location Time is <= 01/01/2014 00:00:00.000
@@ -336,8 +408,7 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
                     gpsStatus = GPS_STABILIZING;
                     stabilizer = numberOfStabilizationSamples;
                     EventBus.getDefault().post(EventBusMSG.UPDATE_FIX);
-                }
-                else stabilizer--;
+                } else stabilizer--;
                 if (stabilizer <= 0) gpsStatus = GPS_OK;
                 prevFix = eloc;
                 prevRecordedFix = eloc;
@@ -358,7 +429,8 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
                 forceRecord = true;                         // + Force to record the new
             }
 
-            if ((isRecording) && (isPlacemarkRequested)) forceRecord = true;                                    //  Adding an annotation while recording also adds a trackpoint (issue #213)
+            if ((isRecording) && (isPlacemarkRequested))
+                forceRecord = true;                                    //  Adding an annotation while recording also adds a trackpoint (issue #213)
 
             if (gpsStatus == GPS_OK) {
                 AsyncTODO ast = new AsyncTODO();
@@ -386,7 +458,7 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
                         && (prefGPSdistance > 0)                                                            // Only distance filter enabled
                         && ((loc.distanceTo(prevRecordedFix.getLocation()) >= prefGPSdistance)))
                         || (currentTrack.getNumberOfLocations() == 0)))                                         // It is the first point of a track
-                        || (isForcedTrackpointsRecording)){                                                     // recording button is long pressed
+                        || (isForcedTrackpointsRecording)) {                                                     // recording button is long pressed
 
                     if (isForcedTrackpointsRecording) {
                         Vibrator vibrator;
@@ -426,12 +498,8 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
         }
     }
 
-
-
-    public  String getCacheCsvPath() {
-       //File tempDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-       // String ret =  getBaseContext() .getCacheDir() .getAbsolutePath()+ "/Tracks";
-        String ret= null;
+    public String getCacheCsvPath() {
+        String ret = null;
         try {
             ret = getCacheDir().getCanonicalPath() + "/Tracks";
         } catch (IOException e) {
@@ -440,9 +508,8 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
         return ret;
     }
 
-
-    public  String getCacheLogPath() {
-        String ret= null;
+    public String getCacheLogPath() {
+        String ret = null;
         try {
             ret = getCacheDir().getCanonicalPath() + "/Logs";
         } catch (IOException e) {
@@ -451,55 +518,19 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
         return ret;
     }
 
-
     public TDeviceType getDeviceType() {
         return dmdViewModel.GetDeviceType();
     }
 
-    private boolean prefShowGraph = true;                         // Show the graph in the main activity
     public boolean getPrefShowGraph() {
         prefShowGraph = sharedPref.getBoolean("showgraph", true);
         return prefShowGraph;                                                   // Show the graph in the main activity
     }
-    private boolean prefRotateGraph=true;                         // Rotate the graph in the main activity
+
     public boolean getPrefRotateGraph() {
         prefRotateGraph = sharedPref.getBoolean("rotategraph", true);
         return prefRotateGraph;                                                  // Rotate the graph in the main activity
     }
-
-    private View view;
-    private ActivityMainBinding binding;
-
-    private final FileOpener fopen;
-    private DmdViewModel dmdViewModel;
-    private LollyService lolly;
-    private final String TAG = "TOMST";
-
-
-    private static LollyActivity singleton;
-    public static LollyActivity getInstance(){
-        return singleton;
-    }
-
-    public LollyActivity(){
-        fopen = new FileOpener(this);
-    }
-
-    private ServiceConnection connection = new ServiceConnection() {
-        private boolean bound;
-
-        @Override
-        public void onServiceConnected(ComponentName componentName, IBinder binder) {
-            LollyService.LollyBinder lollyBinder =
-                    (LollyService.LollyBinder) binder;
-            lolly = lollyBinder.getOdometer();
-            bound = true;
-        }
-        @Override
-        public void onServiceDisconnected(ComponentName componentName) {
-            bound = false;
-        }
-    };
 
     // Request location
     public Location getLocation() {
@@ -510,13 +541,11 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
         return locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
     }
 
-
-    public boolean checkPermission(){
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R){
+    public boolean checkPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             //Android is 11(R) or above
             return Environment.isExternalStorageManager();
-        }
-        else{
+        } else {
             //Android is below 11(R)
             int write = ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
             int read = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
@@ -525,17 +554,22 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
         }
     }
 
-
     @Override
     public void onClick(View v) {
         if (!checkPermission()) {
-            Snackbar.make(view,"requesting permission", Snackbar.LENGTH_LONG).show();
+            Snackbar.make(view, "requesting permission", Snackbar.LENGTH_LONG).show();
             requestPermission();
         }
-    }
+    }    private final Runnable enableLocationUpdatesRunnable = new Runnable() {
+        @Override
+        public void run() {
+            setGPSLocationUpdates(false);
+            setGPSLocationUpdates(true);
+        }
+    };
 
-    private void requestPermission(){
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R){
+    private void requestPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             //Android is 11(R) or above
             try {
                 Log.d(Constants.TAG, "requestPermission: try");
@@ -545,15 +579,13 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
                 Uri uri = Uri.fromParts("package", this.getPackageName(), null);
                 intent.setData(uri);
                 storageActivityResultLauncher.launch(intent);
-            }
-            catch (Exception e){
+            } catch (Exception e) {
                 Log.e(Constants.TAG, "requestPermission: catch", e);
                 Intent intent = new Intent();
                 intent.setAction(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
                 storageActivityResultLauncher.launch(intent);
             }
-        }
-        else {
+        } else {
             //Android is below 11(R)
             ActivityCompat.requestPermissions(
                     this,
@@ -563,7 +595,7 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
         }
     }
 
-    private void createFolder(){
+    private void createFolder() {
         //get folder name
         String folderName = "test"; //folderNameEt.getText().toString().trim();
 
@@ -580,82 +612,65 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
         }
     }
 
-    private ActivityResultLauncher<Intent> storageActivityResultLauncher = registerForActivityResult(
-            new ActivityResultContracts.StartActivityForResult(),
-            new ActivityResultCallback<ActivityResult>() {
-                @Override
-                public void onActivityResult(ActivityResult result) {
-                    Log.d(Constants.TAG, "onActivityResult: ");
-                    //here we will handle the result of our intent
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R){
-                        //Android is 11(R) or above
-                        if (Environment.isExternalStorageManager()){
-                            //Manage External Storage Permission is granted
-                            Log.d(Constants.TAG, "onActivityResult: Manage External Storage Permission is granted");
-                            createFolder();
-                        }
-                        else{
-                            //Manage External Storage Permission is denied
-                            Log.d(Constants.TAG, "onActivityResult: Manage External Storage Permission is denied");
-                            Toast.makeText(LollyActivity.this, "Manage External Storage Permission is denied", Toast.LENGTH_SHORT).show();
-                        }
-                    }
-                    else {
-                        //Android is below 11(R)
-                    }
-                }
-            }
-    );
-
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == STORAGE_PERMISSION_CODE){
-            if (grantResults.length > 0){
+        if (requestCode == STORAGE_PERMISSION_CODE) {
+            if (grantResults.length > 0) {
                 //check each permission if granted or not
                 boolean write = grantResults[0] == PackageManager.PERMISSION_GRANTED;
                 boolean read = grantResults[1] == PackageManager.PERMISSION_GRANTED;
 
-                if (write && read){
+                if (write && read) {
                     //External Storage permissions granted
                     Log.d(Constants.TAG, "onRequestPermissionsResult: External Storage permissions granted");
                     createFolder();
-                }
-                else{
+                } else {
                     //External Storage permission denied
                     Log.d(Constants.TAG, "onRequestPermissionsResult: External Storage permission denied");
                     Toast.makeText(this, "External Storage permission denied", Toast.LENGTH_SHORT).show();
                 }
             }
         }
-    }
 
+
+
+
+    }
 
     public void createPrivateFolders() {
         // csv
         File sd = new File(DIRECTORY_TEMP);
         if (!sd.exists()) {
-            if (sd.mkdir()) Log.w("myApp", "[#] GPSApplication.java - Folder created: " + sd.getAbsolutePath());
-            else Log.w("myApp", "[#] GPSApplication.java - Unable to create the folder: " + sd.getAbsolutePath());
-        } else Log.w("myApp", "[#] GPSApplication.java - Folder exists: " + sd.getAbsolutePath());
+            if (sd.mkdir())
+                Log.w("myApp", "[#] LollyApplication.java - Folder created: " + sd.getAbsolutePath());
+            else
+                Log.w("myApp", "[#] LollyApplication.java - Unable to create the folder: " + sd.getAbsolutePath());
+        } else Log.w("myApp", "[#] LollyApplication.java - Folder exists: " + sd.getAbsolutePath());
 
         // male obrazky grafu ?
         sd = new File(getApplicationContext().getFilesDir() + "/Thumbnails");
         if (!sd.exists()) {
-            if (sd.mkdir()) Log.w("myApp", "[#] GPSApplication.java - Folder created: " + sd.getAbsolutePath());
-            else Log.w("myApp", "[#] GPSApplication.java - Unable to create the folder: " + sd.getAbsolutePath());
-        } else Log.w("myApp", "[#] GPSApplication.java - Folder exists: " + sd.getAbsolutePath());
+            if (sd.mkdir())
+                Log.w("myApp", "[#] LollyApplication.java - Folder created: " + sd.getAbsolutePath());
+            else
+                Log.w("myApp", "[#] LollyApplication.java - Unable to create the folder: " + sd.getAbsolutePath());
+        } else Log.w("myApp", "[#] LollyApplication.java - Folder exists: " + sd.getAbsolutePath());
 
         sd = new File(DIRECTORY_FW);
         if (!sd.exists()) {
-            if (sd.mkdir()) Log.w("myApp", "[#] GPSApplication.java - Folder created: " + sd.getAbsolutePath());
-            else Log.w("myApp", "[#] GPSApplication.java - Unable to create the folder: " + sd.getAbsolutePath());
-        } else Log.w("myApp", "[#] GPSApplication.java - Folder exists: " + sd.getAbsolutePath());
+            if (sd.mkdir())
+                Log.w("myApp", "[#] LollyApplication.java - Folder created: " + sd.getAbsolutePath());
+            else
+                Log.w("myApp", "[#] LollyApplication.java - Unable to create the folder: " + sd.getAbsolutePath());
+        } else Log.w("myApp", "[#] LollyApplication.java - Folder exists: " + sd.getAbsolutePath());
 
         sd = new File(DIRECTORY_LOGS);
         if (!sd.exists()) {
-            if (sd.mkdir()) Log.w("myApp", "[#] GPSApplication.java - Folder created: " + sd.getAbsolutePath());
-            else Log.w("myApp", "[#] GPSApplication.java - Unable to create the folder: " + sd.getAbsolutePath());
+            if (sd.mkdir())
+                Log.w("myApp", "[#] GPSApplication.java - Folder created: " + sd.getAbsolutePath());
+            else
+                Log.w("myApp", "[#] GPSApplication.java - Unable to create the folder: " + sd.getAbsolutePath());
         } else Log.w("myApp", "[#] GPSApplication.java - Folder exists: " + sd.getAbsolutePath());
 
     }
@@ -679,8 +694,7 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
                             pickedDir = DocumentFile.fromFile(new File(prefExportFolder));
                         }
 
-                        if ((pickedDir==null))
-                        {
+                        if ((pickedDir == null)) {
                             Log.w("myApp", "[#] GPSApplication.java - THE EXPORT FOLDER DOESN'T EXIST");
                             return false;
                         }
@@ -731,14 +745,10 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
                 .show();
     }
 
-    // for user authentication
-    FirebaseAuth auth;
-    FirebaseUser user;
-
     // service binding
     public void startAndBindService() {
         if ((ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) &&
-        (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED)) {
+                (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED)) {
             Intent intent = new Intent(this, LollyService.class);
 //            startService(intent);
             bindService(intent, connection, Context.BIND_AUTO_CREATE);
@@ -746,39 +756,39 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
     }
 
 
-    @Override
-    protected void onStart() {
-        super.onStart();
-        //Intent intent = new Intent(this, LollyService.class);
-        //bindService(intent, connection, Context.BIND_AUTO_CREATE);
-        startAndBindService();
+    public class EventBusInitializer {
+        private static boolean isEventBusInitialized = false;
+        private static final Object LOCK = new Object();
 
-    //    dmdViewModel.sendMessageToFragment("Hello from MainActivity");
-
+        public static void ensureInitialized() {
+            // Dvojitá kontrola zamykání pro thread-safe línou inicializaci
+            if (!isEventBusInitialized) {
+                synchronized (LOCK) {
+                    if (!isEventBusInitialized) {
+                        try {
+                            EventBus.builder()
+                                    .addIndex(new EventBusIndex())
+                                    .installDefaultEventBus();
+                            isEventBusInitialized = true;
+                            Log.d("EventBusInitializer", "EventBus initialized.");
+                        } catch (Exception e) {
+                            Log.e("EventBusInitializer", "Error initializing EventBus.", e);
+                            // Možná nainstalovat bez indexu jako fallback
+                            EventBus.builder().installDefaultEventBus();
+                            isEventBusInitialized = true; // Označit jako inicializovaný i při fallbacku
+                        }
+                    }
+                }
+            }
+        }
     }
+
 
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         Log.d("LollyActivity", "onNewIntent called with intent action: " + intent.getAction());
     }
-
-
-    // The Handler that try to enable location updates after a time delay.
-    // It is used when the GPS provider is not available, to periodically check
-    // if there is a new one available (for example when a Bluetooth GPS antenna is connected)
-    private final Handler enableLocationUpdatesHandler = new Handler();
-    private final Runnable enableLocationUpdatesRunnable = new Runnable() {
-        @Override
-        public void run() {
-            setGPSLocationUpdates(false);
-            setGPSLocationUpdates(true);
-        }
-    };
-
-    private final Satellites satellites = new Satellites();      // The class that contains all the information about satellites
-    private boolean isScreenOn                  = true;          // True if the screen of the device is ON
-
 
     /**
      * Updates the GPS Status for legacy Androids.
@@ -803,8 +813,12 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
             //Log.w("myApp", "[#] GPSApplication.java - updateSats: Used=" + numberOfSatellitesUsedInFix + " Total=" + numberOfSatellitesTotal);
         }
         //Log.w("myApp", "[#] GPSApplication.java - updateSats: Total=" + _NumberOfSatellites + " Used=" + _NumberOfSatellitesUsedInFix);
-    }
-
+    }    private final Runnable disableLocationUpdatesRunnable = new Runnable() {
+        @Override
+        public void run() {
+            setGPSLocationUpdates(false);
+        }
+    };
 
     /**
      * Updates the GPS Status for new Androids (Build.VERSION_CODES >= N).
@@ -832,76 +846,18 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
         //Log.w("myApp", "[#] GPSApplication.java - updateSats: Total=" + _NumberOfSatellites + " Used=" + _NumberOfSatellitesUsedInFix);
     }
 
-
-
-    /**
-     * The Class that manages the GPS Status, using the appropriate methods
-     * depending on the Android Version.
-     * - For VERSION_CODES > N it uses the new GnssStatus.Callback;
-     * - For older Android it uses the legacy GpsStatus.Listener;
-     */
-    private class MyGPSStatus {
-        private GpsStatus.Listener gpsStatusListener;
-        private GnssStatus.Callback mGnssStatusListener;
-
-        public MyGPSStatus() {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                mGnssStatusListener = new GnssStatus.Callback() {
-                    @Override
-                    public void onSatelliteStatusChanged(@NonNull GnssStatus status) {
-                        super.onSatelliteStatusChanged (status);
-                        updateGNSSStatus(status);
-                    }
-                };
-            } else {
-                gpsStatusListener = new GpsStatus.Listener() {
-                    @Override
-                    public void onGpsStatusChanged(int event) {
-                        switch (event) {
-                            case GpsStatus.GPS_EVENT_SATELLITE_STATUS:
-                                updateGPSStatus();
-                                break;
-                        }
-                    }
-                };
-            }
-        }
-
-        /**
-         * Enables the GPS Status listener
-         */
-        public void enable() {
-            if (ContextCompat.checkSelfPermission(LollyActivity.getInstance(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) locationManager.registerGnssStatusCallback(mGnssStatusListener);
-                else locationManager.addGpsStatusListener(gpsStatusListener);
-            }
-        }
-
-        /**
-         * Disables the GPS Status listener
-         */
-        public void disable() {
-            if (ContextCompat.checkSelfPermission(LollyActivity.getInstance(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) locationManager.unregisterGnssStatusCallback(mGnssStatusListener);
-                else locationManager.removeGpsStatusListener(gpsStatusListener);
-            }
-        }
-    }
-
-
-
-
-    private MyGPSStatus gpsStatusListener;                       // The listener for the GPS Status changes events
-
     public boolean isRecording() {
         return isRecording;
     }
+
+    // ---------------------------------------------------------------------- Foreground Service
+
     /**
      * Enables / Disables the GPS Location Updates
      *
      * @param state Tne state of GPS Location Updates: true = enabled; false = disabled.
      */
-    public void setGPSLocationUpdates (boolean state) {
+    public void setGPSLocationUpdates(boolean state) {
         enableLocationUpdatesHandler.removeCallbacks(enableLocationUpdatesRunnable);
 
         if (!state && !isRecording() && isGPSLocationUpdatesActive
@@ -936,51 +892,13 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
         }
     }
 
-
-    // The Handler that switches off the location updates after a time delay:
-    private final Handler disableLocationUpdatesHandler = new Handler();
-    private final Runnable disableLocationUpdatesRunnable = new Runnable() {
-        @Override
-        public void run() {
-            setGPSLocationUpdates(false);
-        }
-    };
-
-    public void setHandlerTime(int handlerTime) {
-        this.handlerTime = handlerTime;
-    }
-
     public int getHandlerTime() {
         return handlerTime;
     }
 
-    // ---------------------------------------------------------------------- Foreground Service
-
-    Intent gpsServiceIntent;                            // The intent for GPSService
-//    GPSService gpsService;                              // The Foreground Service that keeps the app alive in Background
-    LollyService gpsService;
-    boolean isGPSServiceBound = false;                  // True if the GPSService is bound
-
-    private final ServiceConnection gpsServiceConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName className,
-                                       IBinder service) {
-//            GPSService.LocalBinder binder = (GPSService.LocalBinder) service;
-            LollyService.LollyBinder binder = (LollyService.LollyBinder) service;
-
-            //gpsService = binder.getServiceInstance();                     //Get instance of your service!
-            gpsService = binder.getOdometer();
-            Log.w("myApp", "[#] GPSApplication.java - GPSSERVICE CONNECTED - onServiceConnected event");
-            isGPSServiceBound = true;
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName arg0) {
-            Log.w("myApp", "[#] GPSApplication.java - GPSSERVICE DISCONNECTED - onServiceDisconnected event");
-            isGPSServiceBound = false;
-        }
-    };
-
+    public void setHandlerTime(int handlerTime) {
+        this.handlerTime = handlerTime;
+    }
 
     /**
      * Stops and Unbinds to the Foreground Service GPSService
@@ -1000,22 +918,19 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
         }
     }
 
-    private boolean mustUpdatePrefs             = true;          // True if preferences needs to be updated
-    private boolean isBackgroundActivityRestricted;              // True if the App is Background Restricted
-    private boolean isBatteryOptimisedWarningVisible = true;     // True if the App shows the warning when the battery optimisation is active
-
     /**
      * Updates the GPS Location update frequency, basing on the value of prefGPSupdatefrequency.
      * Set prefGPSupdatefrequency to a new value before calling this in order to change
      * frequency.
      */
-    public void updateGPSLocationFrequency () {
+    public void updateGPSLocationFrequency() {
         if (isGPSLocationUpdatesActive
                 && (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)) {
             //Log.w("myApp", "[#] GPSApplication.java - updateGPSLocationFrequency");
             gpsStatusListener.disable();
             locationManager.removeUpdates(this);
-            if (prefGPSupdatefrequency >= 1000) numberOfStabilizationSamples = (int) Math.ceil(STABILIZER_TIME / prefGPSupdatefrequency);
+            if (prefGPSupdatefrequency >= 1000)
+                numberOfStabilizationSamples = (int) Math.ceil(STABILIZER_TIME / prefGPSupdatefrequency);
             else numberOfStabilizationSamples = (int) Math.ceil(STABILIZER_TIME / 1000);
             gpsStatusListener.enable();
             locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, prefGPSupdatefrequency, 0, this);
@@ -1068,14 +983,12 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
 
         try {
             prefGPSdistance = Float.parseFloat(preferences.getString("prefGPSdistance", "0"));
-        }
-        catch(NumberFormatException nfe) {
+        } catch (NumberFormatException nfe) {
             prefGPSdistance = 0;
         }
         try {
             prefGPSinterval = Float.parseFloat(preferences.getString("prefGPSinterval", "0"));
-        }
-        catch(NumberFormatException nfe) {
+        } catch (NumberFormatException nfe) {
             prefGPSinterval = 0;
         }
 
@@ -1101,7 +1014,8 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
         //editor.remove("prefGPSDistanceRaw");
         editor.commit();
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) prefExportFolder = preferences.getString("prefExportFolder", "");
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
+            prefExportFolder = preferences.getString("prefExportFolder", "");
         else setPrefExportFolder(Environment.getExternalStorageDirectory() + "/GPSLogger");
 
         long oldGPSupdatefrequency = prefGPSupdatefrequency;
@@ -1128,6 +1042,17 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
         EventBus.getDefault().post(EventBusMSG.UPDATE_FIX);
         EventBus.getDefault().post(EventBusMSG.UPDATE_TRACK);
         EventBus.getDefault().post(EventBusMSG.UPDATE_TRACKLIST);
+
+        EventBus.getDefault().post(EventBusMSG.UPDATE_FIX);
+    }
+
+    @Subscribe
+    public void onEvent(EventBusMSGNormal msg) {
+        switch (msg.eventBusMSG) {
+            case EventBusMSG.TRACKLIST_SELECT:;
+            //case EventBusMSG.TRACKLIST_DESELECT:
+            //    activateActionModeIfNeeded();
+        }
     }
 
     @Subscribe
@@ -1138,6 +1063,9 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
             ast.location = null;
             asyncTODOQueue.add(ast);
             return;
+        }
+        if (msg == EventBusMSG.UPDATE_FIX){
+
         }
         if (msg == EventBusMSG.ADD_PLACEMARK) {
             AsyncTODO ast = new AsyncTODO();
@@ -1177,7 +1105,7 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
 
             // Check if the App is Background Restricted
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                ActivityManager activityManager = (ActivityManager)getApplicationContext().getSystemService(Context.ACTIVITY_SERVICE);
+                ActivityManager activityManager = (ActivityManager) getApplicationContext().getSystemService(Context.ACTIVITY_SERVICE);
                 if ((activityManager != null) && (activityManager.isBackgroundRestricted())) {
                     isBackgroundActivityRestricted = true;
                     Log.w("myApp", "[#] GPSApplication.java - THE APP IS BACKGROUND RESTRICTED!");
@@ -1196,7 +1124,124 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
     }
 
     @Override
+    protected void onStop() {
+        if (isGPSServiceBound) {
+            unbindService(gpsServiceConnection);
+            isGPSServiceBound = false;
+        }
+        super.onStop();
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        Log.d(TAG, "onSaveInstanceState called." +
+                " - Instance: " + Integer.toHexString(System.identityHashCode(this)));
+        outState.putBoolean("isRecording", isRecording);
+    }
+
+    public static LollyActivity getInstance() {
+        return singleton;
+    }
+
+    /*
+    @Override
+    public void onTerminate() {
+        Log.w("myApp", "[#] GPSApplication.java - onTerminate");
+        EventBus.getDefault().unregister(this);
+        stopAndUnbindGPSService();
+ //       unregisterReceiver(broadcastReceiver);
+        super.onTerminate();
+    }
+     */
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+       // EventBus.getDefault().register(this);
+        //Intent intent = new Intent(this, LollyService.class);
+        //bindService(intent, connection, Context.BIND_AUTO_CREATE);
+        startAndBindService();
+        setGPSLocationUpdates(true);
+        //    dmdViewModel.sendMessageToFragment("Hello from MainActivity");
+    }
+
+
+    @Override
+    protected void onDestroy() {
+        EventBus.getDefault().unregister(this);
+        super.onDestroy();
+        Log.d(TAG, "onDestroy called." +
+                " - Instance: " + Integer.toHexString(System.identityHashCode(this)));
+    }
+
+    /*
+
+    private void updateUi() {
+        if (directoryUri != null) {
+            // Získáme reprezentaci adresáře, se kterou se dá pracovat
+            DocumentFile dir = DocumentFile.fromTreeUri(this, directoryUri);
+            if (dir != null && dir.exists()) {
+                infoTextView.setText("Vybraný adresář:\n" + dir.getName());
+            } else {
+                infoTextView.setText("Chyba: Vybraný adresář již neexistuje nebo k němu nemáme přístup.");
+            }
+        } else {
+            infoTextView.setText("Není vybrán žádný adresář pro ukládání dat.");
+        }
+    }
+    */
+
+
+    // Moderní způsob, jak získat výsledek z jiné Activity (nahrazuje onActivityResult)
+    private final ActivityResultLauncher<Intent> directoryPickerLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
+                    Uri uri = result.getData().getData();
+                    if (uri != null) {
+                        Log.i(TAG, "Uživatel vybral adresář: " + uri.toString());
+
+                        // Získáme trvalé oprávnění pro přístup k tomuto URI
+                        final int takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION;
+                        getContentResolver().takePersistableUriPermission(uri, takeFlags);
+
+                        // Uložíme URI do SharedPreferences
+
+                        sharedPref.edit().putString("prefExportFolder", uri.toString()).apply();
+                        this.directoryUri = uri; // Aktualizujeme lokální proměnnou
+                        //updateUi();
+                        Toast.makeText(this, "Adresář úspěšně nastaven!", Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Log.w(TAG, "Uživatel nevybral žádný adresář.");
+                    Toast.makeText(this, "Nevybrali jste žádný adresář.", Toast.LENGTH_SHORT).show();
+                }
+            });
+
+
+    private void openDirectoryPicker() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+        directoryPickerLauncher.launch(intent);
+    }
+
+    private void showFirstRunDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("Vítejte!")
+                .setMessage("Pro správnou funkci aplikace je potřeba vybrat složku, kam budeme ukládat vaše data. Prosím, vyberte nebo vytvořte adresář v následujícím kroku.")
+                .setPositiveButton("Rozumím, pokračovat", (dialog, which) -> {
+                    openDirectoryPicker();
+                })
+                .setCancelable(false) // Znemožníme zavření dialogu bez akce
+                .show();
+    }
+
+    public static final String KEY_IS_FIRST_RUN = "isFirstRun";
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
+
 
         super.onCreate(savedInstanceState);
 
@@ -1206,10 +1251,15 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
                 " - Instance: " + Integer.toHexString(System.identityHashCode(this)));
 
         singleton = this;
-        location = LollyActivity.getInstance().getLocation();
- //       Log.w(TAG, "[#] LollyApplication.java - onCreate");
 
-        // Initialize Firebase and crashlytics for collecting crash reports and analytics
+        if (!checkPermission()) {
+            requestPermission();
+        }
+
+
+//        location = LollyActivity.getInstance().getLocation();
+
+         // Initialize Firebase and crashlytics for collecting crash reports and analytics
         FirebaseApp.initializeApp(this);
         FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(true);
 
@@ -1231,15 +1281,15 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
             channel.setSound(null, null);
             channel.enableLights(false);
             channel.enableVibration(false);
-            channel.setSound(null,null);
+            channel.setSound(null, null);
 
             NotificationManager manager = getSystemService(NotificationManager.class);
             manager.createNotificationChannel(channel);
         }
 
         //EventBus eventBus = EventBus.builder().addIndex(new EventBusIndex()).build();
-        EventBus.builder().addIndex(new EventBusIndex()).installDefaultEventBus();
-        EventBus.getDefault().register(this);
+       // EventBus.builder().addIndex(new EventBusIndex()).installDefaultEventBus();
+       // EventBus.getDefault().register(this);
 
 
         //  TOAST_VERTICAL_OFFSET = (int)(75 * getResources().getDisplayMetrics().density);
@@ -1247,11 +1297,33 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
         DIRECTORY_FW = getApplicationContext().getCacheDir() + "/Fw";
         DIRECTORY_LOGS = getApplicationContext().getCacheDir() + "/Logs";
 
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);     // Location Manager
+        gpsStatusListener = new MyGPSStatus();
+
+        // GPS Satellites
+
         createPrivateFolders();
         gpsDataBase = new DatabaseHandler(this);
 
         Context context = getApplicationContext();
-        sharedPref= context.getSharedPreferences(getString(R.string.save_options), context.MODE_PRIVATE);
+        sharedPref = context.getSharedPreferences(getString(R.string.save_options), context.MODE_PRIVATE);
+
+        // je to prvni spusteni ?
+        boolean isFirstRun = sharedPref.getBoolean(KEY_IS_FIRST_RUN, true);
+        if (isFirstRun) {
+            Log.i("LollyApplication", "Detekováno první spuštění. Vytvářím výchozí adresář.");
+            //setupDefaultDirectory();
+
+            showFirstRunDialog();
+
+            // Uložíme příznak, že inicializace již proběhla
+            SharedPreferences.Editor editor = sharedPref.edit();
+            editor.putBoolean(KEY_IS_FIRST_RUN, false);
+            editor.apply();
+        } else {
+            Log.i("LollyApplication", "Toto není první spuštění.");
+        }
+
         prefExportFolder = sharedPref.getString("prefExportFolder", "");
         if (!prefExportFolder.isEmpty()) {
             if (!isExportFolderWritable())
@@ -1259,15 +1331,14 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
             //   prefExportFolder = "";  // pokud neexistuje, tak se nastavi na prazdny retezec (
             //prefExportFolder = Environment.DIRECTORY_DOWNLOADS;)
         }
-       prefShowGraph = sharedPref.getBoolean("prefShowGraph", true);
-       prefRotateGraph = sharedPref.getBoolean("prefRotateGraph", true);
 
+        prefShowGraph = sharedPref.getBoolean("prefShowGraph", true);
+        prefRotateGraph = sharedPref.getBoolean("prefRotateGraph", true);
 
- //       Intent intent = getIntent();
+        //       Intent intent = getIntent();
         String action = intent.getAction();
 
-        if (action != null)
-        {
+        if (action != null) {
             switch (intent.getAction()) {
                 case Intent.ACTION_GET_CONTENT:
                     fopen.isRequestDocument = true;
@@ -1284,9 +1355,6 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
         }
 
         //checkPermission();
-        if (!checkPermission()) {
-            requestPermission();
-        }
 
         // sdileny datovy modul
         dmdViewModel = new ViewModelProvider(this).get(DmdViewModel.class);
@@ -1306,11 +1374,11 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.main_menu,menu);
+        getMenuInflater().inflate(R.menu.main_menu, menu);
         return true;
     }
 
-    private void switchToSettingsFragment(){
+    private void switchToSettingsFragment() {
         BottomNavigationView bottomNavigationView;
         bottomNavigationView = (BottomNavigationView) binding.navView;
         View view = bottomNavigationView.findViewById(R.id.navigation_options);
@@ -1324,12 +1392,158 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
 
-        if  (id ==R.id.action_settings) {
+        if (id == R.id.action_settings) {
             switchToSettingsFragment();
             return true;
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    /**
+     * The Class defines a Database transaction to be enqueued
+     */
+    private static class AsyncTODO {
+        String taskType;
+        LocationExtended location;
+    }
+
+    /**
+     * Checks if a boolean preference (excluded from backup) exists.
+     * This kind of Preference is used to store certain Flags, like the recording state.
+     *
+     * @param flag The name of the flag
+     */
+    public boolean preferenceFlagExists(String flag) {
+        SharedPreferences preferences_nobackup = getSharedPreferences("prefs_nobackup",Context.MODE_PRIVATE);
+        return preferences_nobackup.getBoolean(flag, false);
+    }
+
+
+    /*
+    @Override
+    public void onResume() {
+        Log.w("myApp", "[#] " + this + " - onResume()");
+        super.onResume();
+
+        // Workaround for Nokia Devices, Android 9
+        // https://github.com/BasicAirData/GPSLogger/issues/77
+        if (EventBus.getDefault().isRegistered(this)) {
+            //Log.w("myApp", "[#] GPSActivity.java - EventBus: GPSActivity already registered");
+            EventBus.getDefault().unregister(this);
+        }
+
+        EventBus.getDefault().register(this);
+        loadPreferences();
+        EventBus.getDefault().post(EventBusMSG.APP_RESUME);
+
+        // Check for Location runtime Permissions (for Android 23+)
+        if (!gpsApp.isLocationPermissionChecked()) {
+            checkLocationAndNotificationPermission();
+            gpsApp.setLocationPermissionChecked(true);
+        }
+
+        activateActionModeIfNeeded();
+
+        if (LollyActivity.preferenceFlagExists(LollyActivity.FLAG_RECORDING) && !LollyActivity.isRecording()) {
+            // The app is crashed in background
+            Log.w("myApp", "[#] GPSActivity.java - THE APP HAS BEEN KILLED IN BACKGROUND DURING A RECORDING !!!");
+            LollyActivity.clearPreferenceFlag_NoBackup(GPSApplication.FLAG_RECORDING);
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                builder.setMessage(getResources().getString(R.string.dlg_app_killed) + "\n\n" + getResources().getString(R.string.dlg_app_killed_description));
+                builder.setNeutralButton(R.string.open_android_app_settings, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        Intent intent = new Intent();
+                        intent.setAction(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                        Uri uri = Uri.fromParts("package", getPackageName(), null);
+                        intent.setData(uri);
+                        try {
+                            startActivity(intent);
+                        } catch (Exception e) {
+                            //Log.w("myApp", "[#] GPSActivity.java - Unable to open the settings screen");
+                        }
+                        dialog.dismiss();
+                    }
+                });
+            }
+            else builder.setMessage(getResources().getString(R.string.dlg_app_killed));
+            builder.setIcon(android.R.drawable.ic_menu_info_details);
+            builder.setPositiveButton(R.string.about_ok, new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int id) {
+                    dialog.dismiss();
+                }
+            });
+            AlertDialog dialog = builder.create();
+            dialog.show();
+        }
+        if (LollyActivity.isJustStarted() && (LollyActivity.getCurrentTrack().getNumberOfLocations() + gpsApp.getCurrentTrack().getNumberOfPlacemarks() > 0)) {
+            Toast toast = Toast.makeText(gpsApp.getApplicationContext(), R.string.toast_active_track_not_empty, Toast.LENGTH_LONG);
+            toast.setGravity(Gravity.BOTTOM, 0, TOAST_VERTICAL_OFFSET);
+            toast.show();
+        }
+        if (gpsApp.isJustStarted()) gpsApp.deleteOldFilesFromCache(2);
+        gpsApp.setJustStarted(false);
+    }
+
+     */
+
+
+    /**
+     * The Class that manages the GPS Status, using the appropriate methods
+     * depending on the Android Version.
+     * - For VERSION_CODES > N it uses the new GnssStatus.Callback;
+     * - For older Android it uses the legacy GpsStatus.Listener;
+     */
+    private class MyGPSStatus {
+        private GpsStatus.Listener gpsStatusListener;
+        private GnssStatus.Callback mGnssStatusListener;
+
+        public MyGPSStatus() {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                mGnssStatusListener = new GnssStatus.Callback() {
+                    @Override
+                    public void onSatelliteStatusChanged(@NonNull GnssStatus status) {
+                        super.onSatelliteStatusChanged(status);
+                        updateGNSSStatus(status);
+                    }
+                };
+            } else {
+                gpsStatusListener = new GpsStatus.Listener() {
+                    @Override
+                    public void onGpsStatusChanged(int event) {
+                        switch (event) {
+                            case GpsStatus.GPS_EVENT_SATELLITE_STATUS:
+                                updateGPSStatus();
+                                break;
+                        }
+                    }
+                };
+            }
+        }
+
+        /**
+         * Enables the GPS Status listener
+         */
+        public void enable() {
+            if (ContextCompat.checkSelfPermission(LollyActivity.getInstance(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
+                    locationManager.registerGnssStatusCallback(mGnssStatusListener);
+                else locationManager.addGpsStatusListener(gpsStatusListener);
+            }
+        }
+
+        /**
+         * Disables the GPS Status listener
+         */
+        public void disable() {
+            if (ContextCompat.checkSelfPermission(LollyActivity.getInstance(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
+                    locationManager.unregisterGnssStatusCallback(mGnssStatusListener);
+                else locationManager.removeGpsStatusListener(gpsStatusListener);
+            }
+        }
     }
 
 

@@ -18,6 +18,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.os.SystemClock;
+import android.telecom.VideoProfile;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -50,6 +51,7 @@ import com.tomst.lolly.BuildConfig;
 // test3
 public class TMSReader extends Thread
 {
+
     private enum TReadState
     {
         rsStart,
@@ -59,6 +61,9 @@ public class TMSReader extends Thread
         rsFinal
     }
     public boolean started = false;
+    private volatile boolean isRunning = true;
+    private final Object lock = new Object(); // Objekt pro synchronizaci
+
 
     public final int SPI_DOWNLOAD_NONE = 100;
     public final int SPI_DOWNLOAD_ALL = 0;
@@ -97,10 +102,6 @@ public class TMSReader extends Thread
     public RFirmware rfir;
     public TupoHeader tupoHeader;
     private TDevState devState = TDevState.tStart;
-
-
-//    private static volatile TDevState devState;
-
     public void SetDevState(TDevState devState){
         this.devState = devState;
     }
@@ -121,6 +122,48 @@ public class TMSReader extends Thread
     private int DevCount;
     private final boolean bReadThreadGoing;
     public boolean mRunning;
+
+    // --- NOVÉ PROMĚNNÉ PRO PAUZU ---
+    private final Object pauseLock = new Object();
+    private volatile boolean isPaused = false;
+    // --- KONEC NOVÝCH PROMĚNNÝCH ---
+
+
+
+    public  void Enable(boolean Enabled) {
+        Log.d("TMSReader", "Stop method called. Active: " + Enabled);
+
+        if (!Enabled) {
+            isRunning = false; // Nastaví příznak pro pauzu
+            synchronized (pauseLock) {
+                isPaused = true;
+                Log.d(TAG, "pauseLoop() called. isPaused set to true.");
+            }
+        } else {
+            synchronized (pauseLock) {
+                if (isPaused) {
+                    isRunning = true; // Nastaví příznak pro běh
+                    isPaused = false;
+                    Log.d(TAG, "resumeLoop() called. Notifying the waiting thread.");
+                    pauseLock.notifyAll(); // "Probudí" vlákno, pokud čeká v pauseLock.wait()
+                }
+            }
+
+        }
+    }
+
+    /**
+     * Obnoví běh smyčky mLoop() po jejím pozastavení.
+     */
+    public void resumeLoop() {
+        synchronized (pauseLock) {
+            if (isPaused) {
+                isPaused = false;
+                Log.d(TAG, "resumeLoop() called. Notifying the waiting thread.");
+                pauseLock.notifyAll(); // "Probudí" vlákno, pokud čeká v pauseLock.wait()
+            }
+        }
+    }
 
     public void SetHer(uHer her){
         fHer = her;
@@ -158,6 +201,7 @@ public class TMSReader extends Thread
     public void SetDevice(FT_Device Dev) {this.ftDev =Dev;}
 
     private final Context context;
+
 
     // chci, aby firmware existoval v danem kontextu
     public TMSReader(Context context){
@@ -256,8 +300,6 @@ public class TMSReader extends Thread
             }
         };
         */
-
-
         if (BuildConfig.SIMULATE_HARDWARE)
             mTestLoop();
         else
@@ -885,6 +927,7 @@ public class TMSReader extends Thread
         TInfo info;
         info = new TInfo();
         lollyTime = Instant.MIN;
+        started = true;
 
         if (fHer==null)
         {
@@ -902,6 +945,25 @@ public class TMSReader extends Thread
                 && (devState != TDevState.tError)
                 && (mRunning))
         {
+
+            // --- BLOK PRO KONTROLU PAUZY ---
+            synchronized (pauseLock) {
+                if (isPaused) {
+                    try {
+                        Log.d(TAG, "mLoop is paused. Waiting...");
+                        // Uvolní zámek a uspí vlákno, dokud není zavoláno notifyAll()
+                        pauseLock.wait();
+                        Log.d(TAG, "mLoop resumed from wait.");
+                    } catch (InterruptedException e) {
+                        Log.w(TAG, "Thread interrupted while paused. Stopping loop.");
+                        mRunning = false; // Pokud je vlákno přerušeno, bezpečně ukončíme smyčku
+                        Thread.currentThread().interrupt(); // Správná praxe je obnovit příznak přerušení
+                        continue; // Pokračuje na začátek smyčky, která se díky mRunning=false ukončí
+                    }
+                }
+            }
+            // --- KONEC BLOKU PRO PAUZU ---
+
             // devState
             Log.e(TAG, devState.toString());
 
@@ -948,7 +1010,7 @@ public class TMSReader extends Thread
                     // parse header and set rfir
 
                     if (s.length()<2)
-                        break;
+                       continue;
 
                     if (ParseHeader(s)) {
                         info.msg = String.format("%d.%d.%d",rfir.Hw,rfir.Fw,rfir.Sub);
@@ -957,7 +1019,8 @@ public class TMSReader extends Thread
 
                         // TMereni is copied to TInfo in SendMex
                         SendMex(TDevState.tHead,mer,rfir);   // Hlavicka
-                        devState = TDevState.tFirmware;
+                       // devState = TDevState.tFirmware;
+                        devState = TDevState.tSerial;
                     }
                     else {
                         //devState = TDevState.tFinal;
@@ -1209,10 +1272,20 @@ public class TMSReader extends Thread
 
                 case tWaitInLimbo:
                     try {
-                        Thread.sleep(3000); // 5 seconds
+
+                        synchronized (lock){
+                            lock.wait(3000);
+                        }
+                        if (!mRunning) {
+                            // devState = TDevState.tFinal;
+                            break;
+                        }
+                        //Thread.sleep(3000); // 5 seconds
                         //devState = TDevState.tStart;
                         SendMeasure(TDevState.tWaitInLimbo,sMeteo);
                     } catch (InterruptedException e) {
+                        Log.w("TMSReader", "Thread interrupted in tWaitInLimbo.");
+                        isRunning = false;
                         e.printStackTrace();
                     }
 
@@ -1222,6 +1295,10 @@ public class TMSReader extends Thread
                     break;
             }
         }
+
+        Log.e("TOMST", "TMSReader thread is finishing. Final state: " + devState.toString());
+        // Zde můžete provést jakékoli finální čištění
+        SendMeasure(TDevState.tFinal, "Thread stopped.");
 
         Log.e("TOMST", devState.toString());
     }

@@ -125,5 +125,14 @@
     <color name="green_A700">#00C853</color>
 
 
+    <color name="colorRoundedCornerBottom">#eeeeee</color>
+    <color name="colorRoundedCornerTop">#ffffff</color>
+    <color name="colorRoundedCornerBorder">#c7c7c7</color>
+
+    <!-- ======[ SHARED COLORS ]=============================================================== -->
+
+    <color name="colorThumbnailLineColor">#c9c9c9</color> <!-- DO NOT CHANGE THIS COLOR! -->
+
+
 
 </resources>
