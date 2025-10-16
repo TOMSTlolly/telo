@@ -43,6 +43,7 @@
                 android:resource="@xml/provider_paths" />
         </provider>
 
+
         <activity
             android:name=".LollyActivity"
             android:launchMode="singleTask"

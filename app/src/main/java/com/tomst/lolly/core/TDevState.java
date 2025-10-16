@@ -25,6 +25,7 @@ public enum TDevState
     tTMDCycling,
     tBlockNumber,
     tProgress,
+    tVrtule,
     tReadData,
     tReadType,
     tReadFromBookmark,

@@ -7,6 +7,7 @@ import static com.tomst.lolly.core.Constants.SERIAL_NUMBER_INDEX;
 import static com.tomst.lolly.core.Constants.fMicroInter;
 import static com.tomst.lolly.core.Constants.fMicroSlope;
 
+import android.content.Context;
 import android.net.Uri;
 import android.os.Build;
 import android.util.Log;
@@ -31,49 +32,58 @@ public class shared {
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     public static  String CompileFileName(String Prefix,String Serial, String ADir){
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy_MM_dd").withZone(ZoneId.of("UTC"));
-        LocalDateTime localDateTime = LocalDateTime.now();
+        Context context = LollyActivity.getInstance().getApplicationContext();
 
-        int idx=0;
-        boolean filex = true;
-        String locFile = null;
-        String fmtdate = localDateTime.format(formatter);
-        DocumentFile txtFile;
+        Uri treeUri = Uri.parse(ADir);
+        DocumentFile targetDirectory = DocumentFile.fromTreeUri(context, treeUri);
 
-        //CreateTestFile(ADir);
-        try {
-            DocumentFile pickedDir;
-            if (ADir.startsWith("content")) {
-                Uri uri = Uri.parse(ADir);
-                pickedDir = DocumentFile.fromTreeUri(LollyActivity.getInstance().getApplicationContext(), uri);
-            } else {
-                pickedDir = DocumentFile.fromFile(new File(ADir));
-            }
+        LocalDateTime now = LocalDateTime.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy_MM_dd_HH_mm_ss");
+        String timestamp = now.format(formatter);
 
-            // katastrofa, nemuzu vytvorit adresar
-            if (!pickedDir.exists()) {
-                Log.w("myApp", "[#] Exporter.java - UNABLE TO CREATE THE FOLDER");
-                //exportingTask.setStatus(ExportingTask.STATUS_ENDED_FAILED);
-                return null;
-            }
+        // Vytvoření základního názvu, např. "data_92221411_2023_10_26_14_30_05"
+        String baseFileName = Prefix  + Serial + "_" + timestamp;
+        String finalFileName = baseFileName + ".csv";
 
-            //String fName = "testfile";
-            filex = true;
-            Integer i = 0;while ((filex == true) && (i<100)) {
-                locFile = Prefix+Serial+"_"+fmtdate+"_"+Integer.valueOf(i)+".csv";
-                txtFile = pickedDir.findFile(locFile);
-                // soubor uz existuje, neprepisuju, ale pridam index na konci souboru
 
-                if ((txtFile ==null) || (!txtFile.exists()))
-                    filex = false;
-                else
-                    i++;
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+        // 3. Kontrola unikátnosti a přidání číselného sufixu v případě kolize
+        // (např. pokud se metoda zavolá dvakrát během stejné sekundy)
+        int counter = 0;
+        // Metoda findFile je efektivní pro kontrolu existence souboru v DocumentFile
+        while (targetDirectory.findFile(finalFileName) != null) {
+            counter++;
+            finalFileName = baseFileName + "_" + counter + ".csv";
+            Log.w("CompileFileName", "File already exists, generating new name: " + finalFileName);
         }
-        return locFile;
+
+        // 4. Vytvoření souboru v cílovém adresáři a vrácení jeho URI
+        // Vracíme URI jako string, protože to je nejlepší identifikátor pro práci se SAF.
+        DocumentFile newFile = targetDirectory.createFile("text/csv", finalFileName);
+
+        if (newFile != null) {
+            Log.i("CompileFileName", "Successfully created file: " + newFile.getUri().toString());
+            return newFile.getUri().toString();
+        } else {
+            Log.e("CompileFileName", "Failed to create file in the target directory.");
+            return "";
+        }
+
+
+    }
+
+    /**
+     * Extracts the folder name starting from the encoded uri.
+     *
+     * @param uriPath The encoded URI path
+     * @return the path of the folder
+     */
+    public static String extractFolderNameFromEncodedUri(String uriPath) {
+        String spath = Uri.decode(uriPath);
+        String pathSeparator = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) ? ":" : "/";
+        if (spath.contains(pathSeparator)) {
+            String[] spathParts = spath.split(pathSeparator);
+            return spathParts[spathParts.length - 1];
+        } else return spath;
     }
 
 

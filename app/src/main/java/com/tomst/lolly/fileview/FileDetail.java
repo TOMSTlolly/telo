@@ -101,8 +101,10 @@ public class FileDetail
     public String getFull() { return fullName; }
     public long getFileSize() { return FileSize; }
     public long getiCount() {return iCount; }
-    public LocalDateTime getiFrom() {return iFrom; }
+    public LocalDateTime getiFrom() {
+        return iFrom; }
     public LocalDateTime getiInto() {
+
         return iInto;
     }
     public void setFileSize(long size) { FileSize = size; }
@@ -116,7 +118,10 @@ public class FileDetail
     public void setUploaded(boolean uploaded) { this.isUploaded = uploaded; }
 
     // nove property
-    public void setCreated(LocalDateTime created) { this.created = created; }
+    public void setCreated(LocalDateTime created) {
+        this.created = created;
+    }
+
     public String getCreated() {
         return created.toString();
     }

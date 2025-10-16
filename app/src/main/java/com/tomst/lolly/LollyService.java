@@ -183,6 +183,7 @@ public class LollyService extends Service {
     @Override
     public boolean onUnbind(Intent intent){
         ftTMS.SetRunning(false); // vylez z vycitaciho threadu
+        ftTMS.stopAndRelease();
         super.onUnbind(intent);
         return true;
     }

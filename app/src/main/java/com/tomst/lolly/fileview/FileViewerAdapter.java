@@ -97,9 +97,30 @@ public class FileViewerAdapter extends BaseAdapter
         // typ zarizeni
         TDeviceType devType = currentFile.getDeviceType();
         if (devType==null)
-            holder.trackType.setText("?");
+            holder.trackType.setText("U");
         else
             holder.trackType.setText(formatDevType(devType));
+
+
+        // prvni a posledni cas v radku
+        DateTimeFormatter fmtFrom = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        DateTimeFormatter fmtInto  = DateTimeFormatter.ofPattern("yy-MM-dd HH:mm").withZone(ZoneId.of("UTC"));
+
+        if (currentFile.getiFrom() !=null) {
+            String formattedFrom = currentFile.getiFrom().format(fmtFrom);
+            holder.from.setText(formattedFrom);
+        }
+        if (currentFile.getiInto() !=null) {
+            String formattedInto = currentFile.getiInto().format(fmtInto);
+            holder.into.setText(formattedInto);
+        }
+
+
+
+        holder.count.setText(String.valueOf(currentFile.getiCount()));
+        holder.annotation.setText(currentFile.getCreated());
+        holder.annotation.setTextColor(ContextCompat.getColor(mContext, R.color.default_text_color));
+        holder.size.setText(formatSize(currentFile.getFileSize()));
 
 
         // doplnim statistiku, pokud je to znamy datovy soubor
@@ -110,19 +131,6 @@ public class FileViewerAdapter extends BaseAdapter
 
         if (currentFile.errFlag==Constants.PARSER_OK)
         {
-           // DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneId.of("UTC"));
-            DateTimeFormatter fmtFrom = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-            DateTimeFormatter fmtInto  = DateTimeFormatter.ofPattern("yy-MM-dd HH:mm").withZone(ZoneId.of("UTC"));
-
-            String formattedFrom = currentFile.getiFrom().format(fmtFrom);
-            String formattedInto = currentFile.getiInto().format(fmtInto);
-
-            holder.count.setText(String.valueOf(currentFile.getiCount()));
-            holder.annotation.setText(currentFile.getCreated());
-            holder.from.setText(formattedFrom);
-            holder.into.setText(formattedInto);
-            // holder.mintx.setText(String.valueOf(currentFile.getMinT1()));
-
             // maxima a mimina pro vsechny  teplomery
             if (currentFile.getDeviceType() == TDeviceType.dLolly3 || currentFile.getDeviceType() == TDeviceType.dLolly4)
             {
@@ -156,12 +164,10 @@ public class FileViewerAdapter extends BaseAdapter
             holder.checkBox.setChecked(currentFile.isSelected());
             holder.annotation.setTextColor(ContextCompat.getColor(mContext, R.color.default_text_color));
         }
+
         else
         {
-            //holder.cloudIcon.setImageResource(R.drawable.ic_bookmark);
-            //holder.imageView.setImageResource(R.drawable.ic_file_download);
             holder.imageView.setBackgroundColor(Color.RED);
-
             // zobrazim chybovou hlasku
             switch (currentFile.errFlag)
             {
@@ -170,6 +176,9 @@ public class FileViewerAdapter extends BaseAdapter
                     break;
                 case Constants.PARSER_HOLE_ERR:
                     holder.annotation.setText("Hole in data");
+                    break;
+                case Constants.PARSER_FILE_EMPTY:
+                    holder.annotation.setText("Empty---------");
                     break;
                 default:
                     holder.annotation.setText("Unknown");

@@ -217,6 +217,37 @@ public class TMSReader extends Thread
         bReadThreadGoing = false;
     }
 
+
+
+    public void stopAndRelease() {
+        Log.d(TAG, "Destroying TMSReader...");
+
+        // Signal the loop to stop
+        mRunning = false;
+        devState = TDevState.tFinal;
+
+        // Resume the thread if it is paused to allow it to exit the loop
+        resumeLoop();
+
+        // Interrupt the thread to wake it from any sleep or wait state
+        if (isAlive()) {
+            interrupt();
+        }
+
+        // Close the FTDI device connection
+        if (ftDev != null && ftDev.isOpen()) {
+            try {
+                ftDev.close();
+                Log.d(TAG, "FTDI device closed.");
+            } catch (Exception e) {
+                Log.e(TAG, "Error closing FTDI device.", e);
+            }
+        }
+        ftDev = null;
+
+        Log.d(TAG, "TMSReader destroyed.");
+    }
+
     @RequiresApi(api = Build.VERSION_CODES.O)
     private void DoProgress(int pos){
         Message message = handler.obtainMessage();
@@ -232,6 +263,16 @@ public class TMSReader extends Thread
         message.obj = info;
         handler.sendMessage(message);
     }
+
+    private void SendHeartBeat(int pos){
+        Message message = loghandler.obtainMessage();
+        TInfo info = new TInfo();
+        info.stat  = TDevState.tVrtule;
+        info.idx  = pos;
+        message.obj = info;
+        handler.sendMessage(message);
+    }
+
     private void SendMeasure(TDevState stat, String msg) { // Handle sending message back to handler
         Message message = handler.obtainMessage();
         TInfo info = new TInfo();
@@ -928,6 +969,7 @@ public class TMSReader extends Thread
         info = new TInfo();
         lollyTime = Instant.MIN;
         started = true;
+        int idx = 0;
 
         if (fHer==null)
         {
@@ -941,12 +983,14 @@ public class TMSReader extends Thread
                 "save_options", Context.MODE_PRIVATE
         );
 
+        idx = 0;
         while (( devState != TDevState.tFinal )
                 && (devState != TDevState.tError)
                 && (mRunning))
         {
 
             // --- BLOK PRO KONTROLU PAUZY ---
+            /*
             synchronized (pauseLock) {
                 if (isPaused) {
                     try {
@@ -962,7 +1006,9 @@ public class TMSReader extends Thread
                     }
                 }
             }
+             */
             // --- KONEC BLOKU PRO PAUZU ---
+            SendHeartBeat(idx++);
 
             // devState
             Log.e(TAG, devState.toString());
@@ -1294,6 +1340,9 @@ public class TMSReader extends Thread
                 case tCheckTMSFirmware:
                     break;
             }
+
+            // sem deponuju vrtuli
+
         }
 
         Log.e("TOMST", "TMSReader thread is finishing. Final state: " + devState.toString());

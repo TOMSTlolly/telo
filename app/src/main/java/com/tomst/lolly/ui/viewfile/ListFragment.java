@@ -46,6 +46,8 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageMetadata;
 import com.google.firebase.storage.StorageReference;
+
+import com.tomst.lolly.core.shared;
 import com.tomst.lolly.LollyActivity;
 import com.tomst.lolly.R;
 import com.tomst.lolly.core.CSVReader;
@@ -65,6 +67,10 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -72,8 +78,6 @@ import java.util.concurrent.Executors;
 
 public class ListFragment extends Fragment implements OnProListener
 {
-
-
     private ExecutorService executor;
     public void SetFilePath(String path)
     {
@@ -167,7 +171,7 @@ public class ListFragment extends Fragment implements OnProListener
         rootView = binding.getRoot();
 
         // trik, kterym si aplikace rekne o opravneni pri vytvareni formulare
-        Location location = LollyActivity.getInstance().getLocation();
+        // Location location = LollyActivity.getInstance().getLocation();
 
         binding.proBar.setMin(0);
         binding.proBar.setMax(100);
@@ -180,13 +184,14 @@ public class ListFragment extends Fragment implements OnProListener
         else
             sharedFolder = DocumentFile.fromFile(new File(sharedPath));
 
+
         String privatePath = getContext().getFilesDir().toString();
         privateFolder = DocumentFile.fromFile(new File(privatePath));
 
         // textova popiska k umisteni souboru
         TextView folderName = binding.tvFolderDest;
-        //folderName.setText(LollyActivity.getInstance().getCacheCsvPath());
-        folderName.setText(sharedFolder.getName() != null ? sharedFolder.getName() : sharedFolder.getUri().getLastPathSegment());
+        String s = shared.extractFolderNameFromEncodedUri(sharedPath);
+        folderName.setText(s);
 
         // Saving folder destination
         Button btn_reload = binding.btnLoadFolder;
@@ -203,13 +208,6 @@ public class ListFragment extends Fragment implements OnProListener
                 }
             }
 
-            /*
-            @Override   // load files from the folder
-            public void onClick(View view)
-            {
-                DoTestProBar(1000);
-            }
-             */
         });
 
         Button zip_btn = binding.buttonZipall;
@@ -218,60 +216,33 @@ public class ListFragment extends Fragment implements OnProListener
         {
             public void onClick(View v)
             {
-                ZipFiles zipFiles = new ZipFiles();
-
-              //  File dir = new File(Constants.FILEDIR);
-                String zipDirName = Constants.FILEDIR+"//tmp.zip";
-                File dir = new File(DIRECTORY_TEMP);
-                //String zipDirName = DIRECTORY_TEMP+"//tmp.zip";
-
-                zipFiles.zipDirectory(dir, zipDirName);
-
-                // Assume you have created a zip file called "my_project.zip" in your app's cache directory
-                File zipFile = new File(zipDirName);
-
-                // Get a content URI for the zip file using FileProvider
                 Context context = getContext();
-                context = context != null ? context : LollyActivity.getInstance().getApplicationContext();
-                Uri zipUri = FileProvider.getUriForFile(
-                    getContext(),
-                    BuildConfig.APPLICATION_ID + ".provider",
-                    zipFile
-                );
+                String sharedPath = LollyActivity.getInstance().getPrefExportFolder();
+                DocumentFile exportFolder = DocumentFile.fromTreeUri(context, Uri.parse(sharedPath));
+                if (exportFolder == null || !exportFolder.isDirectory()) {
+                    Toast.makeText(context, "Export folder not found", Toast.LENGTH_SHORT).show();
+                    return;
+                }
 
-                // Create an intent with the action ACTION_SEND and the type "application/zip"
+                File cacheDir = context.getCacheDir();
+                File zipFile = new File(cacheDir, "tmp.zip");
+
+                ZipFiles zipFiles = new ZipFiles();
+                zipFiles.zipDocumentFileDirectory(exportFolder, zipFile.getAbsolutePath(), context);
+
+                Uri zipUri = FileProvider.getUriForFile(
+                        context,
+                        BuildConfig.APPLICATION_ID + ".provider",
+                        zipFile
+                );
                 Intent sendIntent = new Intent(Intent.ACTION_SEND);
                 sendIntent.setType("application/zip");
-
-                // Put the content URI of the zip file as an extra
                 sendIntent.putExtra(Intent.EXTRA_STREAM, zipUri);
-
-                // Optionally, you can also add a subject and a text message for the intent
                 sendIntent.putExtra(Intent.EXTRA_SUBJECT, "Zip file");
-                sendIntent.putExtra(
-                    Intent.EXTRA_TEXT,
-                    "Here is content of my download from lolly phone app."
-                );
-
-                // Start the intent using startActivity() or startActivityForResult()
+                sendIntent.putExtra(Intent.EXTRA_TEXT, "Here is content of my download from lolly phone app.");
                 startActivity(sendIntent);
             }
         });
-
-        // database stuff
-        /*
-        db = FirebaseFirestore.getInstance();
-        Button uploadBtn = binding.btnUploadToDB;
-        Button shareBtn = binding.btnShare;
-        uploadBtn.setOnClickListener(new View.OnClickListener()
-        {
-            @Override
-            public void onClick(View view)
-            {
-                uploadDataToStorage();
-            }
-        });
-        */
 
 
         Button shareBtn = binding.btnShare;
@@ -279,7 +250,31 @@ public class ListFragment extends Fragment implements OnProListener
             @Override
             public void onClick(View view)
             {
-                shareData();
+                Context context = getContext();
+                String sharedPath = LollyActivity.getInstance().getPrefExportFolder();
+                DocumentFile exportFolder = DocumentFile.fromTreeUri(context, Uri.parse(sharedPath));
+                if (exportFolder == null || !exportFolder.isDirectory()) {
+                    Toast.makeText(context, "Export folder not found", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                File cacheDir = context.getCacheDir();
+                File zipFile = new File(cacheDir, "tmp.zip");
+
+                ZipFiles zipFiles = new ZipFiles();
+                zipFiles.zipDocumentFileDirectory(exportFolder, zipFile.getAbsolutePath(), context);
+
+                Uri zipUri = FileProvider.getUriForFile(
+                        context,
+                        BuildConfig.APPLICATION_ID + ".provider",
+                        zipFile
+                );
+                Intent sendIntent = new Intent(Intent.ACTION_SEND);
+                sendIntent.setType("application/zip");
+                sendIntent.putExtra(Intent.EXTRA_STREAM, zipUri);
+                sendIntent.putExtra(Intent.EXTRA_SUBJECT, "Zip file");
+                sendIntent.putExtra(Intent.EXTRA_TEXT, "Here is content of my download from lolly phone app.");
+                startActivity(sendIntent);
             }
         });
 
@@ -616,56 +611,7 @@ public class ListFragment extends Fragment implements OnProListener
     }
 
 
-    // naplni seznam fFriends podle csv souboru v adresari
-    // bez nacitani podrobnosti
-    // jen jmeno, velikost, datum
-    // pro rychle zobrazeni seznamu
-    @RequiresApi(api = Build.VERSION_CODES.O)
-    public void DoLoadFil()
-    {
-        fFriends.clear();
-        //File cacheDir = new File(DIRECTORY_TEMP);
-        // Log.d(TAG, "Loading files from: " + cacheDir.getAbsolutePath());
-        //if (cacheDir.isDirectory()) {
-        //    File[] files = cacheDir.listFiles();
-        //    if (files == null || files.length == 0)
-        //       return;
-        if (sharedFolder != null && sharedFolder.isDirectory()) {
-            DocumentFile[] files = sharedFolder.listFiles();
-            if (files == null || files.length == 0)
-                return;
 
-        FileDetail fdet = null;
-        CSVReader reader = new CSVReader();
-        //for (File file : files) {
-        for (DocumentFile file : files) {
-            if (file != null) {
-                if (file.length() == 0) {
-                    Log.d(TAG, "File " + file.getName() + " is empty.");
-                    continue;
-                }
-
-                /*
-                Uri fileUri = Uri.fromFile(file);  // Convert File to Uri
-                try {
-                    fdet = reader.FirstLast(fileUri);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-                fdet.setFull(fileUri.toString());
-                 */
-                fdet = reader.FirstLast(file);
-                fdet.setFull(file.getUri().toString());
-
-                fdet.setName(file.getName());
-                fdet.setNiceName(getNiceName(file.getName()));
-
-                fdet.setFileSize((int) file.length());
-                fFriends.add(fdet);
-            }
-        }
-        }
-    }
 
     // _data_98765432_2024_10_28_5.csv
     // 1
@@ -676,21 +622,23 @@ public class ListFragment extends Fragment implements OnProListener
     // 5 10
     // 6 28
     // 7  5.csv
-    private String  getNiceName(String name)
+    private String getNiceName(String name)
     {
 
         if (!name.contains("_"))
             return name;
 
         String[] parts = name.split("_");
-        if (parts.length > 6)
-            return parts[1];
+        if (parts.length != 8)
+            return name;
 
         if (parts[1].isEmpty())
             return null;
 
-        String s = parts[1] + "-" + parts[2] + parts[3] + parts[4]+ "-" + bef(parts[5],"\\.");
-         return s;
+         //String s = parts[1] + "-" + parts[2] + parts[3] + parts[4]+ "-" + bef(parts[5],"\\.");
+        String s = parts[1] + "-" + parts[2] + parts[3] + parts[4] + bef(parts[7],"\\.");
+
+        return s;
     }
 
     protected Handler handler = new Handler(Looper.getMainLooper()) {
@@ -716,6 +664,7 @@ public class ListFragment extends Fragment implements OnProListener
     }
 
 
+    @RequiresApi(api = Build.VERSION_CODES.O)
     private FileDetail LoadCsvFile(DocumentFile file)
     {
         Context context = getContext();
@@ -723,7 +672,18 @@ public class ListFragment extends Fragment implements OnProListener
         try {
             tempFile = CSVReader.FileUtils.copyDocumentFileToTempFile(context, file);
             Uri tempUri = Uri.fromFile(tempFile);
-            return LoadCsvFile(tempUri);
+            FileDetail fdet =  LoadCsvFile(tempUri);
+            // Get last modified date
+            long lastModified = file.lastModified();
+            // Assuming FileDetail has a setLastModified(long) method; adjust as needed
+            // This is the corrected code
+            fdet.setCreated(
+                    Instant.ofEpochMilli(lastModified)
+                            .atZone(ZoneId.systemDefault())
+                            .toLocalDateTime()
+            );
+
+            return fdet;
         } catch (IOException e) {
             Log.e(TAG, "Error copying DocumentFile to temp file", e);
             FileDetail fdet = new FileDetail(file.getName());
@@ -759,7 +719,7 @@ public class ListFragment extends Fragment implements OnProListener
 
         try{
             // precte cele CSV, zjisti Maxima, minima, diry v datech
-            fdet = csv.readFileContent(fileUri);
+            fdet = csv.readFileContent(fileUri);  //FileDetail
 
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -768,83 +728,7 @@ public class ListFragment extends Fragment implements OnProListener
         return fdet;
     }
 
-    //public void DoLoadFiles(String sharedPath, String privatePath)
-    @RequiresApi(api = Build.VERSION_CODES.O)
-    public void DoLoadFiles() {
 
-        /*
-        File cacheDir = new File(DIRECTORY_TEMP);
-        if (cacheDir.isDirectory()) {
-            File[] files = cacheDir.listFiles();
-            if (files == null || files.length == 0)
-                return;
-        */
-
-        if (sharedFolder != null && sharedFolder.isDirectory()) {
-            DocumentFile[] files = sharedFolder.listFiles();
-            if (files == null || files.length == 0)
-                return;
-
-
-            Context context = LollyActivity.getInstance().getApplicationContext();
-            DatabaseHandler db = LollyActivity.getInstance().gpsDataBase;
-
-            // remove not used files from db
-            String[] usedFiles = new String[files.length];
-            int index = 0;
-
-            /*
-            for (File file : files) {
-                usedFiles[index++] = file.getName();
-            }
-             */
-            for (DocumentFile file: files){
-                usedFiles[index++] = file.getName();
-            }
-
-            db.ClearUnusedFiles(usedFiles);
-
-            Location location = LollyActivity.getInstance().getLocation();
-            FileDetail fdet = null;
-
-            for (DocumentFile file : files) {
-                /*
-                Uri fileUri = Uri.fromFile(file);
-                if (!fileUri.toString().contains(".csv"))
-                    continue;
-                */
-                String fileName = file.getName();
-                if (fileName == null || !fileName.toLowerCase().endsWith(".csv"))
-                    continue;
-
-
-                if (db.getFileDetail(file.getName()) != null) {
-                    fdet = db.getFileDetail(file.getName());
-                    fdet.setNiceName(getNiceName(file.getName()));
-                }
-                else
-                {
-                    //fdet = LoadCsvFile(fileUri);
-                    fdet = LoadCsvFile(file);
-                    fdet.setName(file.getName());
-                    fdet.setFileSize((int) file.length());
-                    //fdet.setFull(fileUri.toString());
-                    fdet.setFull(file.getName());
-                    if (fdet.getFileSize()<1)
-                        fdet.errFlag = Constants.PARSER_FILE_EMPTY;
-
-                    // je to datovy soubor ?
-                    if ((fdet.errFlag == Constants.PARSER_OK) || (fdet.errFlag == Constants.PARSER_HOLE_ERR))
-                        db.addFile(fdet, location);
-                }
-                // predelej radek v recycleru
-                FileDetail temp = findFileName(file.getName());  // najdi existujici radek v recycleru podle jmena souboru
-                if (temp != null) {
-                    updateFriends(fdet, temp);
-                }
-            }
-        }
-    }
 
     private boolean loadCSVFil(String uriPath)  {
         Uri fileUri = Uri.parse(uriPath);
@@ -893,21 +777,153 @@ public class ListFragment extends Fragment implements OnProListener
         return true;
     }
 
+    // naplni seznam fFriends podle csv souboru v adresari
+    // bez nacitani podrobnosti
+    // jen jmeno, velikost, datum
+    // pro rychle zobrazeni seznamu
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    public void DoLoadFil()
+    {
+        fFriends.clear();
+        //File cacheDir = new File(DIRECTORY_TEMP);
+        // Log.d(TAG, "Loading files from: " + cacheDir.getAbsolutePath());
+        //if (cacheDir.isDirectory()) {
+        //    File[] files = cacheDir.listFiles();
+        //    if (files == null || files.length == 0)
+        //       return;
+        if (sharedFolder != null && sharedFolder.isDirectory()) {
+            DocumentFile[] files = sharedFolder.listFiles();
+            if (files == null || files.length == 0)
+                return;
+
+            FileDetail fdet = null;
+            CSVReader reader = new CSVReader();
+            //for (File file : files) {
+            for (DocumentFile file : files) {
+                if (file != null) {
+                    fdet = reader.FirstLast(file);
+                    fdet.setFileSize((int) file.length());
+                    fdet.setCreated(
+                            Instant.ofEpochMilli(file.lastModified())
+                                    .atZone(ZoneId.systemDefault())
+                                    .toLocalDateTime()
+                    );
+
+                    fdet.setFull(file.getUri().toString());
+                    fdet.setName(file.getName());
+                    fdet.setNiceName(getNiceName(file.getName()));
+
+                    fdet.setFileSize((int) file.length());
+                    fFriends.add(fdet);
+                }
+            }
+        }
+    }
+
+    //public void DoLoadFiles(String sharedPath, String privatePath)
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    public void DoLoadFiles() {
+
+        if (sharedFolder != null && sharedFolder.isDirectory()) {
+            DocumentFile[] files = sharedFolder.listFiles();
+            if (files == null || files.length == 0)
+                return;
+
+
+            Context context = LollyActivity.getInstance().getApplicationContext();
+            DatabaseHandler db = LollyActivity.getInstance().gpsDataBase;
+
+            // remove not used files from db
+            String[] usedFiles = new String[files.length];
+            int index = 0;
+
+            // vyhodim prazdne soubory
+            // ty, ktere jsou >0 a jsou relevantni (pripona .csv a prefix data_ )
+            for (DocumentFile file: files){
+                usedFiles[index++] = file.getName();
+            }
+            db.ClearUnusedFiles(usedFiles);  // vyhodi z databaze nazvy souboru, ktere nemam v adresari
+
+            //Location location = LollyActivity.getInstance().getLocation();
+            FileDetail fdet = null;
+
+            for (DocumentFile file : files) {
+
+                String fileName = file.getName();
+                if (fileName == null || !fileName.toLowerCase().endsWith(".csv"))
+                    continue;
+
+                // vymaz prazdny soubor
+                if (file.length() ==0) {
+                    Log.d(TAG, "File " + fileName + " is empty. Deleting...");
+                    if (file.delete()) {
+                        Log.d(TAG, "Empty file " + fileName + " deleted successfully.");
+                    } else {
+                        Log.e(TAG, "Failed to delete empty file: " + fileName);
+                    }
+                    continue; // Skip to the next file
+                }
+
+
+                if (db.getFileDetail(file.getName()) != null) {
+                    fdet = db.getFileDetail(file.getName());
+                    fdet.setNiceName(getNiceName(file.getName()));
+                }
+                else
+                {
+                    // vycitam uplne cely soubor
+                    fdet = LoadCsvFile(file);
+                    fdet.setName(file.getName());
+                    fdet.setNiceName(getNiceName(file.getName()));
+
+                    fdet.setFileSize((int) file.length());
+                    //fdet.setFull(fileUri.toString());
+                    fdet.setFull(file.getName());
+
+
+                    if (fdet.getFileSize()<1)
+                        fdet.errFlag = Constants.PARSER_FILE_EMPTY;
+
+                    // prazdny soubor v seznamu nechci, jenom mi to dela brikule
+
+                    // je to datovy soubor ?
+                    if ((fdet.errFlag == Constants.PARSER_OK) || (fdet.errFlag == Constants.PARSER_HOLE_ERR))
+                        db.addFile(fdet, null);
+                }
+                // predelej radek v recycleru
+                fdet.setFileSize((int) file.length());
+                fFriends.add(fdet);
+                /*
+                FileDetail temp = findFileName(file.getName());  // najdi existujici radek v recycleru podle jmena souboru
+                if (temp != null) {
+                    updateFriends(fdet, temp);
+                }
+                 */
+
+
+            }
+        }
+    }
+
     @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
     public void onStart()
     {
-        Log.d("LIST", "Started...");
+        Log.d("LIST", "Started DoLoadFile() ...");
         super.onStart();
 
-         DoLoadFil();
+     //   DoLoadFil();
 
 
-        Log.d("LIST", "Started...");
+        Log.d("LIST", "Started DoLoadFiles() ...");
+
+       DoLoadFiles();
+
+        /*
         executor.execute(() -> {
             DoLoadFiles();
         });
-
+         */
 
 
     }

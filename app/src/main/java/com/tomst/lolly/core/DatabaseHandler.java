@@ -234,6 +234,10 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     }
 
       // skutecne existujici soubory v cache aplikace
+      // vyhodim z databaze zaznamy, ktere nemaji obraz v adresari
+      // TEST - vycti zarizeni
+      // TEST - vymaz tento soubor z adresari
+      // TEST - novy beh mi soubor oznaci a vyhodi z csvlist (breakpoint v (!found)
       public int ClearUnusedFiles(String[] UsedFileNames) { // fileNames is an array of file names
         SQLiteDatabase db = this.getWritableDatabase();
         Cursor cursor = db.rawQuery("SELECT * FROM csvlist", null);
@@ -241,14 +245,14 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         int i = 0;
         if (cursor.moveToFirst()) {
             do {
-                @SuppressLint("Range") String name = cursor.getString(cursor.getColumnIndex("name"));
+                @SuppressLint("Range") String dbName = cursor.getString(cursor.getColumnIndex("name"));
                 @SuppressLint("Range") int id = cursor.getInt(cursor.getColumnIndex("id"));
                // System.out.println("Name: " + name + ", ID: " + id);
 
-                // search UsedFileNames array for existing
+                //
                 boolean found = false;
                 for (String fileName : UsedFileNames) {
-                    if (name.equals(fileName)) {
+                    if (dbName.equals(fileName)) {
                         found = true;
                         break;
                     }
@@ -256,8 +260,8 @@ public class DatabaseHandler extends SQLiteOpenHelper {
 
                 // If the name is not found in UsedFileNames, delete the entry
                 if (!found) {
-                    // int result = db.delete(TABLE_CLIST, KEY_CLIST_NAME + " = ?", new String[]{name});
-                    System.out.println("Deleted file: " + name);
+                    int result = db.delete(TABLE_CLIST, KEY_CLIST_NAME + " = ?", new String[]{dbName});
+                    System.out.println("Deleted file: " + dbName);
                     i++;
                 }
             } while (cursor.moveToNext());

@@ -42,6 +42,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
                 android:text="SQ.SCN"
+                android:visibility="gone"
                 android:backgroundTint="#f1a833"/>
 
 

@@ -1,9 +1,14 @@
 package com.tomst.lolly.core;
 
+import android.content.Context;
+
+import androidx.documentfile.provider.DocumentFile;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.ZipEntry;
@@ -23,6 +28,29 @@ public class ZipFiles {
 
         ZipFiles zipFiles = new ZipFiles();
         zipFiles.zipDirectory(dir, zipDirName);
+    }
+
+    public void zipDocumentFileDirectory(DocumentFile folder, String zipFilePath, Context context) {
+        try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(zipFilePath))) {
+            for (DocumentFile file : folder.listFiles()) {
+                if (file.isFile()) {
+                    try (InputStream is = context.getContentResolver().openInputStream(file.getUri())) {
+                        if (is == null) continue;
+                        ZipEntry entry = new ZipEntry(file.getName());
+                        zos.putNextEntry(entry);
+
+                        byte[] buffer = new byte[4096];
+                        int len;
+                        while ((len = is.read(buffer)) > 0) {
+                            zos.write(buffer, 0, len);
+                        }
+                        zos.closeEntry();
+                    }
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     /**

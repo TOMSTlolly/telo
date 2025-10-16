@@ -22,6 +22,7 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.view.WindowManager;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
@@ -190,7 +191,7 @@ public class HomeFragment extends Fragment {
            //Context mContext = getContext();
            odometer.SetContext(mContext);      // az tady muze startovat hardware
            odometer.startBindService();        // tady se mi rozbiha servis
-           odometer.enableLoop(true);
+           odometer.enableLoop(true);          // lock uvolnim az po onServiceConnected
            bound = true;
        }
 
@@ -222,19 +223,12 @@ public class HomeFragment extends Fragment {
      @Override
      public void onResume() {
         super.onResume();
-
-
-        /*
-        if (odometer != null) {
-            odometer.SetServiceState(TDevState.tStart);
-            odometer.enableLoop(true);
-        }
-         */
-
          // Set the orientation to landscape (90 degrees)
          getActivity().setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 
-        //ConnectDevice();
+         // Keep screen on while the app is in foreground
+         getActivity().getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
      };
 
      @Override
@@ -436,6 +430,7 @@ public class HomeFragment extends Fragment {
 
                 case tNoHardware:
                     binding.proMessage.setText("NO HARDWARE !!!");
+                    binding.proBar.setProgress(0);
                     break;
 
                 case tWaitForAdapter:
@@ -452,6 +447,7 @@ public class HomeFragment extends Fragment {
                         } else {
                             Log.d("TOMST", "R.drawable.adapter_green is not null");
                         }
+                        binding.proBar.setProgress(0);
                         adapterImage.setImageResource(R.drawable.adapter_green);
                     }
                     break;
@@ -507,17 +503,17 @@ public class HomeFragment extends Fragment {
                     // csv file output, it should be unique for each device and each download
                     LollyActivity.getInstance().setSerialNumber(serialNumber);
 
-                    String ATrackDir = LollyActivity.getInstance().getCacheCsvPath();
+                    //String ATrackDir = LollyActivity.getInstance().getCacheCsvPath();
+                    String ATrackDir = LollyActivity.getInstance().getPrefExportFolder();
                     String ACsvFileName =   CompileFileName("data_",serialNumber,ATrackDir);
+                    csv = new CSVReader(ACsvFileName);
+                    csv.OpenForWrite(ACsvFileName);  // otevre vystupni stream pro addCsv vyse
+
                     ALogFileName= "log_"+shared.aft(ACsvFileName,"data_");
                     ALogFileName = LollyActivity.getInstance().getCacheLogPath()+"/"+ALogFileName;
-
                     AErrFileName= "err_"+shared.aft(ACsvFileName,"data_");
                     AErrFileName = LollyActivity.getInstance().getCacheLogPath()+"/"+AErrFileName;
 
-                    ACsvFileName = ATrackDir + "/" + ACsvFileName;
-                    csv = new CSVReader(ACsvFileName);
-                    csv.OpenForWrite();  // otevre vystupni stream pro addCsv vyse
                     break;
 
                 case tInfo:
@@ -591,6 +587,10 @@ public class HomeFragment extends Fragment {
 
                     HandleHeartbeat();
                     //binding.tvStatus.setText(info.msg);
+                    break;
+
+                case tVrtule:
+                    HandleHeartbeat();
                     break;
 
                 case tLollyService:
@@ -681,6 +681,8 @@ public class HomeFragment extends Fragment {
         binding.phoneTime.setText("01.01.2000 12:34:56");
         binding.devMode.setText("Basic");
         binding.devMemory.setProgress(0);
+        binding.proBar.setProgress(0);
+        binding.proBar.setMax(0);
         binding.devhumADVal.setText("0");
         binding.devt1.setText("0");
         binding.devt2.setText("0");
@@ -709,6 +711,7 @@ public class HomeFragment extends Fragment {
 
         binding = FragmentHomeBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
+        root.setKeepScreenOn(true); // nedovol, aby se displej uspal
         binding.proBar.setProgress(0); // vycisti progress bar
 
         // do formulare nahrej defaultni nastaveni

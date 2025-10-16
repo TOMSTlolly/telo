@@ -887,7 +887,7 @@
                             style="?android:attr/progressBarStyleHorizontal"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
-                            android:progress="70"
+                            android:progress="20"
                             android:progressDrawable="@drawable/background_pro" />
 
                         <LinearLayout

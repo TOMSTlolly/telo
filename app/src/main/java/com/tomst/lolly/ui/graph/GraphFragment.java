@@ -172,15 +172,12 @@ public class GraphFragment extends Fragment {
 
     }
 
-
-
     private  float min(float a, float b, float c) {
         return Math.min(Math.min(a, b), c);
     }
     private  float max(float a, float b, float c) {
         return Math.max(Math.max(a, b), c);
     }
-
 
     protected Handler handler = new Handler(Looper.getMainLooper()) {
         @Override
@@ -196,7 +193,6 @@ public class GraphFragment extends Fragment {
         Uri fileUri = Uri.parse(uriPath);
         CSVReader csv = new CSVReader(fileUri.toString());
         csv.SetHandler(handler);
-
 
         // progress bar
         csv.SetProgressListener(value -> {

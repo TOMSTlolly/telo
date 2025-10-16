@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:card_view="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/card_view"
     android:layout_width="match_parent"
@@ -9,31 +8,30 @@
     android:layout_marginLeft="2dp"
     android:layout_marginRight="2dp"
     android:foreground="@drawable/card_foreground"
-    card_view:cardBackgroundColor="@color/colorCardBackground"
-    card_view:cardCornerRadius="2dp"
-    card_view:cardElevation="3dp"
-    card_view:cardPreventCornerOverlap="false"
-    card_view:cardUseCompatPadding="true">
+    app:cardBackgroundColor="@color/colorCardBackground"
+    app:cardCornerRadius="2dp"
+    app:cardElevation="3dp"
+    app:cardPreventCornerOverlap="false"
+    app:cardUseCompatPadding="true">
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
 
+        <!-- Icon Container -->
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="8"
+            android:layout_weight="1.5"
+            android:gravity="center"
             android:orientation="vertical">
-
 
             <CheckBox
                 android:id="@+id/checkBox"
                 android:layout_width="@dimen/thumbSize"
                 android:layout_height="@dimen/thumbSize"
                 android:layout_gravity="center"
-                android:layout_margin="5dp"
-                android:gravity="center_vertical"
-                android:scaleType="center"
                 android:visibility="gone" />
 
             <ImageView
@@ -41,139 +39,104 @@
                 android:layout_width="@dimen/thumbSize"
                 android:layout_height="@dimen/thumbSize"
                 android:layout_gravity="center"
-                android:layout_margin="5dp"
-                android:gravity="center_vertical"
-                android:scaleType="center"
                 android:src="@drawable/baseline_cloud_done_24"
                 android:visibility="gone" />
 
             <ImageView
                 android:id="@+id/iconID"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_centerVertical="true"
+                android:layout_height="48dp"
+                android:layout_gravity="center"
                 android:layout_margin="5dp"
-                android:layout_weight="1"
-                android:scaleType="center"
+                android:scaleType="fitCenter"
                 android:src="@drawable/baseline_insert_drive_file_24"
                 app:tint="#14532D" />
         </LinearLayout>
 
+        <!-- Text Content Container -->
         <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="8"
             android:orientation="vertical">
 
-            <LinearLayout
+            <!-- Top section with Title and Description -->
+            <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:orientation="horizontal">
+                android:layout_height="wrap_content"
+                android:paddingTop="4dp">
 
-                <LinearLayout
+                <TextView
+                    android:id="@+id/id_TrackName"
                     android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="10"
-                    android:orientation="vertical">
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="4dp"
+                    android:gravity="start"
+                    android:maxLines="1"
+                    android:textAppearance="?android:attr/textAppearanceMedium"
+                    android:textColor="@color/textColorCardTitle"
+                    android:textStyle="bold"
+                    app:layout_constraintEnd_toStartOf="@+id/id_device_type_rowitem"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    tools:text="Track Name" />
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="0dp"
-                        android:layout_weight="3"
-                        android:orientation="horizontal">
-
-                        <TextView
-                            android:id="@+id/id_TrackName"
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent"
-                            android:layout_margin="1dp"
-                            android:gravity="start"
-                            android:textAlignment="viewStart"
-                            android:textAppearance="?android:attr/textAppearanceMedium"
-                            android:textColor="@color/textColorCardTitle"
-                            android:textDirection="locale"
-                            android:textStyle="bold" />
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="0dp"
-                        android:layout_weight="2"
-                        android:orientation="horizontal">
-
-                        <TextView
-                            android:id="@+id/id_textView_card_TrackDesc"
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent"
-                            android:layout_below="@id/id_TrackName"
-                            android:layout_margin="1dp"
-                            android:ellipsize="end"
-                            android:gravity="start"
-                            android:maxLines="1"
-                            android:textAlignment="viewStart"
-                            android:textAppearance="@style/TextAppearanceCardSmall"
-                            android:textDirection="locale"
-                            android:textStyle="italic" />
-                    </LinearLayout>
-                </LinearLayout>
-
-                <LinearLayout
+                <TextView
+                    android:id="@+id/id_textView_card_TrackDesc"
                     android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/id_TrackName"
+                    android:layout_marginTop="2dp"
+                    android:maxLines="1"
+                    android:textStyle="italic"
+                    app:layout_constraintEnd_toEndOf="@+id/id_TrackName"
+                    app:layout_constraintStart_toStartOf="@+id/id_TrackName"
+                    app:layout_constraintTop_toBottomOf="@+id/id_TrackName"
+                    tools:text="1234567890" />
 
-                    <TextView
-                        android:id="@+id/id_device_type_rowitem"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:autoSizeTextType="uniform"
-                        android:autoSizeMinTextSize="8sp"
-                        android:autoSizeMaxTextSize="18sp"
-                        android:autoSizeStepGranularity="1sp"
-                        android:gravity="center"
-                        android:maxLines="1"
-                        android:text="M"
-                        android:textStyle="bold">
+                <TextView
+                    android:id="@+id/id_device_type_rowitem"
+                    android:layout_width="24dp"
+                    android:layout_height="0dp"
+                    android:layout_marginEnd="8dp"
+                    android:autoSizeMaxTextSize="18sp"
+                    android:autoSizeMinTextSize="8sp"
+                    android:autoSizeStepGranularity="1sp"
+                    android:autoSizeTextType="uniform"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:textStyle="bold"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    tools:text="M" />
 
-                    </TextView>
+            </androidx.constraintlayout.widget.ConstraintLayout>
 
-                </LinearLayout>
-            </LinearLayout>
-
-
-            <!-- Male popisky pod textovym souborem a anotaci -->
+            <!-- Bottom section with details -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/id_card_separator"
-                android:layout_toEndOf="@+id/iconID"
-                android:layout_toRightOf="@+id/iconID"
                 android:background="@color/colorCardBackground_Data"
                 android:baselineAligned="false"
                 android:orientation="horizontal"
                 android:paddingStart="8dp"
-                android:paddingLeft="8dp"
                 android:paddingTop="2dp"
                 android:paddingEnd="5dp"
-                android:paddingRight="5dp"
-                android:paddingBottom="6dp"
-                android:weightSum="2">
+                android:paddingBottom="6dp">
 
+                <!-- Left Column -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:orientation="horizontal"
-                    android:paddingBottom="2dp">
+                    android:orientation="horizontal">
 
-                    <!-- popisky  count/start/stop/maxtx -->
                     <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginEnd="8dp"
-                        android:layout_marginRight="8dp"
                         android:orientation="vertical">
 
                         <TextView
@@ -203,10 +166,8 @@
                             android:layout_marginTop="3dp"
                             android:text="@string/label_min_hum"
                             android:textAppearance="@style/TextAppearanceCardSmall" />
-
                     </LinearLayout>
 
-                    <!-- hodnoty prvni sloupec-->
                     <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -218,6 +179,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
                             android:maxLines="1"
+                            android:minEms="10"
                             android:textAppearance="@style/TextAppearanceCardSmall"
                             android:textColor="@color/textColorPrimary" />
 
@@ -250,19 +212,17 @@
                     </LinearLayout>
                 </LinearLayout>
 
-                <!-- prava cast boxu s malinkyma hodnotama pod hlavni popiskou -->
+                <!-- Right Column -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:orientation="horizontal"
-                    android:paddingBottom="2dp">
+                    android:orientation="horizontal">
 
                     <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginEnd="8dp"
-                        android:layout_marginRight="8dp"
                         android:orientation="vertical">
 
                         <TextView
@@ -294,7 +254,6 @@
                             android:textAppearance="@style/TextAppearanceCardSmall" />
                     </LinearLayout>
 
-                    <!-- druhy sloupec -->
                     <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -302,10 +261,11 @@
 
                         <TextView
                             android:id="@+id/id_file_into"
-                            android:layout_width="wrap_content"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
                             android:maxLines="1"
+                            android:minEms="8"
                             android:textAppearance="@style/TextAppearanceCardSmall"
                             android:textColor="@color/textColorPrimary" />
 
@@ -336,14 +296,8 @@
                             android:textAppearance="@style/TextAppearanceCardSmall"
                             android:textColor="@color/textColorPrimary" />
                     </LinearLayout>
-
                 </LinearLayout>
-
             </LinearLayout>
-
-
         </LinearLayout>
     </LinearLayout>
-
-
 </androidx.cardview.widget.CardView>

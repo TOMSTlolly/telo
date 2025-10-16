@@ -30,6 +30,7 @@ package com.tomst.lolly.core;
  import java.nio.file.Files;
  import java.nio.file.Path;
  import java.io.FileOutputStream;
+ import java.io.OutputStream;
  import java.time.LocalDateTime;
 
  import com.tomst.lolly.LollyActivity;
@@ -41,8 +42,8 @@ public class CSVReader extends Thread
     private static Handler progressBarHandler = new Handler(Looper.getMainLooper());  // handler pro vysilani z Threadu
 
     private FileOutputStream fout ;
-
-    private FileOutputStream fNewCsv;
+//    private FileOutputStream fNewCsv;
+    private OutputStream fNewCsv;
     private boolean writeTxf=false;
 
     private int  oldPos=0;
@@ -117,8 +118,8 @@ public class CSVReader extends Thread
     }
 
     private static Context context = null;
-   private  DocumentFile privateDocumentDir;
-   private  DocumentFile documentFile;
+    private  DocumentFile privateDocumentDir;
+    private  DocumentFile documentFile;
 
     public static class FileUtils {
         public static File copyDocumentFileToTempFile(Context context, DocumentFile documentFile) throws IOException {
@@ -189,7 +190,7 @@ public class CSVReader extends Thread
             if (AFileName.startsWith("content")) {
                 Uri uri = Uri.parse(AFileName);
                 documentFile = DocumentFile.fromSingleUri(this.context, uri);;
-                privateDocumentDir = DocumentFile.fromTreeUri(this.context, uri);
+                privateDocumentDir = DocumentFile.fromTreeUri(this.context, uri);  // no usage
             } else {
                 File file = new File(AFileName);
                 if (!file.exists()) {
@@ -218,6 +219,8 @@ public class CSVReader extends Thread
     public CSVReader(String AFileName)
     {
         super("CSVReaderThread"); // nazev vlakna pro debugger
+        this.context = LollyActivity.getInstance().getApplicationContext();
+
         this.FileName = AFileName;
         ClearPrivate();
         ClearAvg();
@@ -321,26 +324,30 @@ public class CSVReader extends Thread
         }
     }
 
-
-    public void OpenForWrite(){
-        this.context = LollyActivity.getInstance().getApplicationContext();
-        String AFileName = this.FileName;
-        try {
-            if (AFileName.startsWith("content")) {
-                Uri uri = Uri.parse(AFileName);
-                documentFile = DocumentFile.fromSingleUri(this.context, uri);;
-                privateDocumentDir = DocumentFile.fromTreeUri(this.context, uri);
-            } else {
-                // fNewCsv = new FileOutputStream(AFileName);
-                fNewCsv = new FileOutputStream(AFileName);
-                //privateDocumentDir = DocumentFile.fromFile(file);
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ;
-        }
+    private void showErrorDialog(String message) {
+        new android.app.AlertDialog.Builder(this.context)
+                .setTitle("Error")
+                .setMessage(message)
+                .setPositiveButton(android.R.string.ok, null)
+                .show();
     }
+
+
+    public void OpenForWrite(String AFileName) {
+        this.context = LollyActivity.getInstance().getApplicationContext();
+
+        Uri fileUri = Uri.parse(AFileName);
+        try {
+            fNewCsv = context.getContentResolver().openOutputStream(fileUri);
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+
+
+    }
+
+
+
 
 
     // format staci nastavit jenom jednou na zacatku
@@ -397,7 +404,7 @@ public class CSVReader extends Thread
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     private void AddToCsv(
-            FileOutputStream AStream,
+            OutputStream AStream,
             TMereni Mer
     ) throws IOException
     {
@@ -641,7 +648,10 @@ public class CSVReader extends Thread
             // Get Uri from the temp file
             Uri tempUri = Uri.fromFile(tempFile);
             // Call the existing FirstLast(Uri uri) method
-            return FirstLast(tempUri);
+            //FileDetail fdet = new FileDetail(file.getUri().getLastPathSegment());
+            FileDetail fdet = FirstLast(tempUri);
+            return fdet;
+
         } catch (IOException e) {
             Log.e(TAG, "Error copying DocumentFile to temp file", e);
             FileDetail fdet = new FileDetail(file.getName());
@@ -696,6 +706,8 @@ public class CSVReader extends Thread
         fdet.setInto(Mer.dtm);
         fdet.setCount(Mer.idx);
         fdet.setDeviceType(Mer.dev);
+        fdet.setFileSize(fileLength);
+
         return fdet;
     }
 
@@ -739,6 +751,18 @@ public class CSVReader extends Thread
     }
 
 
+    private LocalDateTime getCreationDateFromUri(Context context, Uri uri) {
+        String[] projection = { MediaStore.MediaColumns.DATE_ADDED };
+        try (Cursor cursor = context.getContentResolver().query(uri, projection, null, null, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                long dateAdded = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_ADDED));
+                return LocalDateTime.ofEpochSecond(dateAdded, 0, java.time.ZoneOffset.UTC);
+            }
+        }
+        return null;
+    }
+
+
     @RequiresApi(api = Build.VERSION_CODES.O)
     public FileDetail readFileContent(Uri uri) throws IOException
     {
@@ -746,7 +770,8 @@ public class CSVReader extends Thread
 
         // Streamovane vycteni, zatim nejrychlejsi verze
         InputStream inputStream =
-                this.context.getContentResolver().openInputStream(uri);
+              //  this.context.getContentResolver().openInputStream(uri);
+                LollyActivity.getInstance().getContentResolver().openInputStream(uri);
         BufferedReader reader =
                 new BufferedReader(new InputStreamReader(inputStream));
         Integer totalBytes = inputStream.available();  // pocet dostupnych bytu
@@ -759,9 +784,10 @@ public class CSVReader extends Thread
         FileDetail fileDetail = new FileDetail(uri.getLastPathSegment());
 
         // soubor byl vytvoren
-        Path path = new File(uri.getPath()).toPath();
-        FileTime fileTime = (FileTime) Files.getAttribute(path, "creationTime");
-        LocalDateTime creationDate = LocalDateTime.ofInstant(fileTime.toInstant(), ZoneId.systemDefault());
+        //Path path = new File(uri.getPath()).toPath();
+        //FileTime fileTime = (FileTime) Files.getAttribute(path, "creationTime");
+        //LocalDateTime creationDate = LocalDateTime.ofInstant(fileTime.toInstant(), ZoneId.systemDefault());
+        LocalDateTime creationDate = getCreationDateFromUri(context, uri);
         fileDetail.setCreated(creationDate);
 
         // je soubor prazdny ?
@@ -846,11 +872,17 @@ public class CSVReader extends Thread
         if (!this.FileName.contains(".csv") )
             return;
 
-        Context context = LollyActivity.getInstance().getApplicationContext();
-        Uri uri = Uri.parse(this.FileName);
+        this.context = LollyActivity.getInstance().getApplicationContext();
+        // Uri uri = Uri.parse(this.FileName);
+
+        String ADir = LollyActivity.getInstance().getPrefExportFolder();
+        DocumentFile exportDir = DocumentFile.fromTreeUri(this.context, Uri.parse(ADir));
+        if (exportDir == null) return;
+
+        DocumentFile file = exportDir.findFile(this.FileName);
+
         try {
-            //FileDetail det = readFileContent(uri);
-            det = readFileContent(uri);
+            det = readFileContent(file.getUri());
         } catch (IOException e) {
             // Handle error here
             Log.d(TAG,e.toString());

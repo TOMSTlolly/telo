@@ -405,7 +405,9 @@
                             android:minHeight="@dimen/spacing_xxlarge"
                             android:orientation="horizontal"
                             android:paddingLeft="@dimen/spacing_medium"
-                            android:paddingRight="@dimen/spacing_medium">
+                            android:paddingRight="@dimen/spacing_medium"
+                            android:visibility="gone"
+                            >
 
                             <ImageButton
                                 android:layout_width="@dimen/spacing_xmlarge"
