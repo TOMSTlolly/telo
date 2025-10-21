@@ -20,6 +20,7 @@ import android.os.Looper;
 import android.text.InputType;
 import android.text.TextUtils;
 import android.util.Log;
+import android.view.ActionMode;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -85,6 +86,7 @@ public class ListFragment extends Fragment implements OnProListener
     }
     DocumentFile sharedFolder;
     DocumentFile privateFolder;
+
 
 
     private FragmentViewerBinding binding;
@@ -169,6 +171,8 @@ public class ListFragment extends Fragment implements OnProListener
                 inflater, container, false
         );
         rootView = binding.getRoot();
+
+
 
         // trik, kterym si aplikace rekne o opravneni pri vytvareni formulare
         // Location location = LollyActivity.getInstance().getLocation();

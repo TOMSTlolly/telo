@@ -21,6 +21,7 @@
 
         <!-- Icon Container -->
         <LinearLayout
+            android:id="@+id/icon_container"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1.5"
@@ -29,17 +30,11 @@
 
             <CheckBox
                 android:id="@+id/checkBox"
-                android:layout_width="@dimen/thumbSize"
-                android:layout_height="@dimen/thumbSize"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:layout_gravity="center"
-                android:visibility="gone" />
-
-            <ImageView
-                android:id="@+id/cloudIcon"
-                android:layout_width="@dimen/thumbSize"
-                android:layout_height="@dimen/thumbSize"
-                android:layout_gravity="center"
-                android:src="@drawable/baseline_cloud_done_24"
+                android:clickable="false"
+                android:focusable="false"
                 android:visibility="gone" />
 
             <ImageView
@@ -50,6 +45,7 @@
                 android:layout_margin="5dp"
                 android:scaleType="fitCenter"
                 android:src="@drawable/baseline_insert_drive_file_24"
+                android:visibility="visible"
                 app:tint="#14532D" />
         </LinearLayout>
 
