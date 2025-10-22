@@ -70,7 +70,7 @@ public class FileViewerAdapter extends BaseAdapter
 //          holder.trackTypeIcon = convertView.findViewById(R.id.id_imageView_card_tracktype);  // pravy horni roh ikona
 
             holder.trackType = convertView.findViewById(R.id.id_device_type_rowitem);  // pravy horni roh, symbol zarizeni;
-            holder.cloudIcon = convertView.findViewById(R.id.cloudIcon);
+//            holder.cloudIcon = convertView.findViewById(R.id.cloudIcon);
             holder.imageView = convertView.findViewById(R.id.iconID);
             holder.checkBox  = convertView.findViewById(R.id.checkBox);
             holder.trackName = convertView.findViewById(R.id.id_TrackName);
