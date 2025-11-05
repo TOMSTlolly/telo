@@ -1,6 +1,7 @@
 package com.tomst.lolly.core;
 
 import android.content.Context;
+import android.os.ParcelFileDescriptor;
 
 import androidx.documentfile.provider.DocumentFile;
 
@@ -14,78 +15,115 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import com.tomst.lolly.core.OnProListener; // DŮLEŽITÝ IMPORT
+
 public class ZipFiles {
     List<String> filesListInDir = new ArrayList<String>();
 
-    public static void main(String[] args) {
-        File file = new File("/Users/pankaj/sitemap.xml");
-        String zipFileName = "/Users/pankaj/sitemap.zip";
+    private void zipFile(File fileToZip, String fileName, ZipOutputStream zos) throws IOException {
+        try (FileInputStream fis = new FileInputStream(fileToZip)) {
+            ZipEntry zipEntry = new ZipEntry(fileName);
+            zos.putNextEntry(zipEntry);
 
-        File dir = new File("/Users/pankaj/tmp");
-        String zipDirName = "/Users/pankaj/tmp.zip";
-
-        zipSingleFile(file, zipFileName);
-
-        ZipFiles zipFiles = new ZipFiles();
-        zipFiles.zipDirectory(dir, zipDirName);
+            byte[] bytes = new byte[1024];
+            int length;
+            while ((length = fis.read(bytes)) >= 0) {
+                zos.write(bytes, 0, length);
+            }
+        }
     }
+    /**
+     * Zazipuje adresář a reportuje průběh pomocí OnProListener.
+     * @param sourceDir Zdrojový adresář (java.io.File)
+     * @param zipFilePath Cesta k cílovému ZIP souboru
+     * @param listener Váš OnProListener pro sledování průběhu
+     * @return true, pokud bylo zipování úspěšné
+     */
+    public boolean zipDirectory(File sourceDir, String zipFilePath, OnProListener listener) {
+        File[] files = sourceDir.listFiles();
+        if (files == null || files.length == 0) {
+            return false; // Nic k zipování
+        }
 
-    public void zipDocumentFileDirectory(DocumentFile folder, String zipFilePath, Context context) {
-        try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(zipFilePath))) {
-            for (DocumentFile file : folder.listFiles()) {
+        try (FileOutputStream fos = new FileOutputStream(zipFilePath);
+             ZipOutputStream zos = new ZipOutputStream(fos)) {
+
+            int filesZipped = 0;
+            int totalFiles = files.length;
+
+            for (File file : files) {
+                // Zipujeme pouze soubory, ne pod-adresáře pro jednoduchost
                 if (file.isFile()) {
-                    try (InputStream is = context.getContentResolver().openInputStream(file.getUri())) {
-                        if (is == null) continue;
-                        ZipEntry entry = new ZipEntry(file.getName());
-                        zos.putNextEntry(entry);
+                    zipFile(file, file.getName(), zos);
+                }
+                filesZipped++;
 
-                        byte[] buffer = new byte[4096];
-                        int len;
-                        while ((len = is.read(buffer)) > 0) {
-                            zos.write(buffer, 0, len);
-                        }
-                        zos.closeEntry();
-                    }
+                // Vypočítáme a reportujeme procentuální progres
+                if (listener != null) {
+                    int progress = (int) ((filesZipped / (float) totalFiles) * 100);
+                    // Voláme metodu z vašeho rozhraní
+                    listener.OnProEvent(progress);
                 }
             }
+            return true;
         } catch (IOException e) {
             e.printStackTrace();
+            return false;
         }
     }
 
     /**
-     * This method zips the directory
-     * @param dir
-     * @param zipDirName
+     * Zazipuje DocumentFile adresář a reportuje průběh pomocí OnProListener.
+     * @param directory Zdrojový adresář (DocumentFile)
+     * @param zipFilePath Cesta k cílovému ZIP souboru
+     * @param context Context aplikace
+     * @param listener Váš OnProListener pro sledování průběhu
+     * @return true, pokud bylo zipování úspěšné
      */
-    public void zipDirectory(File dir, String zipDirName) {
-        try {
-            populateFilesList(dir);
-            //now zip files one by one
-            //create ZipOutputStream to write to the zip file
-            FileOutputStream fos = new FileOutputStream(zipDirName);
-            ZipOutputStream zos = new ZipOutputStream(fos);
-            for(String filePath : filesListInDir){
-                System.out.println("Zipping "+filePath);
-                //for ZipEntry we need to keep only relative file path, so we used substring on absolute path
-                ZipEntry ze = new ZipEntry(filePath.substring(dir.getAbsolutePath().length()+1, filePath.length()));
-                zos.putNextEntry(ze);
-                //read the file and write to ZipOutputStream
-                FileInputStream fis = new FileInputStream(filePath);
-                byte[] buffer = new byte[1024];
-                int len;
-                while ((len = fis.read(buffer)) > 0) {
-                    zos.write(buffer, 0, len);
+    public boolean zipDocumentFileDirectory(DocumentFile directory, String zipFilePath, Context context, OnProListener listener) {
+        DocumentFile[] files = directory.listFiles();
+        if (files.length == 0) return false;
+
+        try (FileOutputStream fos = new FileOutputStream(zipFilePath);
+             ZipOutputStream zos = new ZipOutputStream(fos)) {
+
+            int filesZipped = 0;
+            int totalFiles = files.length;
+
+            for (DocumentFile file : files) {
+                if (file.isFile()) {
+                    // Kód pro přidání DocumentFile do ZIPu
+                    try (ParcelFileDescriptor pfd = context.getContentResolver().openFileDescriptor(file.getUri(), "r");
+                         FileInputStream fis = new FileInputStream(pfd.getFileDescriptor())) {
+
+                        ZipEntry zipEntry = new ZipEntry(file.getName());
+                        zos.putNextEntry(zipEntry);
+
+                        byte[] bytes = new byte[4096];
+                        int length;
+                        while ((length = fis.read(bytes)) >= 0) {
+                            zos.write(bytes, 0, length);
+                        }
+                        zos.closeEntry();
+                    }
                 }
-                zos.closeEntry();
-                fis.close();
+                filesZipped++;
+                // Vypočítáme a reportujeme procentuální progres
+                if (listener != null) {
+                    int progress = (int) ((filesZipped / (float) totalFiles) * 100);
+                    // Voláme metodu z vašeho rozhraní
+                    listener.OnProEvent(progress);
+                }
             }
-            zos.close();
-            fos.close();
+            return true;
         } catch (IOException e) {
             e.printStackTrace();
+            return false;
         }
     }
+
+
+
 
     /**
      * This method populates all the files in a directory to a List

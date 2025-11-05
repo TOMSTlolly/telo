@@ -18,32 +18,34 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_horizontal">
+            android:orientation="horizontal">
 
             <Button
                 android:id="@+id/buttonZipall"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="zip all"
-                android:backgroundTint="#f1a833"/>
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="zip all"/>
 
             <Button
                 android:id="@+id/selectGraph"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:backgroundTint="#f1a833"
+                android:layout_weight="1"
                 android:text="graph"
-                android:textAlignment="center" />
+                android:gravity="center"
+                android:theme="@style/Button.Primary"
+                />
+
             <Button
-                android:id="@+id/btnLoadFolder"
-                android:layout_width="wrap_content"
+                android:id="@+id/zipLogs"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:text="SQ.SCN"
-                android:visibility="gone"
-                android:backgroundTint="#f1a833"/>
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="Zip LOGS"/>
+
 
 
         </LinearLayout>

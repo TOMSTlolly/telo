@@ -6,10 +6,12 @@ import static android.os.Environment.*;
 import static com.tomst.lolly.LollyActivity.DIRECTORY_TEMP;
 import static com.tomst.lolly.core.shared.bef;
 
+import android.app.ActivityManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.content.pm.ResolveInfo;
 import android.graphics.Bitmap;
 import android.location.Location;
 import android.net.Uri;
@@ -19,11 +21,13 @@ import android.os.Handler;
 import android.os.Looper;
 import android.text.InputType;
 import android.text.TextUtils;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.ActionMode;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.EditText;
@@ -72,6 +76,8 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
+import java.util.Locale;
+
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -88,6 +94,7 @@ public class ListFragment extends Fragment implements OnProListener
     DocumentFile privateFolder;
 
 
+    private ProgressBar proBar; // Deklarace proměnné pro ProgressBar
 
     private FragmentViewerBinding binding;
     private View rootView = null;
@@ -157,6 +164,150 @@ public class ListFragment extends Fragment implements OnProListener
     }
 
 
+    private void showZipDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+        builder.setTitle("Enter ZIP file name");
+
+        // Nastavení EditText pro vstup od uživatele
+        final EditText input = new EditText(getActivity());
+        input.setInputType(InputType.TYPE_CLASS_TEXT);
+        // Můžete přidat výchozí název souboru, např. s časovým razítkem
+        String defaultName = "logs_" + System.currentTimeMillis() + ".zip";
+        input.setText(defaultName);
+        builder.setView(input);
+
+        // Nastavení tlačítek dialogu
+        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                String zipFileName = input.getText().toString().trim();
+                if (TextUtils.isEmpty(zipFileName)) {
+                    Toast.makeText(getContext(), "File name cannot be empty", Toast.LENGTH_SHORT).show();
+                } else {
+                    // Přidáme koncovku .zip, pokud chybí
+                    if (!zipFileName.toLowerCase().endsWith(".zip")) {
+                        zipFileName += ".zip";
+                    }
+                    zipLogsDirectory(zipFileName);
+                }
+            }
+        });
+        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.cancel();
+            }
+        });
+
+        builder.show();
+    }
+
+    // zazipuje logy do zadaneho souboru, pak odesle pres intent
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    private void zipLogsDirectory(String zipFileName) {
+        Context context = getContext();
+        if (context == null) return;
+
+        // 1. Najdeme adresář 'logs' v cache
+        File cacheDir = context.getCacheDir();
+        File logsDir = new File(cacheDir, "Logs");
+
+        if (!logsDir.exists() || !logsDir.isDirectory() || logsDir.listFiles() == null || logsDir.listFiles().length == 0) {
+            Toast.makeText(context, "Logs directory is empty or does not exist.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // 2. Určíme cílový ZIP soubor v hlavní cache složce
+        File zipFile = new File(cacheDir, zipFileName);
+
+        // 3. Spustíme zipování v samostatném vlákně, abychom neblokovali UI
+        executor.execute(() -> {
+            ZipFiles zipFiles = new ZipFiles();
+
+            // Vytvoříme listener, který bude aktualizovat ProgressBar na UI vlákně
+            // Použijeme vaše rozhraní OnProListener
+            OnProListener progressListener = progress -> {
+                // Zajistíme, že se UI aktualizuje na hlavním vlákně
+                new Handler(Looper.getMainLooper()).post(() -> proBar.setProgress(progress));
+            };
+
+            // Tato metoda musí umět pracovat s polem souborů (File[])
+            boolean success = zipFiles.zipDirectory(logsDir, zipFile.getAbsolutePath(),progressListener);
+
+            // Po dokončení zobrazíme výsledek v hlavním (UI) vlákně
+            new Handler(Looper.getMainLooper()).post(() -> {
+                if (success) {
+                    proBar.setProgress(100); // Volitelně ukázat 100%
+
+                   // Toast.makeText(context, "Logs successfully zipped to " + zipFile.getName(), Toast.LENGTH_LONG).show();
+                    String body = getDeviceDiagnostics();
+                    // ZDE POUŽIJEME NOVOU METODU PRO SDÍLENÍ
+                    shareZipFile(
+                            zipFile,
+                            "Lolly App Logs",
+                            "Attached are the zipped log files from the Lolly phone app.\r\n"+
+                                    body
+
+                    );
+
+                    // Zde můžete případně přidat kód pro sdílení souboru, pokud chcete
+                } else {
+                    Toast.makeText(context, "Failed to create zip file.", Toast.LENGTH_SHORT).show();
+                }
+
+                // Vynulujeme a skryjeme ProgressBar
+                // Můžeme přidat malé zpoždění, aby uživatel stihl vidět 100%
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    proBar.setProgress(0);
+                    proBar.setVisibility(View.GONE);
+                }, 1000); // 1 sekunda zpoždění
+
+                //fFriends.notifyAll();
+            });
+        });
+    }
+
+
+    private void shareExportedData(){
+        Context context = getContext();
+        if (context == null) return;
+        String sharedPath = LollyActivity.getInstance().getPrefExportFolder();
+        DocumentFile exportFolder = DocumentFile.fromTreeUri(context, Uri.parse(sharedPath));
+        if (exportFolder == null || !exportFolder.isDirectory()) {
+            Toast.makeText(context, "Export folder not found", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // tady ukladam docasny zip do cache
+        //File cacheDir = context.getCacheDir();
+        File zipFile = new File(context.getCacheDir(), "exported_data.zip");
+
+
+        proBar.setVisibility(View.VISIBLE);
+        proBar.setProgress(0);
+
+        executor.execute(() -> {
+            ZipFiles zipFiles = new ZipFiles();
+            OnProListener progressListener = progress -> {
+                new Handler(Looper.getMainLooper()).post(() -> proBar.setProgress(progress));
+            };
+
+            boolean success = zipFiles.zipDocumentFileDirectory(exportFolder, zipFile.getAbsolutePath(), getContext(), progressListener);
+            // 2. Vytvoříme text emailu
+            String emailBody = "Here is the content of my export from the Lolly phone app.\n\n"
+                    + "--- Device Info ---\n";
+
+            // 3. Zavoláme sdílení
+            shareZipFile(
+                    zipFile,
+                    "Lolly App Export - " + Build.MODEL,
+                    emailBody
+            );
+
+        });
+
+    }
+
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     public View onCreateView(
@@ -171,15 +322,14 @@ public class ListFragment extends Fragment implements OnProListener
                 inflater, container, false
         );
         rootView = binding.getRoot();
-
-
+        proBar = binding.proBar;
 
         // trik, kterym si aplikace rekne o opravneni pri vytvareni formulare
         // Location location = LollyActivity.getInstance().getLocation();
 
-        binding.proBar.setMin(0);
-        binding.proBar.setMax(100);
-        binding.proBar.setProgress(5);
+        proBar.setMin(0);
+        proBar.setMax(100);
+        proBar.setProgress(0);
 
         //  cesty pro export do SAF
         String sharedPath = LollyActivity.getInstance().getPrefExportFolder();
@@ -198,89 +348,31 @@ public class ListFragment extends Fragment implements OnProListener
         folderName.setText(s);
 
         // Saving folder destination
-        Button btn_reload = binding.btnLoadFolder;
-        btn_reload.setOnClickListener(new View.OnClickListener()
+        Button zipLogs = binding.zipLogs;
+        zipLogs.setText("Zip LOGS");
+        zipLogs.setOnClickListener(new View.OnClickListener()
         {
             @Override   // load files from the folder
             public void onClick(View view)
             {
-               // DoLoadFiles();
-                if (SelectedFileName != "")
-                {
-                    //csvPath = SelectedFileName;
-                    loadCSVFil(SelectedFileName);
-                }
+               showZipDialog();
             }
 
         });
 
+        // zazipuj data
         Button zip_btn = binding.buttonZipall;
-        zip_btn.setText("Upload Zip");
+        zip_btn.setText("Zip ALL");
         zip_btn.setOnClickListener(new View.OnClickListener()
         {
+            @Override
             public void onClick(View v)
             {
-                Context context = getContext();
-                String sharedPath = LollyActivity.getInstance().getPrefExportFolder();
-                DocumentFile exportFolder = DocumentFile.fromTreeUri(context, Uri.parse(sharedPath));
-                if (exportFolder == null || !exportFolder.isDirectory()) {
-                    Toast.makeText(context, "Export folder not found", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-
-                File cacheDir = context.getCacheDir();
-                File zipFile = new File(cacheDir, "tmp.zip");
-
-                ZipFiles zipFiles = new ZipFiles();
-                zipFiles.zipDocumentFileDirectory(exportFolder, zipFile.getAbsolutePath(), context);
-
-                Uri zipUri = FileProvider.getUriForFile(
-                        context,
-                        BuildConfig.APPLICATION_ID + ".provider",
-                        zipFile
-                );
-                Intent sendIntent = new Intent(Intent.ACTION_SEND);
-                sendIntent.setType("application/zip");
-                sendIntent.putExtra(Intent.EXTRA_STREAM, zipUri);
-                sendIntent.putExtra(Intent.EXTRA_SUBJECT, "Zip file");
-                sendIntent.putExtra(Intent.EXTRA_TEXT, "Here is content of my download from lolly phone app.");
-                startActivity(sendIntent);
+              shareExportedData();
             }
         });
 
 
-        Button shareBtn = binding.btnShare;
-        shareBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view)
-            {
-                Context context = getContext();
-                String sharedPath = LollyActivity.getInstance().getPrefExportFolder();
-                DocumentFile exportFolder = DocumentFile.fromTreeUri(context, Uri.parse(sharedPath));
-                if (exportFolder == null || !exportFolder.isDirectory()) {
-                    Toast.makeText(context, "Export folder not found", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-
-                File cacheDir = context.getCacheDir();
-                File zipFile = new File(cacheDir, "tmp.zip");
-
-                ZipFiles zipFiles = new ZipFiles();
-                zipFiles.zipDocumentFileDirectory(exportFolder, zipFile.getAbsolutePath(), context);
-
-                Uri zipUri = FileProvider.getUriForFile(
-                        context,
-                        BuildConfig.APPLICATION_ID + ".provider",
-                        zipFile
-                );
-                Intent sendIntent = new Intent(Intent.ACTION_SEND);
-                sendIntent.setType("application/zip");
-                sendIntent.putExtra(Intent.EXTRA_STREAM, zipUri);
-                sendIntent.putExtra(Intent.EXTRA_SUBJECT, "Zip file");
-                sendIntent.putExtra(Intent.EXTRA_TEXT, "Here is content of my download from lolly phone app.");
-                startActivity(sendIntent);
-            }
-        });
 
 
         dmd = new ViewModelProvider(getActivity()).get(DmdViewModel.class);
@@ -345,6 +437,142 @@ public class ListFragment extends Fragment implements OnProListener
         //setupBitmaps();
 
         return rootView;
+    }
+
+
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    private String getDeviceDiagnostics() {
+        // Použijeme StringBuilder pro efektivní skládání textu
+        StringBuilder diagnostics = new StringBuilder();
+        Context context = getContext();
+
+        diagnostics.append("--- App Info ---\n");
+        // Verze aplikace (získaná z BuildConfig, které generuje Gradle)
+        diagnostics.append("App Version: ").append(BuildConfig.VERSION_NAME).append(" (").append(BuildConfig.VERSION_CODE).append(")\n");
+        diagnostics.append("App ID: ").append(BuildConfig.APPLICATION_ID).append("\n");
+
+        diagnostics.append("\n--- Device Info ---\n");
+        // Model a výrobce zařízení
+        diagnostics.append("Manufacturer: ").append(Build.MANUFACTURER).append("\n");
+        diagnostics.append("Model: ").append(Build.MODEL).append("\n");
+        diagnostics.append("Product: ").append(Build.PRODUCT).append("\n");
+        diagnostics.append("Board: ").append(Build.BOARD).append("\n");
+        diagnostics.append("Hardware: ").append(Build.HARDWARE).append("\n");
+
+        diagnostics.append("\n--- Build Info ---\n");
+        // Verze Androidu
+        diagnostics.append("Android Version: ").append(Build.VERSION.RELEASE).append("\n");
+        diagnostics.append("API Level: ").append(Build.VERSION.SDK_INT).append("\n");
+        diagnostics.append("Build ID: ").append(Build.DISPLAY).append("\n");
+        diagnostics.append("Build Time: ").append(Build.TIME).append("\n");
+        diagnostics.append("Fingerprint: ").append(Build.FINGERPRINT).append("\n");
+
+        diagnostics.append("\n--- CPU & ABI ---\n");
+        // Podporované architektury procesoru
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            diagnostics.append("Supported ABIs: ").append(String.join(", ", Build.SUPPORTED_ABIS)).append("\n");
+        } else {
+            diagnostics.append("ABI1: ").append(Build.CPU_ABI).append("\n");
+            diagnostics.append("ABI2: ").append(Build.CPU_ABI2).append("\n");
+        }
+
+        if (context != null) {
+            diagnostics.append("\n--- Memory Info ---\n");
+            // Informace o paměti
+            ActivityManager activityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+            if (activityManager != null) {
+                ActivityManager.MemoryInfo memInfo = new ActivityManager.MemoryInfo();
+                activityManager.getMemoryInfo(memInfo);
+                long totalMemory = memInfo.totalMem;
+                long availableMemory = memInfo.availMem;
+                diagnostics.append("Total Memory: ").append(totalMemory / (1024 * 1024)).append(" MB\n");
+                diagnostics.append("Available Memory: ").append(availableMemory / (1024 * 1024)).append(" MB\n");
+                diagnostics.append("Low Memory: ").append(memInfo.lowMemory).append("\n");
+            }
+
+            diagnostics.append("\n--- Display Info ---\n");
+            // Informace o displeji
+            WindowManager windowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+            if (windowManager != null) {
+                DisplayMetrics displayMetrics = new DisplayMetrics();
+                windowManager.getDefaultDisplay().getMetrics(displayMetrics);
+                int width = displayMetrics.widthPixels;
+                int height = displayMetrics.heightPixels;
+                int densityDpi = displayMetrics.densityDpi;
+                float density = displayMetrics.density;
+                diagnostics.append("Resolution: ").append(width).append("x").append(height).append(" pixels\n");
+                diagnostics.append("Density (dpi): ").append(densityDpi).append("\n");
+                diagnostics.append("Density (factor): ").append(density).append("\n");
+            }
+        }
+
+
+        diagnostics.append("\n--- System Settings ---\n");
+        // Další informace
+        diagnostics.append("Locale: ").append(Locale.getDefault().toString()).append("\n");
+        diagnostics.append("Timestamp (UTC): ").append(new java.util.Date().toInstant().toString()).append("\n");
+
+
+        return diagnostics.toString();
+    }
+
+
+    private void shareZipFile(File zipFile, String subject, String text) {
+        Context context = getContext();
+        if (context == null || zipFile == null || !zipFile.exists()) {
+            Toast.makeText(context, "File to share not found.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // 1. Získáme Uri pro soubor pomocí FileProvideru
+        Uri zipUri = FileProvider.getUriForFile(
+                context,
+                // Ujistěte se, že se shoduje s authorities v AndroidManifest.xml
+                BuildConfig.APPLICATION_ID + ".provider",
+                zipFile
+        );
+
+        // 2. Vytvoříme specifický Intent pro EMAILOVÉ aplikace
+        Intent emailIntent = new Intent(Intent.ACTION_SEND);
+        emailIntent.setType("message/rfc822"); // MIME typ pro email
+        emailIntent.putExtra(Intent.EXTRA_EMAIL, new String[]{"krata@tomst.com"}); // Příjemce
+        emailIntent.putExtra(Intent.EXTRA_SUBJECT, subject); // Předmět
+        emailIntent.putExtra(Intent.EXTRA_TEXT, text); // Tělo emailu
+        emailIntent.putExtra(Intent.EXTRA_STREAM, zipUri); // Příloha
+        emailIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+        // 3. Vytvoříme HLAVNÍ (obecný) android.content.Intent pro sdílení souboru.
+        // DŮLEŽITÉ: Tento Intent neobsahuje EXTRA_SUBJECT.
+        // Tím zajistíme, že aplikace jako Google Disk použijí název souboru z URI.
+        Intent shareIntent = new Intent(Intent.ACTION_SEND);
+        shareIntent.setType("application/zip");
+        shareIntent.putExtra(Intent.EXTRA_STREAM, zipUri);
+        shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+        // 4. Vytvoříme Chooser a přidáme emailový Intent jako extra volbu
+        Intent chooser = Intent.createChooser(shareIntent, "Share Zip File via...");
+
+        // Zjistíme, jestli existuje nějaká aplikace pro odeslání emailu
+        List<ResolveInfo> resInfoList = context.getPackageManager().queryIntentActivities(emailIntent, 0);
+        List<Intent> extraIntents = new ArrayList<>();
+
+        for (ResolveInfo resolveInfo : resInfoList) {
+            String packageName = resolveInfo.activityInfo.packageName;
+            Intent extraIntent = new Intent(emailIntent); // Vytvoříme kopii emailového intentu
+            extraIntent.setPackage(packageName); // Omezíme ho na konkrétní emailovou aplikaci
+            extraIntents.add(extraIntent);
+        }
+
+        // Vložíme seznam specifických emailových intentů do Chooseru
+        chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, extraIntents.toArray(new Intent[0]));
+
+        // 5. Spustíme Chooser
+        try {
+            startActivity(chooser);
+        } catch (android.content.ActivityNotFoundException ex) {
+            Toast.makeText(context, "No app found to handle this action.", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void loadAllFiles()
@@ -827,12 +1055,10 @@ public class ListFragment extends Fragment implements OnProListener
     //public void DoLoadFiles(String sharedPath, String privatePath)
     @RequiresApi(api = Build.VERSION_CODES.O)
     public void DoLoadFiles() {
-
         if (sharedFolder != null && sharedFolder.isDirectory()) {
             DocumentFile[] files = sharedFolder.listFiles();
             if (files == null || files.length == 0)
                 return;
-
 
             Context context = LollyActivity.getInstance().getApplicationContext();
             DatabaseHandler db = LollyActivity.getInstance().gpsDataBase;
@@ -920,6 +1146,11 @@ public class ListFragment extends Fragment implements OnProListener
 
 
         Log.d("LIST", "Started DoLoadFiles() ...");
+
+       if (fFriends != null) {
+           fFriends.clear();
+
+       }
 
        DoLoadFiles();
 
