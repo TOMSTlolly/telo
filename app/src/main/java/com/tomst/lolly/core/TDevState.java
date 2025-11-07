@@ -37,7 +37,9 @@ public enum TDevState
     tSetMeteo,
     tSetTime,
     tStart,
+    tWaitForHardware,
     tWaitForAdapter,
+    tAdapterDisconnected,
     tWaitForMeasure,
     tWaitInLimbo,
     tSimulateSerial

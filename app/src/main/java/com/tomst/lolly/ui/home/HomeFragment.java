@@ -73,6 +73,10 @@ public class HomeFragment extends Fragment {
     static final byte MIN_ADANUMBER = 5;  // pozaduju, aby mel adapter minimalne 5 znaku
     private FragmentHomeBinding binding;
 
+    Drawable adapterGreenDrawable = null;
+    ImageView adapterImage = null;
+
+
     private  DmdViewModel dmd;
     private final int PERMISSION_REQUEST_CODE = 698;
     private final int NOTIFICATION_ID = 423;
@@ -422,10 +426,7 @@ public class HomeFragment extends Fragment {
 
             TInfo info = (TInfo) msg.obj;
             Log.d(Constants.TAG,String.valueOf(info.idx)+' '+info.msg);
-     //       String  ATrackDir=null;
-       //     String ALogDir =  null;
-
-            // tady rozebiram vystupy ze stavu v threadu
+             // tady rozebiram vystupy ze stavu v threadu
             switch(info.stat){
 
                 case tNoHardware:
@@ -433,15 +434,23 @@ public class HomeFragment extends Fragment {
                     binding.proBar.setProgress(0);
                     break;
 
+                case tAdapterDisconnected:
+                    binding.proMessage.setText("Adapter disconnected");
+                    binding.proBar.setProgress(0);
+
+                    // vymen obrazek adapteru na cerveny
+                    adapterImage = getActivity().findViewById(R.id.adapterImage);
+                    adapterGreenDrawable = ContextCompat.getDrawable(requireContext(), R.drawable.adapter_green);
+                    adapterImage.setImageResource(R.drawable.adapter_red);
+                    break;
+
                 case tWaitForAdapter:
                     // if (ftTMS.AdapterNumber.length()>MIN_ADANUMBER) ;
                     // tady je zobrazeni cisla adapteru
                     if (info.msg.length()>MIN_ADANUMBER) {
                         binding.proMessage.setText(info.msg);
-
-                        ImageView adapterImage = getActivity().findViewById(R.id.adapterImage);
-
-                        Drawable adapterGreenDrawable = ContextCompat.getDrawable(requireContext(), R.drawable.adapter_green);
+                        adapterImage = getActivity().findViewById(R.id.adapterImage);
+                        adapterGreenDrawable = ContextCompat.getDrawable(requireContext(), R.drawable.adapter_green);
                         if (adapterGreenDrawable == null) {
                             Log.e("TOMST", "R.drawable.adapter_green is null");
                         } else {

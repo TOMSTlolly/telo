@@ -58,6 +58,7 @@ public class TMSReader extends Thread
         rsReadPacket,
         rsPacketOK,
         rsPacketFalse,
+        rsTimeOut,
         rsFinal
     }
     public boolean started = false;
@@ -188,10 +189,6 @@ public class TMSReader extends Thread
     {
         this.fileDir = AFileDir;
     }
-
-    // FileName
-    //String CsvFileName = "";
-    //boolean writeTxf = false;
 
     private boolean fShowMicro = false;
 
@@ -351,7 +348,6 @@ public class TMSReader extends Thread
         mRunning = running;
         devState = TDevState.tStart;
     }
-
 
 
     public boolean ParseHeader(String line)
@@ -794,7 +790,7 @@ public class TMSReader extends Thread
         }
     }
 
-    public void ConnectDevice(){
+    public boolean ConnectDevice(){
         DevCount = 0;
         DoInitFTDI(context);
         createDeviceList();
@@ -808,7 +804,9 @@ public class TMSReader extends Thread
             byte flowControl = 0;
 
             SetConfig(baudRate, dataBit, stopBit, parity, flowControl);
+            return true;
         }
+        return false;
     }
 
     private int copyByte(String line,int i, int count)
@@ -961,6 +959,8 @@ public class TMSReader extends Thread
         }
     }
 
+
+
     @RequiresApi(api = Build.VERSION_CODES.O)
     private void mLoop()
     {
@@ -971,11 +971,12 @@ public class TMSReader extends Thread
         started = true;
         int idx = 0;
 
-        if (fHer==null)
+       if (fHer==null)
         {
             //throw new UnsupportedOperationException("Communication is not ready");
             SendMeasure(TDevState.tNoHardware, "fHer==null !");
-            return;
+            //return;
+            devState=TDevState.tWaitForHardware;
         }
 
         //
@@ -1015,10 +1016,11 @@ public class TMSReader extends Thread
 
             switch (devState)
             {
-                case tStart:
-                    SendMeasure(TDevState.tStart, "test");
-                    if (startFTDI())
+                case tWaitForHardware,tStart:
+                    if (ConnectDevice()) {
                         devState = TDevState.tWaitForAdapter;
+                        SystemClock.sleep(100);
+                    }
                     else
                         SystemClock.sleep(1000);
                     break;
@@ -1029,8 +1031,8 @@ public class TMSReader extends Thread
 
                     if (AdapterNumber.length()>5)
                         devState = TDevState.tHead;
-                    else
-                        devState = TDevState.tFinal;  // tady by melo byt, ze jsem nenasel adapter
+                   // else
+                   //     devState = TDevState.tFinal;  // tady by melo byt, ze jsem nenasel adapter
                     break;
 
                 case tSerialDuplicity:
@@ -1057,6 +1059,14 @@ public class TMSReader extends Thread
 
                     if (s.length()<2)
                        continue;
+
+                    // test vytazeny kabel
+                    if (s.equals("TIMEOUT\n")) {
+                        Log.e(TAG,"TMSReader: Cable is disconnected !");
+                        SendMeasure(TDevState.tAdapterDisconnected, "Cable is disconnected !");
+                        devState = TDevState.tWaitForHardware;
+                        break;
+                    }
 
                     if (ParseHeader(s)) {
                         info.msg = String.format("%d.%d.%d",rfir.Hw,rfir.Fw,rfir.Sub);
@@ -1558,7 +1568,8 @@ public class TMSReader extends Thread
 
         int iBlock = 0;
         int iErr=0;
-        while (rState != TReadState.rsFinal) {
+        uHer.CommandResult Res;
+        while ((rState != TReadState.rsFinal) && (rState != TReadState.rsTimeOut)) {
             switch (rState) {
                 case rsStart:
                     // zjistim aktualni adresu
@@ -1572,8 +1583,19 @@ public class TMSReader extends Thread
                     break;
 
                 case rsReadPacket:
-                    respond = fHer.doCommand("D");
+                    Res= fHer.doCommandEx("D");
+                    if (Res.status == uHer.cmdstate.xTimeout) {
+                        iErr++;
+                        if (iErr>5) {
+                            SendMeasure(TDevState.tTMDCycling, String.format(" No data after %d attempts", iErr));
+                            iErr = 0;
+                            rState = TReadState.rsTimeOut;
+                        }
+                        break;
+                    }
+                    respond = Res.response;
                     if (respond.length() > 1) {
+
                         ret = parser.dpacket(respond);  // data are send into HomeFragment
                         if (ret) {
                            // extract last address from the data packet
@@ -1602,6 +1624,7 @@ public class TMSReader extends Thread
                     parser.SetPacketTime(fDate);  // posledni date cast, kdy dorazilo "D" v poradku
 
                     // prenastavim adresu a zkontroluju, jestli se prenastavila
+
                     fAddr = DecodeTmsFormat.GetSafeAddress()+8;
                     ss = "S=$" + LineUpHexa(fAddr);
                     respond = fHer.doCommand(ss);
@@ -1634,7 +1657,7 @@ public class TMSReader extends Thread
 
         }
 
-        return true;
+        return (rState == TReadState.rsFinal);
     }
 
 

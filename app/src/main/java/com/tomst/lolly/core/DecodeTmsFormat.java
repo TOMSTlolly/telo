@@ -768,7 +768,7 @@ public class DecodeTmsFormat {
                        lastSafeDtm = null;
 
                    // vypis datumove znacky
-                   String line = String.format("ret: %d, AdrAfter: %d, SafeAddress: %d, lastSafeDtm: %s",ret ? 1 : 0,AdrAfter,SafeAddress,lastSafeDtm.toString());
+                  // String line = String.format("ret: %d, AdrAfter: %d, SafeAddress: %d, lastSafeDtm: %s",ret ? 1 : 0,AdrAfter,SafeAddress,lastSafeDtm.toString());
 
                    return ret;
                     //E=$000010;M;01

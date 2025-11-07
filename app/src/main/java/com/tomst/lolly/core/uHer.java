@@ -327,7 +327,7 @@ public class uHer extends Thread {
 
     private enum twstate {
         xSTART, xPESCIP, xPLATTOUCH, xPUTTEXT, xNOADAPTER, xTIMEOUT, xUX, xREPEAT,
-        xSETSTATE, xFINAL, xERROR
+        xSETSTATE, xFINAL, xERROR,xDEAD
     }
 
 
@@ -422,9 +422,19 @@ public class uHer extends Thread {
         int plat = 0;  // vysledek platform touche
         byte iLastByte = 0 ;
         int ib = 0; // navratovy byte z vycitani ASCII textu
-       // int k = 0;  // pozice ukazatele ve vystupnim bufferu
+        // int k = 0;  // pozice ukazatele ve vystupnim bufferu
+        // --- ZMĚNA ZDE: Přidání časového limitu ---
+        long startTime = System.currentTimeMillis();
+        final int TIMEOUT_MS = 4000;
 
         do {
+            // --- ZMĚNA ZDE: Kontrola časového limitu na začátku každé iterace ---
+            if (System.currentTimeMillis() - startTime > TIMEOUT_MS) {
+                // Log.w("pigCommand", "Timeout reached after " + TIMEOUT_MS + " ms");
+                xst = twstate.xDEAD; // Vynutíme stav timeout a ukončení smyčky
+            }
+            // -------------------------------------------------------------------
+
             switch (xst) {
                 case xSTART:
                     // restart adapteru
@@ -505,7 +515,8 @@ public class uHer extends Thread {
                     break;
 
                 case xTIMEOUT:
-                    xst = twstate.xFINAL;
+                    // pozor neplest si s tim, ze mi upadl kabel od adapteru !
+                    xst = twstate.xFINAL; // tohle je TIMEOUT od adapteru
                     break;
 
                 case xERROR:
@@ -534,8 +545,8 @@ public class uHer extends Thread {
                     break;
             }
 
-        } while ((xst != twstate.xFINAL));
-        return (true);
+        } while ((xst != twstate.xFINAL) && (xst != twstate.xDEAD));
+        return ( xst  == twstate.xFINAL);
     }
 
     // nastavim adresu prikazem S=$000001
@@ -589,6 +600,60 @@ public class uHer extends Thread {
         return(false);
     }
 
+
+    public enum cmdstate {
+        xFalse, xTrue, xTimeout
+    }
+
+    // Tuto třídu vložte někam dovnitř třídy uHer
+    public class CommandResult {
+        public final String response;
+        public final cmdstate status;
+
+        public CommandResult(String response, cmdstate status) {
+            this.response = response;
+            this.status = status;
+        }
+    }
+
+    public CommandResult doCommandEx(String cmd){
+        byte[] chr = new byte[cmd.length()+4]; // delka + ridici znaky + pocet znaku na zacatku
+        chr[0] = (byte)(cmd.length()+3);
+        chr[1] = (byte)0x55;
+        chr[2] = (byte)0x40;
+        for (int i =0;i<cmd.length();i++){
+            chr[i+3] = (byte) cmd.charAt(i);
+        }
+        chr[3+cmd.length()] = (byte)0x0D;
+        // poskladam do stringu
+        String command = "";
+        for (int i=0;i<chr.length;i++)
+            command = command+String.format("0x%02X",chr[i]) +';';
+
+        byte[] ou = new byte[65526];
+        boolean ret = pigCommand(command,ou);
+        if (!ret)
+            return new CommandResult("TIMEOUT\n", cmdstate.xTimeout);
+
+        ous.setLength(0);
+        int i=0;
+        if (ou[0] == 0)
+            return new CommandResult("", cmdstate.xTrue);
+        do {
+            //ous = ous+String.format("%c",ou[i]) ; //String.format("0x%02X",ou[i]) +';';
+            ous.append((char)(ou[i]));
+            i++;
+        } while (ou[i] !=0);
+
+        String rts = ous.toString();
+        //doLog(cmd,rts);
+
+        SendLog(cmd,rts);
+
+        return new CommandResult(rts, cmdstate.xTrue);
+        //return(ous.toString());
+    }
+
     // cmd prevedu na array of char a predradim TK magicke znaky
     public String doCommand(String cmd){
         byte[] chr = new byte[cmd.length()+4]; // delka + ridici znaky + pocet znaku na zacatku
@@ -607,7 +672,7 @@ public class uHer extends Thread {
         byte[] ou = new byte[65526];
         boolean ret = pigCommand(command,ou);
         if (!ret)
-            return("command ERROR\n");
+            return("TIMEOUT\n");
 
         ous.setLength(0);
         int i=0;

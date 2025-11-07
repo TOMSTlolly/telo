@@ -70,6 +70,7 @@ import com.tomst.lolly.BuildConfig;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.time.Instant;
@@ -278,9 +279,16 @@ public class ListFragment extends Fragment implements OnProListener
             return;
         }
 
-        // tady ukladam docasny zip do cache
-        //File cacheDir = context.getCacheDir();
-        File zipFile = new File(context.getCacheDir(), "exported_data.zip");
+        // --- ZMĚNA ZDE ---
+        // 1. Vytvoříme formátovač pro datum a čas. 'mm' jsou minuty, 'MM' je měsíc.
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.getDefault());
+
+        // 2. Získáme aktuální čas a naformátujeme ho.
+        String timestamp = sdf.format(new Date());
+
+        // 3. Sestavíme dynamický název souboru a připojíme koncovku .zip.
+        String zipFileName = "exported_data_" + timestamp + ".zip";
+        File zipFile = new File(context.getCacheDir(), zipFileName);
 
 
         proBar.setVisibility(View.VISIBLE);
