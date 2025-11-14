@@ -80,6 +80,7 @@ import java.util.Date;
 import java.util.Locale;
 
 
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -1064,10 +1065,16 @@ public class ListFragment extends Fragment implements OnProListener
     @RequiresApi(api = Build.VERSION_CODES.O)
     public void DoLoadFiles() {
         if (sharedFolder != null && sharedFolder.isDirectory()) {
+
+            Log.d(TAG, "DoLoadFiles: Začátek měření.");
+            long totalStartTime = System.currentTimeMillis();
+
+            long stepStartTime = System.currentTimeMillis();
             DocumentFile[] files = sharedFolder.listFiles();
             if (files == null || files.length == 0)
                 return;
 
+            Log.d(TAG, "Krok 1: 'sharedFolder.listFiles()' trval: " + (System.currentTimeMillis() - stepStartTime) + " ms");
             Context context = LollyActivity.getInstance().getApplicationContext();
             DatabaseHandler db = LollyActivity.getInstance().gpsDataBase;
 
@@ -1077,16 +1084,28 @@ public class ListFragment extends Fragment implements OnProListener
 
             // vyhodim prazdne soubory
             // ty, ktere jsou >0 a jsou relevantni (pripona .csv a prefix data_ )
+            stepStartTime = System.currentTimeMillis();
             for (DocumentFile file: files){
                 usedFiles[index++] = file.getName();
             }
-            db.ClearUnusedFiles(usedFiles);  // vyhodi z databaze nazvy souboru, ktere nemam v adresari
+            Log.d(TAG, "Krok 2: Příprava 'usedFiles' trvala: " + (System.currentTimeMillis() - stepStartTime) + " ms");
+
+            // ---- Měření kroku 3: Čištění databáze ----
+            stepStartTime = System.currentTimeMillis();
+            db.ClearUnusedFiles(usedFiles);
+            Log.d(TAG, "Krok 3: 'db.ClearUnusedFiles()' trval: " + (System.currentTimeMillis() - stepStartTime) + " ms");
+
+            // OPTIMALIZACE: Načtení všech detailů souborů z DB najednou
+            stepStartTime = System.currentTimeMillis();
+            Map<String, FileDetail> fileDetailsMap = db.getAllFileDetailsAsMap(); // Předpokládá existenci této nové metody v DatabaseHandler
+            Log.d(TAG, "Krok 4: 'db.getAllFileDetailsAsMap()' trval: " + (System.currentTimeMillis() - stepStartTime) + " ms");
+
 
             //Location location = LollyActivity.getInstance().getLocation();
             FileDetail fdet = null;
 
+            stepStartTime = System.currentTimeMillis();
             for (DocumentFile file : files) {
-
                 String fileName = file.getName();
                 if (fileName == null || !fileName.toLowerCase().endsWith(".csv"))
                     continue;
@@ -1102,10 +1121,26 @@ public class ListFragment extends Fragment implements OnProListener
                     continue; // Skip to the next file
                 }
 
+                //if (db.getFileDetail(file.getName()) != null) {
+                //    long startTime = System.currentTimeMillis();
+                //    fdet = db.getFileDetail(file.getName());
+                //    fdet.setNiceName(getNiceName(file.getName()));
+                //    long endTime = System.currentTimeMillis(); // Konec měření
+                //    long duration = endTime - startTime; // Výpočet doby trvání
+                //    Log.d(TAG, "Doba trvání bloku 'db.getFileDetail': " + duration + " ms pro soubor: " + file.getName());
+                //}
+                // OPTIMALIZOVANÝ BLOK
+                // Rychlé vyhledání v mapě místo dotazu do DB
+                if (fileDetailsMap.containsKey(fileName)) {
+                    long startTime = System.currentTimeMillis();
 
-                if (db.getFileDetail(file.getName()) != null) {
-                    fdet = db.getFileDetail(file.getName());
-                    fdet.setNiceName(getNiceName(file.getName()));
+                    fdet = fileDetailsMap.get(fileName);
+                    fdet.setNiceName(getNiceName(fileName));
+
+                    long endTime = System.currentTimeMillis(); // Konec měření
+                    long duration = endTime - startTime; // Výpočet doby trvání
+                    Log.d(TAG, "Doba trvání bloku 'db.getFileDetail': " + duration + " ms pro soubor: " + file.getName());
+
                 }
                 else
                 {
@@ -1131,15 +1166,17 @@ public class ListFragment extends Fragment implements OnProListener
                 // predelej radek v recycleru
                 fdet.setFileSize((int) file.length());
                 fFriends.add(fdet);
+
                 /*
                 FileDetail temp = findFileName(file.getName());  // najdi existujici radek v recycleru podle jmena souboru
                 if (temp != null) {
                     updateFriends(fdet, temp);
                 }
-                 */
-
-
+                */
             }
+            Log.d(TAG, "Krok 5: Hlavní smyčka 'for' trvala: " + (System.currentTimeMillis() - stepStartTime) + " ms");
+            Log.d(TAG, "DoLoadFiles: CELKOVÝ ČAS: " + (System.currentTimeMillis() - totalStartTime) + " ms");
+
         }
     }
 
@@ -1147,12 +1184,10 @@ public class ListFragment extends Fragment implements OnProListener
     @Override
     public void onStart()
     {
-        Log.d("LIST", "Started DoLoadFile() ...");
         super.onStart();
 
-     //   DoLoadFil();
-
-
+        // Log.d("LIST", "Started DoLoadFile() ...");
+        // DoLoadFil();
         Log.d("LIST", "Started DoLoadFiles() ...");
 
        if (fFriends != null) {
@@ -1160,7 +1195,11 @@ public class ListFragment extends Fragment implements OnProListener
 
        }
 
-       DoLoadFiles();
+        long startTime = System.currentTimeMillis();
+        DoLoadFiles();
+        long endTime = System.currentTimeMillis(); // Konec měření
+        long duration = endTime - startTime; // Výpočet doby trvání
+        Log.d(TAG, "Doba trvání bloku 'DoLoadFiles': " + duration + " ms");
 
         /*
         executor.execute(() -> {

@@ -40,6 +40,7 @@ public enum TDevState
     tWaitForHardware,
     tWaitForAdapter,
     tAdapterDisconnected,
+    tAdapterDead,
     tWaitForMeasure,
     tWaitInLimbo,
     tSimulateSerial

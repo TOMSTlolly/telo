@@ -24,6 +24,7 @@ import java.util.Date;
 import java.util.List;
 
 public class DecodeTmsFormat {
+    static private int suspAdapter=0;
     static private byte[] fBuf ;
     static private byte INBUF = 16;
     // static private int fMicroInter = 1279;
@@ -53,6 +54,9 @@ public class DecodeTmsFormat {
 
     public static LocalDateTime lastSafeDtm;
     static private int fIdx =0;
+    public int GetCount(){
+        return fIdx;
+    }
 
     //private OnGeekEventListener mListener; // listener field
     private static final byte ADR_INDEX = 0;
@@ -601,7 +605,7 @@ public class DecodeTmsFormat {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
-    public boolean dpacket(String reply)
+    public Integer dpacket(String reply)
     {
         if (SafeAddress <0)
             throw new UnsupportedOperationException("Please check that you've set start address before read");
@@ -632,8 +636,14 @@ public class DecodeTmsFormat {
         fMereniList.clear();
         fMereni.dtm = null;
         fMerBefore.dtm = null;
+        boolean isBadapter = false;
+
         try {
             int i = 0;
+
+            // blby adapter ?
+            isBadapter = ((reply.startsWith("@D")) && (reply.length()==19));
+
             for (String val : reply.split("@")) {
                 // schovavam posledni string
 
@@ -700,12 +710,12 @@ public class DecodeTmsFormat {
                         fMereniList.add(new TMereni(fMereni));
                         fIdx++;
                     }
-                }
+                }  // konec k (if val.startsWith("D"))
                 else {
                     // address
                     String[] view = val.split(";");
                     if (view.length < 3)
-                        return false;
+                        return 0;
 
                     int AdrAfter = StrToHex(aft(view[ADR_INDEX],"="));
 
@@ -714,10 +724,6 @@ public class DecodeTmsFormat {
                     String par = view[PAR_INDEX];
                     String adr = view[ADR_INDEX];
                     // je ve druhem parametru adresa ?
-
-
-
-
 
                         // parameter
                     switch(cmd){
@@ -770,12 +776,12 @@ public class DecodeTmsFormat {
                    // vypis datumove znacky
                   // String line = String.format("ret: %d, AdrAfter: %d, SafeAddress: %d, lastSafeDtm: %s",ret ? 1 : 0,AdrAfter,SafeAddress,lastSafeDtm.toString());
 
-                   return ret;
+                   return ret ? 1 : 0;
                     //E=$000010;M;01
                     //E=$06D5F8;C;2023/10/20,09:14:49+04
                     //E=$06E700;D;2023/10/26,00:00:00+04
                     //E=$06D5D8;&;&93%01.80#94232790
-                }  // konec k (if elseif else)
+                }  // konec bloku, kde kontroluju, jestli jsou to data nebo udaje ze ctecky (M,C, atd)
                 i++;
                 ActAddr = ActAddr + 8;
             }  // konec k for
@@ -786,7 +792,11 @@ public class DecodeTmsFormat {
             Log.e("TAG",e.toString());
         };
 
-        return false;
+        // na konci mam minimalne nastavenu casovou znacku, eventuelne jedno posledni mereni
+        if (isBadapter)
+            return -2;
+
+        return 0;
     }
 
     // fixing situation when restarting block miss leading date mark
@@ -837,11 +847,11 @@ public class DecodeTmsFormat {
                 }
 
                 if (mer.dtm == null) {
-                    mer.dtm      =  dateTime;
-                    mer.year      =  dateTime.getYear();
+                    mer.dtm   =  dateTime;
+                    mer.year  =  dateTime.getYear();
                     mer.month =  dateTime.getMonthValue();
-                    mer.day       =  dateTime.getDayOfMonth();
-                    mer.dtm      = LocalDateTime.of(mer.year, mer.month, mer.day, mer.hh, mer.mm, mer.ss, 0);
+                    mer.day   =  dateTime.getDayOfMonth();
+                    mer.dtm   = LocalDateTime.of(mer.year, mer.month, mer.day, mer.hh, mer.mm, mer.ss, 0);
                 }
                 fMereniList.set(j,mer);
                 merPlus = new TMereni(mer);

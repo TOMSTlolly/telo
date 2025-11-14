@@ -89,6 +89,18 @@ public class uHer extends Thread {
         }
     }
 
+    private boolean EnterProgrammMode() {
+        byte[] b = new byte[2];
+        boolean ret;
+        ret = cmdapi("1;0xFA", 1, b);
+        if (!ret)
+            return (false);
+
+        // shod RTS
+        ret = ftDev.clrRts();
+        return (true);
+    }
+
     private long getTickCount() {
         return (currentTimeMillis());
     }
@@ -452,8 +464,10 @@ public class uHer extends Thread {
                 case xPLATTOUCH:
                    // Log.d("pigCmd", "xPlatTOUCH: ");
                     plat = platformTouch();
-                    if (plat < 0)
+                    if (plat < 0) {
+                        xst = twstate.xDEAD;
                         break;
+                    }
 
                     switch (plat) {
                         case 0x55:

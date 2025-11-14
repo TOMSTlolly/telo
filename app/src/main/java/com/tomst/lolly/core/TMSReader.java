@@ -22,17 +22,22 @@ import android.telecom.VideoProfile;
 import android.util.Log;
 import android.widget.Toast;
 
+
+
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.tomst.lolly.BuildConfig;
 import com.tomst.lolly.LollyActivity;
 
 import androidx.annotation.RequiresApi;
 
+import java.io.ByteArrayOutputStream;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.security.MessageDigest;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -47,6 +52,8 @@ import java.util.regex.Pattern;
 
 import com.tomst.lolly.BuildConfig;
 
+
+
 // test
 // test3
 public class TMSReader extends Thread
@@ -56,7 +63,11 @@ public class TMSReader extends Thread
     {
         rsStart,
         rsReadPacket,
+        rsTryAdapter,
         rsPacketOK,
+        rsAdapterDead,
+        rsD2xxError,
+        rsErrorPointer,
         rsPacketFalse,
         rsTimeOut,
         rsFinal
@@ -64,6 +75,9 @@ public class TMSReader extends Thread
     public boolean started = false;
     private volatile boolean isRunning = true;
     private final Object lock = new Object(); // Objekt pro synchronizaci
+
+    private int ER_CRYPT_DECODE = 238;
+
 
 
     public final int SPI_DOWNLOAD_NONE = 100;
@@ -960,6 +974,127 @@ public class TMSReader extends Thread
     }
 
 
+    /**
+     * Dekóduje soubor .tau (šifrovaný pomocí DCPCrypt/Blowfish/HAVAL)
+     * do poskytnutého MemoryStreamu (ByteArrayOutputStream).
+     *
+     * @param tauFile Cesta k šifrovanému .tau souboru.
+     * @param strmOutput Výstupní stream, do kterého se zapíší dekódovaná data.
+     * @return 0 pro úspěch (SUCCESS), 1 pro chybu (ER_CRYPT_DECODE).
+     */
+    public int DecodeTAUFile(String tauFile, ByteArrayOutputStream strmOutput) {
+
+        // Delphi: strmInput: TFileStream
+        // Java: FileInputStream v try-with-resources pro automatické uzavření
+        try (FileInputStream strmInput = new FileInputStream(tauFile)) {
+
+            // --- 1. Příprava hashe (HAVAL) ---
+
+            // Delphi: Hash := TDCP_haval.Create(nil);
+            // V Javě musíme použít providera (Bouncy Castle)
+            // MessageDigest hash = MessageDigest.getInstance("HAVAL-256-5"); // Předpoklad: 256-bit, 5 průchodů
+
+            // Delphi: Salt: array[0..7] of byte;
+            byte[] salt = new byte[8];
+
+            // Delphi: strmInput.ReadBuffer(Salt[0], Sizeof(Salt));
+            int bytesRead = strmInput.read(salt);
+            if (bytesRead != salt.length) {
+                throw new IOException("Nepodařilo se přečíst celý 8-bajtový salt ze souboru.");
+            }
+
+            // Delphi: Hash.Init; Hash.Update(Salt[0], Sizeof(Salt));
+            hash.update(salt);
+
+            // Delphi: sr := 'abcdefghijklmnopqrstuvwxyz'; Hash.UpdateStr(sr);
+            // "RawByteString" v Delphi odpovídá v Javě kódování ISO-8859-1
+            String passphrase = "abcdefghijklmnopqrstuvwxyz";
+            hash.update(passphrase.getBytes("ISO-8859-1"));
+
+            // Delphi: Hash.final(HashDigest[0]);
+            // Delphi: SetLength(HashDigest, Hash.HashSize div 8);
+            byte[] hashDigest = hash.digest();
+
+
+            // --- 2. Příprava šifry (Blowfish) ---
+
+            /*
+            // Delphi: Cipher := TDCP_blowfish.Create(nil);
+            // Delphi: TDCP_blockcipher(Cipher).CipherMode := cmCBC;
+            // V Javě specifikujeme "Algoritmus/Mód/Padding"
+            // Předpokládáme standardní PKCS5Padding, který DCPCrypt pravděpodobně používá.
+            Cipher cipher = Cipher.getInstance("Blowfish/CBC/PKCS5Padding");
+
+            // Delphi: SetLength(CipherIV, TDCP_blockcipher(Cipher).BlockSize div 8);
+            // Blowfish má velikost bloku 8 bajtů
+            int ivSize = cipher.getBlockSize(); // Vrací velikost bloku v bajtech
+            byte[] cipherIV = new byte[ivSize];
+
+            // Delphi: strmInput.ReadBuffer(CipherIV[0], Length(CipherIV));
+            bytesRead = strmInput.read(cipherIV);
+            if (bytesRead != ivSize) {
+                throw new IOException("Nepodařilo se přečíst celý IV (" + ivSize + " bajtů) ze souboru.");
+            }
+
+            // Delphi: Cipher.Init(HashDigest[0], Min(Cipher.MaxKeySize, Hash.HashSize), CipherIV);
+            // Musíme omezit délku klíče na maximum pro Blowfish (448 bitů = 56 bajtů)
+            // nebo na délku hashe, podle toho, co je menší.
+
+            int hashSizeInBytes = hash.getDigestLength(); // Např. 32 bajtů (256 bitů)
+            int maxKeySizeInBytes = 56; // 448 bitů / 8
+
+            int keyLengthInBytes = Math.min(maxKeySizeInBytes, hashSizeInBytes);
+
+            // Zkopírujeme klíč a případně ho ořízneme/doplníme
+            byte[] keyBytes = Arrays.copyOf(hashDigest, keyLengthInBytes);
+
+            SecretKeySpec keySpec = new SecretKeySpec(keyBytes, "Blowfish");
+            IvParameterSpec ivSpec = new IvParameterSpec(cipherIV);
+
+            cipher.init(Cipher.DECRYPT_MODE, keySpec, ivSpec);
+
+
+            // --- 3. Dekódování streamu ---
+
+            // Delphi: Cipher.DecryptStream(strmInput, strmOutput, strmInput.Size - strmInput.Position);
+            // V Javě musíme zbytek streamu číst po blocích a dekódovat ručně.
+
+            byte[] buffer = new byte[4096];
+            int nRead;
+            // Čteme zbytek souboru (za saltem a IV)
+            while ((nRead = strmInput.read(buffer)) != -1) {
+                // Dekódujeme data a zapisujeme do výstupního streamu
+                byte[] decryptedBlock = cipher.update(buffer, 0, nRead);
+                if (decryptedBlock != null) {
+                    strmOutput.write(decryptedBlock);
+                }
+            }
+
+            // Dokončíme dekódování (zpracuje poslední blok a padding)
+            byte[] finalBlock = cipher.doFinal();
+            if (finalBlock != null) {
+                strmOutput.write(finalBlock);
+            }
+
+            // Delphi: strmOutput.Position := 0;
+            // V Javě (ByteArrayOutputStream) není potřeba, stream je připraven ke čtení.
+
+            // Delphi: FreeAndNil(strmInput);
+            // V Javě se stalo automaticky díky try-with-resources
+
+             */
+
+            return 0; // Vše proběhlo v pořádku
+
+        } catch (Exception e) {
+            // Delphi: except result := ER_CRYPT_DECODE;
+            e.printStackTrace(); // Pro ladění je dobré chybu vypsat
+            return ER_CRYPT_DECODE;
+        }
+        // Delphi: Cipher.Free; Hash.Free;
+        // V Javě není potřeba, Garbage Collector se postará o objekty cipher a hash.
+    }
+
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     private void mLoop()
@@ -991,7 +1126,7 @@ public class TMSReader extends Thread
         {
 
             // --- BLOK PRO KONTROLU PAUZY ---
-            /*
+
             synchronized (pauseLock) {
                 if (isPaused) {
                     try {
@@ -1007,7 +1142,7 @@ public class TMSReader extends Thread
                     }
                 }
             }
-             */
+
             // --- KONEC BLOKU PRO PAUZU ---
             SendHeartBeat(idx++);
 
@@ -1019,10 +1154,10 @@ public class TMSReader extends Thread
                 case tWaitForHardware,tStart:
                     if (ConnectDevice()) {
                         devState = TDevState.tWaitForAdapter;
-                        SystemClock.sleep(100);
+                        //SystemClock.sleep(100);
                     }
                     else
-                        SystemClock.sleep(1000);
+                        SystemClock.sleep(100);
                     break;
 
                 case tWaitForAdapter:
@@ -1031,8 +1166,8 @@ public class TMSReader extends Thread
 
                     if (AdapterNumber.length()>5)
                         devState = TDevState.tHead;
-                   // else
-                   //     devState = TDevState.tFinal;  // tady by melo byt, ze jsem nenasel adapter
+                    else
+                        devState = TDevState.tStart;  // tady by melo byt, ze jsem nenasel adapter
                     break;
 
                 case tSerialDuplicity:
@@ -1307,8 +1442,10 @@ public class TMSReader extends Thread
                 case tReadData:
                     devState = TDevState.tCheckTMSFirmware; // nekonecna smycka, SMAZAT !!!!
 
-                    if (!ReadData()){
-                        devState = TDevState.tError;
+                    TReadState readState = ReadData();
+                    if (readState != TReadState.rsFinal){
+                        if (readState == TReadState.rsAdapterDead);
+                            SendMeasure(TDevState.tAdapterDead,"Adapter needs RE-FLASH !");
                         break;
                     }
                     devState = TDevState.tFinishedData;
@@ -1328,7 +1465,6 @@ public class TMSReader extends Thread
 
                 case tWaitInLimbo:
                     try {
-
                         synchronized (lock){
                             lock.wait(3000);
                         }
@@ -1443,8 +1579,7 @@ public class TMSReader extends Thread
      */
 
     @RequiresApi(api = Build.VERSION_CODES.O)
-    private boolean ReadData() {
-
+    private TReadState ReadData() {
         // chyby pujdou do sdileneho error logu
         String respond = "";
         DecodeTmsFormat parser = new DecodeTmsFormat();
@@ -1461,12 +1596,12 @@ public class TMSReader extends Thread
         if (ftDev == null) {
             Log.e("j2xx", "SendMessage : d2xx device doesnt exist");
             //LogMsg("Device doesnt exist. Check USB port");
-            return false;
+            return TReadState.rsD2xxError;
         }
 
         if (!ftDev.isOpen()) {
             Log.e("j2xx", "SendMessage: device not open");
-            return false;
+            return TReadState.rsD2xxError;
         }
 
         // napocitej pocet cyklu z posledni adresy
@@ -1496,7 +1631,7 @@ public class TMSReader extends Thread
                 fAddr = shared.getaddr(respond);
                 if (!fHer.doSACH(fAddr))
                 //if (!fHer.doSACH(Integer.parseInt(sHexString)))
-                    return false;
+                    return TReadState.rsErrorPointer;
                 /*
                 // controlled conversion back and forth between types just to check the value is valid
                 bHexString = getHexValueFromRespond(Integer.parseInt(sHexString, 16));
@@ -1559,7 +1694,7 @@ public class TMSReader extends Thread
         fAddr = -10000;
         int AdrTest = 0;
         String ss = "";
-        boolean ret = false;
+        Integer ret = 0;
         parser.SetLastSafeDtm(null);
         parser.SetMicroMeter(fShowMicro);
 
@@ -1568,8 +1703,9 @@ public class TMSReader extends Thread
 
         int iBlock = 0;
         int iErr=0;
+        int iSuspectAdapter=0;
         uHer.CommandResult Res;
-        while ((rState != TReadState.rsFinal) && (rState != TReadState.rsTimeOut)) {
+        while ((rState != TReadState.rsFinal) && (rState != TReadState.rsTimeOut) && (rState != TReadState.rsAdapterDead) ) {
             switch (rState) {
                 case rsStart:
                     // zjistim aktualni adresu
@@ -1582,6 +1718,28 @@ public class TMSReader extends Thread
                     }
                     break;
 
+                case rsTryAdapter:
+                    // pokus o znovupripojeni adapteru
+                    iErr++;
+                    SendMeasure(TDevState.tTMDCycling, String.format(" Adapter reconnect attempt %d", iErr));
+                    if (!ConnectDevice()) {
+                        rState = TReadState.rsTimeOut;
+                        break;
+                    }
+
+                    SystemClock.sleep(100);
+                    String adapter = fHer.getAdapter();
+                    if (adapter.length() > 5) {
+                        SendMeasure(TDevState.tTMDCycling, " Adapter reconnected");
+                        rState = TReadState.rsStart;
+                        iErr = 0;
+                    }
+                    if (iErr > 10) {
+                        SendMeasure(TDevState.tTMDCycling, " Adapter reconnect failed");
+                        rState = TReadState.rsTimeOut;
+                    }
+                    break;
+
                 case rsReadPacket:
                     Res= fHer.doCommandEx("D");
                     if (Res.status == uHer.cmdstate.xTimeout) {
@@ -1589,15 +1747,26 @@ public class TMSReader extends Thread
                         if (iErr>5) {
                             SendMeasure(TDevState.tTMDCycling, String.format(" No data after %d attempts", iErr));
                             iErr = 0;
-                            rState = TReadState.rsTimeOut;
+                            rState = TReadState.rsTryAdapter;
                         }
                         break;
                     }
                     respond = Res.response;
                     if (respond.length() > 1) {
-
                         ret = parser.dpacket(respond);  // data are send into HomeFragment
-                        if (ret) {
+
+                        if (ret == -2) {
+                            // podezrely blok dat, chova se jako by byl spatny adapter
+                            SendMeasure(TDevState.tTMDCycling, String.format(" Data packet error %d", iSuspectAdapter));
+                            if (iSuspectAdapter++ >= 10) {
+                                rState = TReadState.rsAdapterDead;
+                                break;
+                            }
+                            rState = TReadState.rsReadPacket;
+                            break;
+                        }
+
+                        if (ret>0) {
                            // extract last address from the data packet
                             iErr =0;
                             fAddr = DecodeTmsFormat.GetSafeAddress();
@@ -1613,6 +1782,7 @@ public class TMSReader extends Thread
 
                             SendMeasure(TDevState.tBlockNumber, String.format("Block %d", iBlock));
                             iBlock++;
+                            iSuspectAdapter = 0;
                             break;
                         }
                         else
@@ -1636,11 +1806,14 @@ public class TMSReader extends Thread
                             rState = TReadState.rsStart;
                     }
 
+                    /*
                     // podezrela hodnota, mozna bude spatny adapter
                     if (++iErr>10) {
                         SendMeasure(TDevState.tTMDCycling, String.format(" Cannot restart after %d attempts", iErr));
                         iErr = 0;
                     }
+
+                     */
                     break;
 
                 default:
@@ -1652,12 +1825,12 @@ public class TMSReader extends Thread
             // vyskoc pri signalu z aplikace
             if (!mRunning) {
                 mRunning = true;
-                return false;
+                return TReadState.rsTimeOut;
             }
 
         }
 
-        return (rState == TReadState.rsFinal);
+        return (rState );
     }
 
 

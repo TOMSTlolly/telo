@@ -23,6 +23,7 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.view.WindowManager;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
@@ -49,13 +50,16 @@ import com.tomst.lolly.core.RFirmware;
 import com.tomst.lolly.core.TDevState;
 import com.tomst.lolly.core.TDeviceType;
 import com.tomst.lolly.core.TInfo;
+import com.tomst.lolly.core.TMSReader;
 import com.tomst.lolly.core.TMSRec;
 import com.tomst.lolly.core.TMereni;
 import com.tomst.lolly.core.TMeteo;
 import com.tomst.lolly.core.shared;
 import com.tomst.lolly.databinding.FragmentHomeBinding;
+import com.tomst.lolly.core.Blowfish;
 
 import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -66,6 +70,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+
 
 public class HomeFragment extends Fragment {
     LollyActivity lollyApp = LollyActivity.getInstance();
@@ -142,8 +147,8 @@ public class HomeFragment extends Fragment {
                 savelog.add(ss);
                 binding.proMessage.setText(ss);
             }
-            csv.AddMerToCsv(mer); // add to csv file
-            //csv.AppendStat(mer);  // statistics, we'll omit this in the next version
+            else
+              csv.AddMerToCsv(mer); // add to csv file
         }
     };
 
@@ -444,6 +449,18 @@ public class HomeFragment extends Fragment {
                     adapterImage.setImageResource(R.drawable.adapter_red);
                     break;
 
+                case tAdapterDead:
+                    // adapter bude potrebovat flash firmware, vraci 19 bytu na "D" ve stylu pomale prohlizecky
+                    // je to nejaka softwerova chyba v adapteru
+                    binding.proMessage.setText("Adapter needs firmware reflash");
+                    binding.proBar.setProgress(0);
+
+                    // vymen obrazek adapteru na cerveny
+                    adapterImage = getActivity().findViewById(R.id.adapterImage);
+                    adapterGreenDrawable = ContextCompat.getDrawable(requireContext(), R.drawable.adapter_green);
+                    adapterImage.setImageResource(R.drawable.adapter_red);
+                    break;
+
                 case tWaitForAdapter:
                     // if (ftTMS.AdapterNumber.length()>MIN_ADANUMBER) ;
                     // tady je zobrazeni cisla adapteru
@@ -495,6 +512,7 @@ public class HomeFragment extends Fragment {
                     binding.proMessage.setTextColor(ContextCompat.getColor(requireContext(), R.color.color_accent)); // Set text color to red
                     savelog.add(info.msg);
                     break;
+
 
                 case tFirmwareIsActual:
                     binding.devver.setText(info.msg);
@@ -575,6 +593,9 @@ public class HomeFragment extends Fragment {
                 case tReadMeteo:
                     // show meteo mode and image
                     ImageView img = (ImageView)  getActivity().findViewById(R.id.modeImage);
+                    if (img == null)
+                        break;
+
                     setMeteoImage(img,info.meteo);
                     binding.devMode.setText(info.msg); // here is wordly description of mode
                     break;
@@ -738,7 +759,50 @@ public class HomeFragment extends Fragment {
         Button genCommand=binding.genCommand;
         genCommand.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
+                String inTauFileName = LollyActivity.getInstance().DIRECTORY_FW+"/lolly.tau";
+
+                // String outCsvFileName = LollyActivity.getInstance().DIRECTORY_FW + "/downloader.csv";
+
+                Context context = LollyActivity.getInstance().getApplicationContext();
+                TMSReader tm = new TMSReader(context);
+                ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+
+                // 2. Volání metody pro dekódování
+                int resultCode = tm.DecodeTAUFile(inTauFileName, outputStream);
+
+                // 3. Zpracování výsledku
+                if (resultCode == 0) { // Předpokládá se, že máte konstantu pro úspěch, např. 0
+                    // Dekódování bylo úspěšné. Data jsou nyní v 'outputStream'.
+
+                    // Převedeme obsah streamu na text (předpokládáme kódování UTF-8)
+                    String decodedContent = outputStream.toString();
+
+                    Log.d("DecodeTAU", "Soubor byl úspěšně dekódován. Obsah:\n" + decodedContent);
+                    Toast.makeText(context, "Dekódování dokončeno.", Toast.LENGTH_SHORT).show();
+
+                    // Pokud chceš obsah zobrazit v UI, můžeš použít nějaký TextView
+                    // binding.proMessage.setText(decodedContent);
+
+                } else {
+                    // Dekódování se nezdařilo
+                    Log.e("DecodeTAU", "Dekódování souboru " + inTauFileName + " se nezdařilo. Kód chyby: " + resultCode);
+                    Toast.makeText(context, "Chyba při dekódování.", Toast.LENGTH_SHORT).show();
+                }
+
+
+                /*
                 String ALogName = LollyActivity.getInstance().DIRECTORY_LOGS + "/command.csv.";
+                Blowfish bf = new Blowfish();
+                bf.selfTest();
+
+                String testStr = "This is a test string for Blowfish encryption.";
+                String encrypted = bf.encrypt(testStr);
+                String decrypted = bf.decrypt(encrypted);
+                Log.d("Blowfish", "Original: " + testStr);
+                Log.d("Blowfish", "Encrypted: " + encrypted);
+                Log.d("Blowfish", "Decrypted: " + decrypted);
+                 */
+
                 //TMSSim sim = new TMSSim(ALogName);
                 //  dmd.sendMessageToFragment("TMD");
                 // Message message = handler.obtainMessage();

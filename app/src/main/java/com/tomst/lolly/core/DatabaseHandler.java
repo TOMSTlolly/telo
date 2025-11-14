@@ -14,6 +14,8 @@ import androidx.annotation.RequiresApi;
 import com.tomst.lolly.fileview.FileDetail;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 public class DatabaseHandler extends SQLiteOpenHelper {
     private static final int DATABASE_VERSION = 1;
@@ -215,6 +217,36 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         location.setTime(cursor.getLong(cursor.getColumnIndex(KEY_LOCATION_TIME)));
         fileDetail.setLocation(location);
         return fileDetail;
+    }
+
+    // Přidejte tuto metodu do vaší třídy DatabaseHandler.java
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    public Map<String, FileDetail> getAllFileDetailsAsMap() {
+        Map<String, FileDetail> fileDetailsMap = new HashMap<>();
+        String selectQuery = "SELECT * FROM " + TABLE_CLIST; // Nahraďte skutečným názvem tabulky
+
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.rawQuery(selectQuery, null);
+
+        FileDetail fileDetail = null;
+
+        // Procházení všech řádků a jejich přidání do mapy
+        if (cursor.moveToFirst()) {
+            do {
+
+                // Zde naplňte objekt fileDetail z kurzoru (stejně jako v getFileDetail)
+                // Např.: fileDetail.setName(cursor.getString(cursor.getColumnIndexOrThrow(KEY_NAME)));
+                // ... naplnit ostatní vlastnosti
+                fileDetail = copyCursorToFileDetail(cursor);
+
+                String fileName = cursor.getString(cursor.getColumnIndexOrThrow(KEY_CLIST_NAME)); // Předpokládám sloupec KEY_NAME pro název souboru
+                fileDetailsMap.put(fileName, fileDetail);
+            } while (cursor.moveToNext());
+        }
+        cursor.close();
+        db.close();
+
+        return fileDetailsMap;
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)

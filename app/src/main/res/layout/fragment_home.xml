@@ -1150,7 +1150,7 @@
                 android:orientation="horizontal"
                 android:paddingLeft="@dimen/spacing_middle"
                 android:paddingRight="@dimen/spacing_middle"
-                android:visibility="gone">
+                android:visibility="visible">
 
                 <Button
                     android:id="@+id/genSerial"
@@ -1158,7 +1158,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:backgroundTint="#f1a833"
-                    android:text="t.SaveLog" />
+                    android:text="t.Tup" />
 
                 <Button
                     android:id="@+id/genCommand"
@@ -1166,7 +1166,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:backgroundTint="#f1a033"
-                    android:text="t.Cmnd" />
+                    android:text="t.Blowfish" />
 
                 <Button
                     android:id="@+id/testCrash"
