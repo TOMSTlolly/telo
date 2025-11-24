@@ -1196,16 +1196,16 @@ public class ListFragment extends Fragment implements OnProListener
        }
 
         long startTime = System.currentTimeMillis();
-        DoLoadFiles();
+        //DoLoadFiles();
         long endTime = System.currentTimeMillis(); // Konec měření
         long duration = endTime - startTime; // Výpočet doby trvání
         Log.d(TAG, "Doba trvání bloku 'DoLoadFiles': " + duration + " ms");
 
-        /*
+
         executor.execute(() -> {
             DoLoadFiles();
         });
-         */
+
 
 
     }

@@ -368,6 +368,42 @@ public class Blowfish {
         coreEncrypt(inData, inOff, outData, outOff);
     }
 
+    // Uvnitř třídy com.tomst.lolly.core.Blowfish
+
+    /**
+     * Dekóduje data pomocí Blowfish v režimu podobném ECB, ale s použitím IV.
+     * @param encryptedData Pole bajtů obsahující zašifrovaná data.
+     * @param outStream Stream, do kterého budou zapsána dekódovaná data.
+     * @param iv Inicializační vektor (8 bajtů).
+     */
+    public void decryptECB(byte[] encryptedData, java.io.OutputStream outStream, byte[] iv) throws java.io.IOException {
+        // Zde bude vaše implementace, která:
+        // 1. Prochází pole `encryptedData` po blocích o velikosti 8 bajtů.
+        // 2. Pro každý blok provede dekódování (s použitím IV, pokud to váš algoritmus vyžaduje).
+        // 3. Výsledek každé operace zapíše do `outStream`.
+
+        // Příklad (logika se může lišit podle vaší implementace):
+        byte[] temp_in = new byte[8];
+        byte[] temp_out = new byte[8];
+
+        for (int i = 0; i < encryptedData.length; i += 8) {
+            // Zkopírovat blok dat
+            System.arraycopy(encryptedData, i, temp_in, 0, 8);
+
+            // XOR s IV
+            for (int j=0; j<8; j++) temp_in[j] ^= iv[j];
+
+            // Dekódovat blok
+            //decode(temp_in, temp_out,temp_in.length);
+
+            // Zapsat výsledek do výstupního streamu
+            outStream.write(temp_out);
+
+            // Aktualizovat IV pro další blok (pokud je to CBC)
+            System.arraycopy(temp_in, 0, iv, 0, 8);
+        }
+    }
+
     /**
      * Dešifruje jeden 8-bajtový blok dat v ECB módu.
      */

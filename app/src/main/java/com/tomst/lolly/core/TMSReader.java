@@ -986,103 +986,63 @@ public class TMSReader extends Thread
 
         // Delphi: strmInput: TFileStream
         // Java: FileInputStream v try-with-resources pro automatické uzavření
-        try (FileInputStream strmInput = new FileInputStream(tauFile)) {
+        try (FileInputStream strmInput = new FileInputStream(tauFile);
+             java.io.DataInputStream dis = new java.io.DataInputStream(strmInput)) {
 
             // --- 1. Příprava hashe (HAVAL) ---
 
-            // Delphi: Hash := TDCP_haval.Create(nil);
-            // V Javě musíme použít providera (Bouncy Castle)
-            // MessageDigest hash = MessageDigest.getInstance("HAVAL-256-5"); // Předpoklad: 256-bit, 5 průchodů
 
             // Delphi: Salt: array[0..7] of byte;
             byte[] salt = new byte[8];
+            dis.readFully(salt) ; // vyctu 8 bytu soli
 
-            // Delphi: strmInput.ReadBuffer(Salt[0], Sizeof(Salt));
-            int bytesRead = strmInput.read(salt);
-            if (bytesRead != salt.length) {
-                throw new IOException("Nepodařilo se přečíst celý 8-bajtový salt ze souboru.");
-            }
+            byte[] hashDigest = new byte[32];
+            //dis.readFully(cipherIV);
 
-            // Delphi: Hash.Init; Hash.Update(Salt[0], Sizeof(Salt));
-            hash.update(salt);
-
-            // Delphi: sr := 'abcdefghijklmnopqrstuvwxyz'; Hash.UpdateStr(sr);
-            // "RawByteString" v Delphi odpovídá v Javě kódování ISO-8859-1
+            // passphrase je stejná jako v Delphi ukázce
             String passphrase = "abcdefghijklmnopqrstuvwxyz";
-            hash.update(passphrase.getBytes("ISO-8859-1"));
+            com.tomst.lolly.core.DcpHaval dh = new com.tomst.lolly.core.DcpHaval();
+            dh.init();
+            dh.update(salt,0,8);
+            dh.updateStr(passphrase);
+            dh.doFinal(hashDigest,0);
 
-            // Delphi: Hash.final(HashDigest[0]);
-            // Delphi: SetLength(HashDigest, Hash.HashSize div 8);
-            byte[] hashDigest = hash.digest();
+            // finalni kodovani
+            com.tomst.lolly.core.Blowfish cipher = new com.tomst.lolly.core.Blowfish();
+            byte [] cipheriv = new byte[8];
+            dis.readFully(cipheriv);
+            //cipher.decryptECB(strmInput, strmOutput, cipheriv);
 
 
-            // --- 2. Příprava šifry (Blowfish) ---
-
-            /*
-            // Delphi: Cipher := TDCP_blowfish.Create(nil);
-            // Delphi: TDCP_blockcipher(Cipher).CipherMode := cmCBC;
-            // V Javě specifikujeme "Algoritmus/Mód/Padding"
-            // Předpokládáme standardní PKCS5Padding, který DCPCrypt pravděpodobně používá.
-            Cipher cipher = Cipher.getInstance("Blowfish/CBC/PKCS5Padding");
-
-            // Delphi: SetLength(CipherIV, TDCP_blockcipher(Cipher).BlockSize div 8);
-            // Blowfish má velikost bloku 8 bajtů
-            int ivSize = cipher.getBlockSize(); // Vrací velikost bloku v bajtech
-            byte[] cipherIV = new byte[ivSize];
-
-            // Delphi: strmInput.ReadBuffer(CipherIV[0], Length(CipherIV));
-            bytesRead = strmInput.read(cipherIV);
-            if (bytesRead != ivSize) {
-                throw new IOException("Nepodařilo se přečíst celý IV (" + ivSize + " bajtů) ze souboru.");
+            // Zjistíme, kolik bajtů zbývá ve streamu
+            int remainingBytes = strmInput.available();
+            if (remainingBytes <= 0) {
+                // Žádná data k dekódování
+                return 0;
             }
 
-            // Delphi: Cipher.Init(HashDigest[0], Min(Cipher.MaxKeySize, Hash.HashSize), CipherIV);
-            // Musíme omezit délku klíče na maximum pro Blowfish (448 bitů = 56 bajtů)
-            // nebo na délku hashe, podle toho, co je menší.
+            // zasifrovany vstup
+            byte[] encryptedData = new byte[remainingBytes];
+            strmInput.read(encryptedData);
 
-            int hashSizeInBytes = hash.getDigestLength(); // Např. 32 bajtů (256 bitů)
-            int maxKeySizeInBytes = 56; // 448 bitů / 8
-
-            int keyLengthInBytes = Math.min(maxKeySizeInBytes, hashSizeInBytes);
-
-            // Zkopírujeme klíč a případně ho ořízneme/doplníme
-            byte[] keyBytes = Arrays.copyOf(hashDigest, keyLengthInBytes);
-
-            SecretKeySpec keySpec = new SecretKeySpec(keyBytes, "Blowfish");
-            IvParameterSpec ivSpec = new IvParameterSpec(cipherIV);
-
-            cipher.init(Cipher.DECRYPT_MODE, keySpec, ivSpec);
+            // odsifrovany vystup
+            byte[] decryptedData = new byte[remainingBytes];
 
 
-            // --- 3. Dekódování streamu ---
+            cipher.init(hashDigest);
 
-            // Delphi: Cipher.DecryptStream(strmInput, strmOutput, strmInput.Size - strmInput.Position);
-            // V Javě musíme zbytek streamu číst po blocích a dekódovat ručně.
-
-            byte[] buffer = new byte[4096];
-            int nRead;
-            // Čteme zbytek souboru (za saltem a IV)
-            while ((nRead = strmInput.read(buffer)) != -1) {
-                // Dekódujeme data a zapisujeme do výstupního streamu
-                byte[] decryptedBlock = cipher.update(buffer, 0, nRead);
-                if (decryptedBlock != null) {
-                    strmOutput.write(decryptedBlock);
+            cipher.decryptECB(encryptedData,0,decryptedData,0);
+            // --- LADÍCÍ BLOK: Uložení šifrovaných dat do souboru ---
+            try {
+                File cacheDir = context.getCacheDir();
+                File outputFile = new File(cacheDir, "encrypted.txt");
+                try (java.io.FileOutputStream fos = new java.io.FileOutputStream(outputFile)) {
+                    fos.write(encryptedData);
+                    Log.d("DecodeTAU", "Šifrovaná data uložena do: " + outputFile.getAbsolutePath());
                 }
+            } catch (IOException e) {
+                Log.e("DecodeTAU", "Chyba při ukládání šifrovaných dat do cache.", e);
             }
-
-            // Dokončíme dekódování (zpracuje poslední blok a padding)
-            byte[] finalBlock = cipher.doFinal();
-            if (finalBlock != null) {
-                strmOutput.write(finalBlock);
-            }
-
-            // Delphi: strmOutput.Position := 0;
-            // V Javě (ByteArrayOutputStream) není potřeba, stream je připraven ke čtení.
-
-            // Delphi: FreeAndNil(strmInput);
-            // V Javě se stalo automaticky díky try-with-resources
-
-             */
 
             return 0; // Vše proběhlo v pořádku
 
