@@ -762,6 +762,11 @@ public class HomeFragment extends Fragment {
                 String inTauFileName = LollyActivity.getInstance().DIRECTORY_FW+"/lolly.tau";
 
                 // String outCsvFileName = LollyActivity.getInstance().DIRECTORY_FW + "/downloader.csv";
+                // pozdrzeni lollyService vlakna
+                if (bound && odometer != null) {
+                    odometer.enableLoop(false);
+                }
+
 
                 Context context = LollyActivity.getInstance().getApplicationContext();
                 TMSReader tm = new TMSReader(context);

@@ -321,6 +321,8 @@ public class Blowfish {
         return 448; // v bitech
     }
 
+    public static byte[] fSalt = new byte[8];
+
     // --- Hlavní metody ---
 
     /**
@@ -332,7 +334,14 @@ public class Blowfish {
             throw new IllegalArgumentException("Neplatná délka klíče. Musí být 1-56 bajtů.");
         }
         initKey(key);
+
+
+
         initialized = true;
+    }
+
+    public void setSalt(byte[] salt) {
+        for (int i = 0; i<8;i++) fSalt[i] = salt[i];
     }
 
     /**
@@ -411,7 +420,18 @@ public class Blowfish {
         if (!initialized) {
             throw new IllegalStateException("Šifra není inicializována");
         }
-        coreDecrypt(inData, inOff, outData, outOff);
+
+
+        coreDecrypt(inData, inOff, outData, outOff); // odpovida radku decryptECB v delphi
+
+        // xor se saltem
+        for (int i = 0;i<8;i++){
+            outData[outOff+i] ^= fSalt[i];
+        }
+
+        for (int i=0;i<8;i++){
+            fSalt[i] = inData[i+inOff];
+        }
     }
 
     // --- Privátní pomocné metody ---

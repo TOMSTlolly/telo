@@ -1011,7 +1011,7 @@ public class TMSReader extends Thread
             com.tomst.lolly.core.Blowfish cipher = new com.tomst.lolly.core.Blowfish();
             byte [] cipheriv = new byte[8];
             dis.readFully(cipheriv);
-            //cipher.decryptECB(strmInput, strmOutput, cipheriv);
+
 
 
             // Zjistíme, kolik bajtů zbývá ve streamu
@@ -1027,17 +1027,27 @@ public class TMSReader extends Thread
 
             // odsifrovany vystup
             byte[] decryptedData = new byte[remainingBytes];
-
-
+            cipher.reset();
             cipher.init(hashDigest);
+            cipher.setSalt(cipheriv);
+            cipher.decryptECB_DelphiCompatible(encryptedData, 0, decryptedData, 0);
 
-            cipher.decryptECB(encryptedData,0,decryptedData,0);
+            // Procházíme šifrovaná data po 8bajtových blocích
+            for (int i = 0; i < encryptedData.length; i += 8) {
+                // Dekódujeme jeden 8bajtový blok ze vstupního pole (encryptedData)
+                // a výsledek uložíme na odpovídající pozici do výstupního pole (decryptedData).
+                cipher.decryptECB(encryptedData, i, decryptedData, i);
+            }
+
+
+
+            strmOutput.write(decryptedData);
             // --- LADÍCÍ BLOK: Uložení šifrovaných dat do souboru ---
             try {
                 File cacheDir = context.getCacheDir();
-                File outputFile = new File(cacheDir, "encrypted.txt");
+                File outputFile = new File(cacheDir, "decrypted.txt");
                 try (java.io.FileOutputStream fos = new java.io.FileOutputStream(outputFile)) {
-                    fos.write(encryptedData);
+                    fos.write(decryptedData);
                     Log.d("DecodeTAU", "Šifrovaná data uložena do: " + outputFile.getAbsolutePath());
                 }
             } catch (IOException e) {
