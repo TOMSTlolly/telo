@@ -1051,7 +1051,7 @@ public class TMSReader extends Thread
                     Log.d("DecodeTAU", "Šifrovaná data uložena do: " + outputFile.getAbsolutePath());
                 }
             } catch (IOException e) {
-                Log.e("DecodeTAU", "Chyba při ukládání šifrovaných dat do cache.", e);
+                Log.e("DecodeTAU+", "Chyba při ukládání šifrovaných dat do cache.", e);
             }
 
             return 0; // Vše proběhlo v pořádku
