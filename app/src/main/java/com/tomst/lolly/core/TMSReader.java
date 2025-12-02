@@ -1039,7 +1039,7 @@ public class TMSReader extends Thread
                 cipher.decryptECB(encryptedData, i, decryptedData, i);
             }
 
-
+            //
 
             strmOutput.write(decryptedData);
             // --- LADÍCÍ BLOK: Uložení šifrovaných dat do souboru ---

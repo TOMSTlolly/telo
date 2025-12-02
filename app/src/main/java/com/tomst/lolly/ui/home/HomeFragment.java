@@ -782,6 +782,7 @@ public class HomeFragment extends Fragment {
                     // Převedeme obsah streamu na text (předpokládáme kódování UTF-8)
                     String decodedContent = outputStream.toString();
 
+
                     Log.d("DecodeTAU", "Soubor byl úspěšně dekódován. Obsah:\n" + decodedContent);
                     Toast.makeText(context, "Dekódování dokončeno.", Toast.LENGTH_SHORT).show();
 

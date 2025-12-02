@@ -421,7 +421,6 @@ public class Blowfish {
             throw new IllegalStateException("Šifra není inicializována");
         }
 
-
         coreDecrypt(inData, inOff, outData, outOff); // odpovida radku decryptECB v delphi
 
         // xor se saltem

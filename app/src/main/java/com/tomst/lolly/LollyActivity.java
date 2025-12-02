@@ -72,7 +72,11 @@ import com.tomst.lolly.core.EventBusMSGNormal;
 
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -497,6 +501,8 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
             }
         }
     }
+
+
 
 
     public String getCacheCsvPath() {
@@ -1241,6 +1247,161 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
 
     public static final String KEY_IS_FIRST_RUN = "isFirstRun";
 
+
+
+
+    /**
+     * Tato metoda se zavolá, až když je vše připraveno.
+     * Zde můžeš bezpečně měnit texty, tlačítka atd.
+     */
+    private void onFirmwareReady(File file) {
+        // Příklad: Odemkneme tlačítko pro flashování
+        // Button btnFlash = findViewById(R.id.btnFlash);
+        // btnFlash.setEnabled(true);
+        // btnFlash.setText("Flashovat firmware");
+
+        System.out.println("Firmware je připraven na cestě: " + file.getAbsolutePath());
+    }
+
+
+    // nakopiruje mi lolly.tau z assets do cache/fw/lolly.tau
+    public File getFirmwareFile(Context context) {
+        // 1. Cesta k adresáři: cache/Fw/
+        File fwDir = new File(context.getCacheDir(), "Fw");
+
+        // Pokud složka 'Fw' neexistuje, vytvoříme ji
+        if (!fwDir.exists()) {
+            boolean dirCreated = fwDir.mkdirs();
+            if (!dirCreated) {
+                // Pokud se nepovede vytvořit složku, nemůžeme pokračovat
+                return null;
+            }
+        }
+
+        // 2. Cesta k souboru: cache/Fw/lolly.tau
+        File targetFile = new File(fwDir, "lolly.tau");
+
+        // 3. KONTROLA: Pokud soubor už existuje, nic neděláme a vrátíme ho.
+        // (Znamená to, že už tam je buď z minula, nebo stažený z HTTP)
+        if (targetFile.exists()) {
+            System.out.println("Soubor už existuje, přeskakuji kopírování z Assets.");
+            return targetFile;
+        }
+
+        // 4. Pokud neexistuje, zkopírujeme ho z Assets (tovární verze)
+        System.out.println("Soubor nenalezen, kopíruji defaultní z Assets...");
+        try (InputStream inputStream = context.getAssets().open("lolly.tau");
+             FileOutputStream outputStream = new FileOutputStream(targetFile)) {
+
+            byte[] buffer = new byte[1024];
+            int length;
+            while ((length = inputStream.read(buffer)) > 0) {
+                outputStream.write(buffer, 0, length);
+            }
+
+            return targetFile; // Vracíme nově vytvořený soubor
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null; // Chyba při kopírování
+        }
+    }
+
+    private boolean downloadFileFromUrl(String urlString, File targetFile) {
+        try {
+            URL url = new URL(urlString);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(5000); // 5 sekund na připojení
+            connection.setReadTimeout(5000);    // 5 sekund na čtení
+            connection.connect();
+
+            // Kontrola, zda server odpověděl 200 OK
+            if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                return false;
+            }
+
+            // Stahování a zápis do souboru
+            try (InputStream input = connection.getInputStream();
+                 FileOutputStream output = new FileOutputStream(targetFile)) {
+
+                byte[] buffer = new byte[4096];
+                int count;
+                while ((count = input.read(buffer)) != -1) {
+                    output.write(buffer, 0, count);
+                }
+            }
+            return true; // Povedlo se
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false; // Nepovedlo se (není net, chyba serveru...)
+        }
+    }
+
+    private boolean shouldDownloadUpdate(File file) {
+        // 1. Pokud soubor fyzicky neexistuje (např. chyba při kopírování z assets), musíme stahovat
+        if (!file.exists()) return true;
+
+        // 2. Zjistíme stáří
+        long lastModified = file.lastModified();
+        long now = System.currentTimeMillis();
+
+        // Rozdíl v čase
+        long age = now - lastModified;
+
+        // 3. Je starší než 14 dní?
+        return age > UPDATE_INTERVAL_MS;
+    }
+
+    /**
+     * Tato metoda spustí vlákno na pozadí, zkontroluje/vytvoří soubor
+     * a případně pořeší stahování z netu.
+     */
+    private static final String TMDFIRMWARE_URL = "https://www.tomst.com/lolly/update/lolly.tau";
+    // 14 dní v milisekundách: 14 * 24 hod * 60 min * 60 sek * 1000 ms
+    private static final long UPDATE_INTERVAL_MS = 14L * 24 * 60 * 60 * 1000;
+
+    private void initFirmwareData() {
+        final Context context = getApplicationContext();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                // 1. bud soubor existuje, nebo ho nakopiruj z assets
+                File fwFile = getFirmwareFile(context);
+
+                // zjistim stari souboru
+                if (shouldDownloadUpdate(fwFile)) {
+                    System.out.println("Soubor je starý nebo neexistuje, stahuji nový...");
+
+                    boolean success = downloadFileFromUrl(TMDFIRMWARE_URL, fwFile);
+                    if (success) {
+                        // DŮLEŽITÉ: Po stažení musíme aktualizovat časovou známku souboru,
+                        // jinak by si aplikace myslela, že je pořád starý (pokud server poslal staré datum).
+                        // Nastavíme mu "teď".
+                        fwFile.setLastModified(System.currentTimeMillis());
+                    }
+                } else {
+                    System.out.println("Soubor je čerstvý (méně než 14 dní), nestahuji.");
+                }
+
+                if (fwFile != null) {
+
+                    // 3. Hotovo, vracíme se na hlavní vlákno aktualizovat UI
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            // Voláme další metodu, která řeší jen UI
+                            //File fwFile = getFirmwareFile(context);
+                            onFirmwareReady(fwFile);
+                        }
+                    });
+                }
+            }
+        }).start();
+    }
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
@@ -1258,10 +1419,9 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
             requestPermission();
         }
 
+        //  location = LollyActivity.getInstance().getLocation();
 
-//        location = LollyActivity.getInstance().getLocation();
-
-         // Initialize Firebase and crashlytics for collecting crash reports and analytics
+        // Initialize Firebase and crashlytics for collecting crash reports and analytics
         FirebaseApp.initializeApp(this);
         FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(true);
 
@@ -1269,6 +1429,8 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
         setContentView(binding.getRoot());
         view = binding.getRoot();
 
+        // zkontroluj firmware
+        initFirmwareData();
 
         // remove stupid line on bottom of action bar
         getSupportActionBar().setElevation(0);
