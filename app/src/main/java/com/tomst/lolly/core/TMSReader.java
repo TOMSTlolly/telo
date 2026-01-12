@@ -18,7 +18,6 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.os.SystemClock;
-import android.telecom.VideoProfile;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -59,6 +58,9 @@ import com.tomst.lolly.BuildConfig;
 public class TMSReader extends Thread
 {
 
+    private String fileDir;
+    private String firmwareFilePath; // <-- PŘIDAT TUTO PROMĚNNOU
+
     private enum TReadState
     {
         rsStart,
@@ -76,7 +78,6 @@ public class TMSReader extends Thread
     private volatile boolean isRunning = true;
     private final Object lock = new Object(); // Objekt pro synchronizaci
 
-    private int ER_CRYPT_DECODE = 238;
 
 
 
@@ -125,7 +126,6 @@ public class TMSReader extends Thread
         return devState;
     }
 
-    private String fileDir;
 
     // handler pro vystup dat ven z tridy
     private static Handler handler = null;            // info ze stavoveho stroje
@@ -973,15 +973,128 @@ public class TMSReader extends Thread
         }
     }
 
+    // flash firmware
+    private static final byte CMD_WRITE_FLASH = (byte) 0xD1;
+    public boolean decodeAndFlash(String AFileName, byte ahw, byte afw)
+    {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        TauParser tauParser = new TauParser();
+        String inTauFileName = AFileName;
 
-    /**
-     * Dekóduje soubor .tau (šifrovaný pomocí DCPCrypt/Blowfish/HAVAL)
-     * do poskytnutého MemoryStreamu (ByteArrayOutputStream).
-     *
-     * @param tauFile Cesta k šifrovanému .tau souboru.
-     * @param strmOutput Výstupní stream, do kterého se zapíší dekódovaná data.
-     * @return 0 pro úspěch (SUCCESS), 1 pro chybu (ER_CRYPT_DECODE).
-     */
+        // 1. Dekódování souboru
+        int resultCode = tauParser.DecodeTAUFile(inTauFileName, outputStream);
+        if (resultCode != 0) {
+            SendMeasure(TDevState.tFirmwareFlashError, "Chyba při dekódování FW souboru.");
+            Log.e(TAG, "decodeAndFlash: Chyba při dekódování souboru " + inTauFileName);
+            return false;
+        }
+
+        // 2. Naplnění interní databáze firmwarů v parseru.
+        // Musí být zavoláno před hledáním.
+        tauParser.findAllFirmwareVariants(outputStream);
+
+        TauParser.RTau firmwareToFlash = null;
+        if (afw == -1) {
+            // Varianta A: Najdi nejnovější firmware pro daný hardware
+            Log.d(TAG, "Hledám nejnovější firmware pro HW: " + String.format("$%02X", ahw));
+            firmwareToFlash = tauParser.getLatestFirmwareForHardware(ahw);
+        } else {
+            // Varianta B: Najdi přesně danou verzi firmwaru
+            Log.d(TAG, "Hledám specifický firmware - HW: " + String.format("$%02X", ahw) + ", FW: " + String.format("$%02X", afw));
+            firmwareToFlash = tauParser.getSpecificFirmware(ahw, (byte) afw);
+        }
+
+        // 4. Kontrola, zda byl firmware nalezen
+        if (firmwareToFlash == null) {
+            String errorMsg = "Požadovaný firmware (HW=" + String.format("$%02X", ahw) +
+                    ", FW=" + (afw == -1 ? "nejnovější" : String.format("$%02X", afw)) +
+                    ") nebyl v souboru nalezen.";
+            SendMeasure(TDevState.tFirmwareFlashError, errorMsg);
+            Log.e(TAG, "decodeAndFlash: " + errorMsg);
+            return false;
+        }
+
+        // 5. Extrakce dat pro vybraný firmware
+        List<byte[]> firmwarePackets = tauParser.extractLatestFirmwareData(
+                outputStream.toString(),
+                firmwareToFlash.hw,
+                firmwareToFlash.fw
+        );
+
+        if (firmwarePackets.isEmpty()) {
+            SendMeasure(TDevState.tFirmwareFlashError, "Nepodařilo se extrahovat data FW.");
+            Log.e(TAG, "decodeAndFlash: Pro vybraný FW nebyly nalezeny žádné datové pakety.");
+            return false;
+        }
+
+        String finalMessage = "Příprava na flashování: " + firmwarePackets.size() + " paketů pro " + firmwareToFlash.toString();
+        Log.d(TAG, finalMessage);
+        SendMeasure(TDevState.tFirmware, finalMessage);
+
+
+      //  boolean flash = true;
+
+        if (fHer.EnterProgrammMode() == false)
+            return false;
+
+
+
+        int totalPackets = firmwarePackets.size();
+        DoProgress(-totalPackets);
+
+        // vynecham prvni paket
+        for (int i = 0; i < totalPackets; i++) {
+            //int offset = i *8;
+            byte[] chunk = firmwarePackets.get(i);
+
+            // A. Zkontrolujeme CRC pro jistotu
+            byte expectedCrc = chunk[7]; // CRC je 8. bajt (index 7)
+            byte actualCrc = TauParser.calculateCRC8(chunk);
+            if (expectedCrc != actualCrc) {
+                String crcErrorMsg = String.format("Chyba CRC v paketu %d! Očekáváno: %02X, Vypočteno: %02X", (i + 1), expectedCrc, actualCrc);
+                Log.e(TAG, crcErrorMsg);
+                // Můžeme se rozhodnout buď pokračovat, nebo flashování přerušit
+                // Pro bezpečnost je lepší přerušit
+                SendMeasure(TDevState.tFirmwareFlashError, "Chyba CRC v datech firmwaru.");
+                return false;
+            }
+
+            // int codeA = (chunk[3] & 0xFF) * 256 + chunk[4] & 0XFF;
+            // int codeB = (chunk[5] & 0xFF) * 256 + chunk[6] & 0xFF;
+            int codeA = ((chunk[3] & 0xFF) << 8) | (chunk[4] & 0xFF);
+            int codeB = ((chunk[5] & 0xFF) << 8) | (chunk[6] & 0xFF);
+            Log.d(TAG, String.format("Flashing packet %d/%d: Addr=0x%04X, Data=0x%04X",
+                    (i + 1), totalPackets, codeA, codeB));
+            if (codeA == 0)
+                continue;
+
+            if (!fHer.sendCode(CMD_WRITE_FLASH, codeA, codeB, false)) {
+                String errorMsg = "Chyba při zápisu paketu " + (i + 1) + "/" + totalPackets;
+                SendMeasure(TDevState.tFirmwareFlashError, errorMsg);
+                Log.e(TAG, "decodeAndFlash: " + errorMsg);
+                return false;
+            }
+
+            DoProgress(i + 1);
+        }
+
+        // 8. Úspěšné dokončení
+        DoProgress(totalPackets);
+        SendMeasure(TDevState.tFirmwareFlashFine, "Flashování firmwaru bylo úspěšně dokončeno.");
+        Log.d(TAG, "decodeAndFlash: Flashování úspěšně dokončeno.");
+
+        fHer.powerOff();
+        SystemClock.sleep(200);
+        fHer.powerOn();
+
+        fHer.writeEEPROM((byte) 0, firmwareToFlash.fw);
+
+        return true;
+
+    }
+
+
+    /*
     public int DecodeTAUFile(String tauFile, ByteArrayOutputStream strmOutput) {
 
         // Delphi: strmInput: TFileStream
@@ -989,10 +1102,7 @@ public class TMSReader extends Thread
         try (FileInputStream strmInput = new FileInputStream(tauFile);
              java.io.DataInputStream dis = new java.io.DataInputStream(strmInput)) {
 
-            // --- 1. Příprava hashe (HAVAL) ---
-
-
-            // Delphi: Salt: array[0..7] of byte;
+             // Delphi: Salt: array[0..7] of byte;
             byte[] salt = new byte[8];
             dis.readFully(salt) ; // vyctu 8 bytu soli
 
@@ -1011,7 +1121,6 @@ public class TMSReader extends Thread
             com.tomst.lolly.core.Blowfish cipher = new com.tomst.lolly.core.Blowfish();
             byte [] cipheriv = new byte[8];
             dis.readFully(cipheriv);
-
 
 
             // Zjistíme, kolik bajtů zbývá ve streamu
@@ -1063,6 +1172,24 @@ public class TMSReader extends Thread
         }
         // Delphi: Cipher.Free; Hash.Free;
         // V Javě není potřeba, Garbage Collector se postará o objekty cipher a hash.
+    }
+     */
+
+    /**
+     * Inicializuje proces aktualizace firmwaru.
+     * Nastaví potřebné parametry a přepne stavový automat.
+     * @param filePath Cesta k .tau souboru s firmwarem.
+     */
+    public void startFirmwareUpdate(String filePath) {
+        Log.d(TAG, "Požadavek na start FW update pro soubor: " + filePath);
+        this.firmwareFilePath = filePath;
+        this.devState = TDevState.tFirmwareFlash;
+
+        // Pokud je vlákno "spící" ve stavu tWaitInLimbo, probudíme ho
+        resumeLoop();
+        synchronized (lock) {
+            lock.notify();
+        }
     }
 
 
@@ -1138,6 +1265,28 @@ public class TMSReader extends Thread
                         devState = TDevState.tHead;
                     else
                         devState = TDevState.tStart;  // tady by melo byt, ze jsem nenasel adapter
+                    break;
+
+                case tFirmwareFlash:
+                    if (firmwareFilePath != null && !firmwareFilePath.isEmpty()) {
+                        // Zde zavoláme samotnou logiku flashování
+                        // Jako příklad použijeme nejnovější FW pro HW 0xD1
+                        boolean success = decodeAndFlash(firmwareFilePath, (byte) 0xD1, (byte) -1);
+
+                        if (success) {
+                            // Po úspěšném flashování je dobré restartovat komunikaci,
+                            // aby se načetla nová hlavička s novou verzí FW.
+                            devState = TDevState.tStart;
+                        } else {
+                            // Pokud se flashování nepodaří, přejdeme do stavu čekání.
+                            devState = TDevState.tWaitInLimbo;
+                        }
+                    } else {
+                        Log.e(TAG, "Stav tFirmwareFlash byl spuštěn bez platné cesty k souboru!");
+                        devState = TDevState.tWaitInLimbo;
+                    }
+                    // Vynulujeme cestu, aby se proces nespustil znovu omylem
+                    firmwareFilePath = null;
                     break;
 
                 case tSerialDuplicity:

@@ -11,6 +11,7 @@ public enum TDevState
     tFinishedData,
     tFirmware,
     tFirmwareIsActual,
+    tFirmwareFlash,
     tFirmwareFileError,
     tFirmwareFlashFine,
     tFirmwareFlashError,

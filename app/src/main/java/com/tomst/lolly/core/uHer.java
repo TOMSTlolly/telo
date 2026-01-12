@@ -20,6 +20,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Random;
 
 //import java.nio.charset.StandardCharsets;
 
@@ -82,23 +83,90 @@ public class uHer extends Thread {
         }
     }
 
-    private void msleep(int milis) {
+    public boolean getDSRStatus() {
+        if (!ftDev.isOpen()) {
+            return false;
+        }
+        // DSR is bit 5 of the modem status
+        return (ftDev.getModemStatus() & 0x20) != 0;
+    }
+
+
+
+    public void msleep(int milis) {
         try {
             Thread.sleep(milis);
         } catch (InterruptedException e) {
         }
     }
 
-    private boolean EnterProgrammMode() {
-        byte[] b = new byte[2];
+    public boolean EnterProgrammMode() {
+        ftDev.clrRts();
+        ftDev.clrDtr();
+
+        msleep(1);
+
+        ftDev.setRts();
+        ftDev.setDtr();
+        byte[] b = new byte[8];
         boolean ret;
+
+       // ret = cmdapi("1;0xF0", 5, b);
+       // if (!ret)
+       //     return (false);
+
         ret = cmdapi("1;0xFA", 1, b);
         if (!ret)
             return (false);
 
-        // shod RTS
+
+        ret = getDSRStatus();
         ret = ftDev.clrRts();
-        return (true);
+        if (!ret)
+            return (false);
+        ret = getDSRStatus();
+        Log.d("TOMST", "ret = " + ret);
+        ret = ftDev.setDtr();
+        if (!ret)
+            return (false);
+        msleep(100);
+
+
+        for (int k=0;k<8;k++)
+            b[k] = 0;
+  //      ret = cmdapi("1;0xF0", 5, b);
+  //      if (!ret)
+  //          return (false);
+
+
+        int j = ftDev.write(new byte[]{(byte)0xD1, (byte)0xFE, 0x00, 0x25, (byte)0x82, (byte)0xFA, (byte)0xF0, (byte)0xB5}, 8);
+       // int j = ftDev.write(new byte[]{0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01}, 8);
+        if ( j != 8)
+            return(false);
+
+
+        int i = 0;
+        /*
+        do {
+            b[0] = 0x01;
+            ftDev.write(b,8);
+            i = ftDev.getQueueStatus();
+        } while (i<=0);
+        */
+
+        //ret = cmdapi("0x01;0x01;0x01;0x01;0x01;0x01;0x01",1,b);
+
+        msleep(300);
+        i = ftDev.getQueueStatus();
+        ret = i>0;
+        if (!ret)
+            return false;
+
+        j= ftDev.read(b,1);
+        if (j==0)
+            return false;
+
+        return (ret);
     }
 
     private long getTickCount() {
@@ -119,11 +187,23 @@ public class uHer extends Thread {
             i++;
         }
         // vypis, co zapisuju
-        //  dumps(fBuf);
+          dumps(fBuf);
 
         // zapis prevedeny buffer
         j = ftDev.write(fBuf, i);
         return (i == j);
+    }
+
+    public boolean writeEEPROM(byte addr, byte data) {
+        byte[] b = new byte[2];
+        boolean ret;
+
+        String command = String.format("3;0x60;0x%02X;0x%02X", addr, data);
+
+        ret = cmdapi(command, 1, b);
+        if (!ret)
+            return (false);
+        return (true);
     }
 
     private boolean readbuf(byte[] b, int cnt) {
@@ -168,6 +248,21 @@ public class uHer extends Thread {
 
         int i = b[0] & 0xFF;
         return (i);
+    }
+
+    public void powerOff()
+    {
+        ftDev.clrRts();
+        msleep(1);
+        ftDev.setRts();
+        ftDev.setDtr();
+    }
+
+    public void powerOn()
+    {
+        ftDev.setRts();
+        ftDev.setDtr();
+        msleep(1);
     }
 
     public String getAdapter() {
@@ -668,6 +763,116 @@ public class uHer extends Thread {
         //return(ous.toString());
     }
 
+
+    private Random random = new Random();
+
+    /**
+     * Sestaví a odešle 8bajtový příkazový paket a čeká na 1bajtovou odpověď.
+     * Toto je přímý překlad funkce TVirt.SendCode z Delphi.
+     *
+     * @param order     Příkaz (první bajt paketu).
+     * @param addr      16bitová adresa.
+     * @param data      16bitová data.
+     * @param useRandom Pokud je true, sedmý bajt bude náhodný; jinak bude 0xF0.
+     * @return true, pokud zápis i čtení odpovědi proběhly úspěšně.
+     */
+    public boolean sendCode(byte order, int addr, int data, boolean useRandom) {
+        // Použijeme lokální buffer, abychom neinterferovali s členským fBuf,
+        // které je navíc statické a mohlo by způsobovat problémy při vícevláknovém přístupu.
+        byte[] cmdBuffer = new byte[8];
+
+        // Rozdělení 16bitových hodnot na jednotlivé bajty
+        int addrLow = addr & 0xFF;
+        int addrHigh = (addr >> 8) & 0xFF;
+        int dataLow = data & 0xFF;
+        int dataHigh = (data >> 8) & 0xFF;
+
+        // Sestavení příkazového bufferu podle Delphi logiky
+        // Indexy jsou zde o 1 nižší, protože Java používá 0-based pole.
+        cmdBuffer[0] = order; // fBuf[1]
+        cmdBuffer[1] = (byte) (0xFF - addrLow); // fBuf[2]
+        // fBuf[3]: prohození polovin (nibble swap) horního bajtu adresy
+        cmdBuffer[2] = (byte) (((addrHigh & 0x0F) << 4) | ((addrHigh >> 4) & 0x0F));
+        // fBuf[4]: jednoduchý kontrolní součet
+        cmdBuffer[3] = (byte) (addrLow + addrHigh + dataLow + dataHigh);
+        // fBuf[5]: prohození polovin (nibble swap) horního bajtu dat
+        cmdBuffer[4] = (byte) (((dataHigh & 0x0F) << 4) | ((dataHigh >> 4) & 0x0F));
+        // fBuf[6]:
+        cmdBuffer[5] = (byte) (0xFF - dataLow);
+        // fBuf[7]:
+        if (useRandom) {
+            cmdBuffer[6] = (byte) random.nextInt(256);
+        } else {
+            cmdBuffer[6] = (byte) 0xF0;
+        }
+
+        // Sestavení 8bajtového pole pro výpočet CRC přesně podle Delphi logiky.
+        // Metoda calc8 očekává specifické pořadí bajtů.
+        // Delphi: ID[1]=fBuf[1], ID[2..7]=fBuf[9-i] -> [fBuf[1], fBuf[7], fBuf[6]..fBuf[2]]
+        byte[] idForCrc = new byte[8]; // calc8 používá indexy až po 6, ale pro jistotu 8
+        idForCrc[0] = cmdBuffer[0]; // z fBuf[1]
+        idForCrc[1] = cmdBuffer[6]; // z fBuf[7]
+        idForCrc[2] = cmdBuffer[5]; // z fBuf[6]
+        idForCrc[3] = cmdBuffer[4]; // z fBuf[5]
+        idForCrc[4] = cmdBuffer[3]; // z fBuf[4]
+        idForCrc[5] = cmdBuffer[2]; // z fBuf[3]
+        idForCrc[6] = cmdBuffer[1]; // z fBuf[2]
+
+        // fBuf[8]: Výpočet a uložení CRC
+        cmdBuffer[7] = calc8(idForCrc);
+
+        StringBuilder sb = new StringBuilder();
+        for (byte b : cmdBuffer) {
+            sb.append(String.format("%02X ", b));
+        }
+        Log.d("uHer.sendCode", "Odesláno: " + sb.toString());
+
+
+        // Odeslání 8 bajtů
+        if (ftDev == null) {
+            // Log.e("uHer.sendCode", "ftDev není inicializováno!");
+            return false;
+        }
+
+        int bytesWritten = ftDev.write(cmdBuffer, 8);
+        if (bytesWritten != 8) {
+            // Log.e("uHer.sendCode", "Chyba při zápisu, zapsáno " + bytesWritten + " bajtů.");
+            return false;
+        }
+        // Čekání na 1 bajt odpovědi s timeoutem (logika je uvnitř readbuf)
+        byte[] responseBuf = new byte[1];
+        boolean readSuccess = readbuf(responseBuf, 1);
+
+        //boolean readSuccess = false;
+        //msleep(100);
+        //ftDev.read(responseBuf, 1);
+
+        long start= getTickCount();
+        long diff = 0;
+        int i = 0;
+        do {
+            i = ftDev.getQueueStatus();
+            diff = getTickCount() - start;
+            msleep(1); // 10 ms between attempts
+        } while ((i < 1) && (diff < 100));
+       readSuccess = (i == 1);
+
+
+        if (readSuccess) {
+             Log.d("uHer.sendCode", "Odpověď přijata: " + String.format("0x%02X", responseBuf[0]));
+        } else {
+             Log.w("uHer.sendCode", "Timeout při čekání na odpověď.");
+        }
+
+        return (readSuccess == true);
+
+
+       // return true;
+    }
+
+    //public boolean FlashFirmware()
+
+
     // cmd prevedu na array of char a predradim TK magicke znaky
     public String doCommand(String cmd){
         byte[] chr = new byte[cmd.length()+4]; // delka + ridici znaky + pocet znaku na zacatku
@@ -795,7 +1000,7 @@ public class uHer extends Thread {
         byte crc = 0 ;
         int cid = 0;
 
-        cid = (byte)((crc ^ id[0]) & (0xFF));
+        cid = (crc ^ id[0]) & (0xFF);
         crc = (byte) CRC_TAB_8_VALUE[cid];
         for (int j=6;j>0;j--){
             cid = ((crc ^ id[j]) & (0xFF));

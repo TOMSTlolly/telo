@@ -94,6 +94,17 @@ public class LollyService extends Service {
         handler.sendMessage(message);
     }
 
+    public void startFirmwareFlash(String filePath) {
+        if (ftTMS != null) {
+            Log.d("LollyService", "Předávám požadavek na flashování do TMSReader.");
+            // Předáme požadavek naší instanci TMSReaderu
+            ftTMS.startFirmwareUpdate(filePath);
+        } else {
+            Log.e("LollyService", "TMSReader (ftTMS) není aktivní, nelze flashovat.");
+        }
+    }
+
+
 
 
     private final class ServiceHandler extends Handler {

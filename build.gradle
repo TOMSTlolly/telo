@@ -4,10 +4,10 @@
 // STARÝ 'buildscript' BLOK MUSÍ BÝT PRYČ.
 plugins {
     // Android Gradle Plugin pro aplikační moduly
-    id("com.android.application") version '8.13.1' apply false
+    id("com.android.application") version '8.13.2' apply false
 
     // Android Gradle Plugin pro knihovní moduly (pokud je máte)
-    id("com.android.library") version '8.13.1' apply false
+    id("com.android.library") version '8.13.2' apply false
 
     // Google Services Plugin
     id("com.google.gms.google-services") version "4.4.2" apply false

@@ -2,14 +2,27 @@ package com.tomst.lolly.core;
 
 import android.util.Log;
 
+import com.tomst.lolly.LollyActivity;
+
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class TauParser {
 
     private static final String TAG = "TauParser";
+    private int ER_CRYPT_DECODE = 238;
+
 
     // CRC Tabulka z Delphi kódu
     private static final int[] CRC8_TABLE = {
@@ -53,6 +66,7 @@ public class TauParser {
 
     private List<RTau> fTauInfo = new ArrayList<>();
     private int fTauCount = 0;
+
 
     /**
      * Převede 16znakový hexadecimální řetězec na pole 8 bajtů.
@@ -103,71 +117,265 @@ public class TauParser {
         return (byte) crc;
     }
 
-    /**
-     * Analyzuje data firmwaru z dekódovaného řetězce.
-     *
-     * @param decodedContent Víceřádkový řetězcový obsah z dekódovaného .tau souboru.
-     * @param targetHw       Cílová verze hardwaru, pro kterou se mají počítat firmwarové pakety.
-     * @param targetFw       Cílová verze firmwaru, pro kterou se mají počítat firmwarové pakety.
-     * @return Počet firmwarových paketů pro zadaný HW/FW.
-     */
-    public int analyzeFirmware(String decodedContent, byte targetHw, byte targetFw) {
-        // Použijeme mapu pro robustní sčítání paketů pro každou verzi HW/FW
-        Map<String, RTau> tauMap = new HashMap<>();
+    public int DecodeTAUFile(String tauFile, ByteArrayOutputStream strmOutput) {
 
-        if (decodedContent == null) {
-            return 0;
+        // Delphi: strmInput: TFileStream
+        // Java: FileInputStream v try-with-resources pro automatické uzavření
+        try (FileInputStream strmInput = new FileInputStream(tauFile);
+             java.io.DataInputStream dis = new java.io.DataInputStream(strmInput)) {
+
+            // Delphi: Salt: array[0..7] of byte;
+            byte[] salt = new byte[8];
+            dis.readFully(salt) ; // vyctu 8 bytu soli
+
+            byte[] hashDigest = new byte[32];
+            //dis.readFully(cipherIV);
+
+            // passphrase je stejná jako v Delphi ukázce
+            String passphrase = "abcdefghijklmnopqrstuvwxyz";
+            com.tomst.lolly.core.DcpHaval dh = new com.tomst.lolly.core.DcpHaval();
+            dh.init();
+            dh.update(salt,0,8);
+            dh.updateStr(passphrase);
+            dh.doFinal(hashDigest,0);
+
+            // finalni kodovani
+            com.tomst.lolly.core.Blowfish cipher = new com.tomst.lolly.core.Blowfish();
+            byte [] cipheriv = new byte[8];
+            dis.readFully(cipheriv);
+
+
+            // Zjistíme, kolik bajtů zbývá ve streamu
+            int remainingBytes = strmInput.available();
+            if (remainingBytes <= 0) {
+                // Žádná data k dekódování
+                return 0;
+            }
+
+            // zasifrovany vstup
+            byte[] encryptedData = new byte[remainingBytes];
+            strmInput.read(encryptedData);
+
+            // odsifrovany vystup
+            byte[] decryptedData = new byte[remainingBytes];
+            cipher.reset();
+            cipher.init(hashDigest);
+            cipher.setSalt(cipheriv);
+            cipher.decryptECB_DelphiCompatible(encryptedData, 0, decryptedData, 0);
+
+            // Procházíme šifrovaná data po 8bajtových blocích
+            for (int i = 0; i < encryptedData.length; i += 8) {
+                // Dekódujeme jeden 8bajtový blok ze vstupního pole (encryptedData)
+                // a výsledek uložíme na odpovídající pozici do výstupního pole (decryptedData).
+                cipher.decryptECB(encryptedData, i, decryptedData, i);
+            }
+
+            //
+
+            strmOutput.write(decryptedData);
+            // --- LADÍCÍ BLOK: Uložení šifrovaných dat do souboru ---
+            try {
+                //File cacheDir = context.getCacheDir();
+                File cacheDir = LollyActivity.getInstance().getApplicationContext().getCacheDir();
+                File outputFile = new File(cacheDir, "decrypted.txt");
+                try (java.io.FileOutputStream fos = new java.io.FileOutputStream(outputFile)) {
+                    fos.write(decryptedData);
+                    Log.d("DecodeTAU", "Šifrovaná data uložena do: " + outputFile.getAbsolutePath());
+                }
+            } catch (IOException e) {
+                Log.e("DecodeTAU+", "Chyba při ukládání šifrovaných dat do cache.", e);
+            }
+
+            return 0; // Vše proběhlo v pořádku
+
+        } catch (Exception e) {
+            // Delphi: except result := ER_CRYPT_DECODE;
+            e.printStackTrace(); // Pro ladění je dobré chybu vypsat
+            return ER_CRYPT_DECODE;
         }
-        
+        // Delphi: Cipher.Free; Hash.Free;
+        // V Javě není potřeba, Garbage Collector se postará o objekty cipher a hash.
+    }
+
+    /**
+     * Z interního seznamu firmwarů najde a vrátí nejnovější verzi pro zadaný hardware.
+     *
+     * @param targetHw Cílová verze hardwaru.
+     * @return Objekt RTau s nejnovějším firmwarem, nebo null, pokud pro daný HW nebyl žádný nalezen.
+     */
+    public RTau getLatestFirmwareForHardware(byte targetHw) {
+        if (this.fTauInfo == null || this.fTauInfo.isEmpty()) {
+            Log.w(TAG, "Seznam firmwarů je prázdný. Zavolejte nejprve 'findAllFirmwareVariants'.");
+            return null;
+        }
+        RTau latestFirmware = null;
+        for (RTau currentFirmware : this.fTauInfo) {
+            if (currentFirmware.hw == targetHw) {
+                if (latestFirmware == null || Byte.toUnsignedInt(currentFirmware.fw) > Byte.toUnsignedInt(latestFirmware.fw)) {
+                    latestFirmware = currentFirmware;
+                }
+            }
+        }
+        return latestFirmware;
+    }
+
+    /**
+     * Z interního seznamu firmwarů najde a vrátí specifickou variantu.
+     *
+     * @param targetHw Cílový hardware.
+     * @param targetFw Cílový firmware.
+     * @return Objekt RTau, pokud je nalezena shoda, jinak null.
+     */
+    public RTau getSpecificFirmware(byte targetHw, byte targetFw) {
+        if (this.fTauInfo == null || this.fTauInfo.isEmpty()) {
+            Log.w(TAG, "Seznam firmwarů je prázdný. Zavolejte nejprve 'findAllFirmwareVariants'.");
+            return null;
+        }
+        for (RTau fwVariant : this.fTauInfo) {
+            if (fwVariant.hw == targetHw && fwVariant.fw == targetFw) {
+                return fwVariant;
+            }
+        }
+        return null;
+    }
+
+
+
+    public List<RTau> findAllFirmwareVariants(ByteArrayOutputStream decodedContent) {
+        if (decodedContent == null || decodedContent.size() == 0) {
+            return new ArrayList<>();
+        }
+        // String[] lines = decodedContent.split("\\r?\\n");
+
+        // Použijeme Set pro automatické zajištění unikátnosti dvojic.
+        // Jako klíč použijeme jednoduchý string "HW:FW".
+        Set<String> uniquePairs = new HashSet<>();
+
+        // Čteme stream řádek po řádku, abychom nemuseli celý obsah načítat do paměti jako jeden String
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(decodedContent.toByteArray())))) {
+
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.isEmpty() || line.length() != 16) {
+                    continue;
+                }
+
+                byte[] idData = hexToBytes(line);
+                if (idData == null || idData[7] != calculateCRC8(idData)) {
+                    continue; // Přeskočit neplatné řádky
+                }
+
+                byte currentHw = idData[0];
+                byte currentFw = idData[1];
+
+                String key = String.format("%02X:%02X", currentHw, currentFw);
+                uniquePairs.add(key);
+            }
+        } catch (IOException e) {
+            Log.e(TAG, "Chyba při čtení dekódovaného streamu.", e);
+            return new ArrayList<>(); // V případě chyby vrátíme prázdný seznam
+        }
+
+        // Převedeme Set klíčů na seznam RTau objektů
+        List<RTau> resultList = new ArrayList<>();
+        for (String pairKey : uniquePairs) {
+            String[] parts = pairKey.split(":");
+            // Parsování zpět z hex stringu na byte
+            byte hw = (byte) Integer.parseInt(parts[0], 16);
+            byte fw = (byte) Integer.parseInt(parts[1], 16);
+            resultList.add(new RTau(hw, fw));
+        }
+        this.fTauInfo = resultList;
+        return this.fTauInfo;
+    }
+
+    public RTau getLatestFirmwareOverall() {
+        if (this.fTauInfo == null || this.fTauInfo.isEmpty()) {
+            Log.w(TAG, "Seznam firmwarů je prázdný. Zavolejte nejprve 'findAllFirmwareVariants'.");
+            return null;
+        }
+
+        // Začneme s prvním prvkem jako dosavadním maximem
+        RTau latestFirmware = fTauInfo.get(0);
+
+        // Projdeme zbytek seznamu a hledáme vyšší verzi FW
+        for (int i = 1; i < fTauInfo.size(); i++) {
+            RTau current = fTauInfo.get(i);
+            // Použijeme porovnání bez znaménka, aby byla verze 0xFF (255) správně vyhodnocena jako nejvyšší
+            if (Byte.toUnsignedInt(current.fw) > Byte.toUnsignedInt(latestFirmware.fw)) {
+                latestFirmware = current; // Našli jsme nový absolutní nejnovější FW
+            }
+        }
+        return latestFirmware;
+    }
+
+
+    // hardware znam, to je D1
+    // targetFw bude bud -1 nebo explicitne vybrane cislo
+    public List<byte[]> extractLatestFirmwareData(String decodedContent, byte targetHw, byte targetFw) {
+        if (decodedContent == null || decodedContent.isEmpty()) {
+            return new ArrayList<>();
+        }
+
         String[] lines = decodedContent.split("\\r?\\n");
 
+        // --- PRVNÍ PRŮCHOD: Nalezení nejnovější verze FW pro daný HW ---
+        byte latestFw = -1;
+        boolean foundFwForHw = false;
+
         for (String line : lines) {
-            if (line.isEmpty() || line.length() != 17 || !line.startsWith("D")) {
-                continue; // Přeskočit neplatné řádky
-            }
-
-            String hexData = line.substring(1); // Odstranit úvodní 'D'
-            byte[] idData = hexToBytes(hexData);
-
-            if (idData == null) {
-                Log.e(TAG, "Nelze převést řádek na bajty: " + line);
+            if (line.isEmpty() || line.length() != 16) {
                 continue;
             }
 
-            byte calculatedCrc = calculateCRC8(idData);
-            if (idData[7] != calculatedCrc) {
-                Log.e(TAG, "Špatné CRC pro řádek: " + line +
-                        " Očekáváno: " + String.format("%02X", idData[7]) +
-                        " Vypočítáno: " + String.format("%02X", calculatedCrc));
+            byte[] idData = hexToBytes(line);
+            if (idData == null || idData[7] != calculateCRC8(idData)) {
+                continue; // Přeskočit neplatné řádky (špatný formát nebo CRC)
+            }
+
+            byte currentHw = idData[0];
+            if (currentHw == targetHw) {
+                byte currentFw = idData[1];
+                // Porovnáváme jako unsigned int, abychom správně určili nejvyšší verzi
+                if (!foundFwForHw || Byte.toUnsignedInt(currentFw) > Byte.toUnsignedInt(latestFw)) {
+                    latestFw = currentFw;
+                    foundFwForHw = true;
+                }
+            }
+        }
+
+        if (!foundFwForHw) {
+            Log.w(TAG, "Pro cílový HW " + String.format("$%02X", targetHw) + " nebyl nalezen žádný firmware.");
+            return new ArrayList<>(); // Cílový HW v souboru není
+        }
+
+        Log.d(TAG, "Nalezena nejnovější verze FW: " + String.format("$%02X", latestFw) + " pro HW: " + String.format("$%02X", targetHw));
+
+        // --- DRUHÝ PRŮCHOD: Extrakce dat pro nalezenou nejnovější verzi ---
+        List<byte[]> firmwareData = new ArrayList<>();
+        for (String line : lines) {
+            if (line.isEmpty() || line.length() != 16) {
                 continue;
             }
 
-            String key = String.format("%02X:%02X", idData[0], idData[1]);
-            RTau currentTau = tauMap.get(key);
-            if (currentTau == null) {
-                currentTau = new RTau(idData[0], idData[1]);
-                tauMap.put(key, currentTau);
+            byte[] idData = hexToBytes(line);
+            if (idData == null || idData[7] != calculateCRC8(idData)) {
+                continue;
             }
-            currentTau.fwCount++;
+
+            byte currentHw = idData[0];
+            byte currentFw = idData[1];
+
+            // Pokud řádek odpovídá cílovému HW a nejnovější verzi FW, extrahujeme data
+            if (currentHw == targetHw && currentFw == latestFw) {
+                firmwareData.add(idData);
+            }
         }
 
-        // Naplnit konečný seznam a počet z mapy
-        this.fTauInfo = new ArrayList<>(tauMap.values());
-        this.fTauCount = this.fTauInfo.size();
-        
-        // Logovat všechny nalezené firmwary a jejich počty
-        for(RTau info : fTauInfo) {
-            Log.d(TAG, "Nalezeno: " + info.toString());
-        }
-
-        // Najít počet pro konkrétní cíl
-        String targetKey = String.format("%02X:%02X", targetHw, targetFw);
-        if (tauMap.containsKey(targetKey)) {
-            return tauMap.get(targetKey).fwCount;
-        }
-
-        return 0; // Cíl nenalezen
+        Log.d(TAG, "Extrahováno " + firmwareData.size() + " datových paketů.");
+        return firmwareData;
     }
+
 
     // Gettery pro výsledky, pokud jsou potřeba
     public List<RTau> getTauInfo() {

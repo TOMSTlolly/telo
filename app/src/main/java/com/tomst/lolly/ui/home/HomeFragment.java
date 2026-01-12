@@ -57,6 +57,7 @@ import com.tomst.lolly.core.TMeteo;
 import com.tomst.lolly.core.shared;
 import com.tomst.lolly.databinding.FragmentHomeBinding;
 import com.tomst.lolly.core.Blowfish;
+import com.tomst.lolly.core.TauParser;
 
 import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
@@ -759,61 +760,22 @@ public class HomeFragment extends Fragment {
         Button genCommand=binding.genCommand;
         genCommand.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
-                String inTauFileName = LollyActivity.getInstance().DIRECTORY_FW+"/lolly.tau";
 
-                // String outCsvFileName = LollyActivity.getInstance().DIRECTORY_FW + "/downloader.csv";
-                // pozdrzeni lollyService vlakna
                 if (bound && odometer != null) {
                     odometer.enableLoop(false);
+                    // Sestavíme cestu k souboru firmwaru
+                    File fwFile = new File(LollyActivity.getInstance().DIRECTORY_FW, "lolly.tau");
+
+                    if (fwFile.exists()) {
+                        Toast.makeText(getContext(), "Zahajuji flashování firmwaru...", Toast.LENGTH_SHORT).show();
+                        // Zavoláme VEŘEJNOU METODU PŘÍMO NA INSTANCI SLUŽBY
+                        odometer.startFirmwareFlash(fwFile.getAbsolutePath());
+                    } else {
+                        Toast.makeText(getContext(), "Soubor firmwaru 'lolly.tau' nenalezen!", Toast.LENGTH_LONG).show();
+                        Log.e("HomeFragment", "Soubor nenalezen: " + fwFile.getAbsolutePath());
+                    }
                 }
-
-
-                Context context = LollyActivity.getInstance().getApplicationContext();
-                TMSReader tm = new TMSReader(context);
-                ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-
-                // 2. Volání metody pro dekódování
-                int resultCode = tm.DecodeTAUFile(inTauFileName, outputStream);
-
-                // 3. Zpracování výsledku
-                if (resultCode == 0) { // Předpokládá se, že máte konstantu pro úspěch, např. 0
-                    // Dekódování bylo úspěšné. Data jsou nyní v 'outputStream'.
-
-                    // Převedeme obsah streamu na text (předpokládáme kódování UTF-8)
-                    String decodedContent = outputStream.toString();
-
-
-                    Log.d("DecodeTAU", "Soubor byl úspěšně dekódován. Obsah:\n" + decodedContent);
-                    Toast.makeText(context, "Dekódování dokončeno.", Toast.LENGTH_SHORT).show();
-
-                    // Pokud chceš obsah zobrazit v UI, můžeš použít nějaký TextView
-                    // binding.proMessage.setText(decodedContent);
-
-                } else {
-                    // Dekódování se nezdařilo
-                    Log.e("DecodeTAU", "Dekódování souboru " + inTauFileName + " se nezdařilo. Kód chyby: " + resultCode);
-                    Toast.makeText(context, "Chyba při dekódování.", Toast.LENGTH_SHORT).show();
-                }
-
-
-                /*
-                String ALogName = LollyActivity.getInstance().DIRECTORY_LOGS + "/command.csv.";
-                Blowfish bf = new Blowfish();
-                bf.selfTest();
-
-                String testStr = "This is a test string for Blowfish encryption.";
-                String encrypted = bf.encrypt(testStr);
-                String decrypted = bf.decrypt(encrypted);
-                Log.d("Blowfish", "Original: " + testStr);
-                Log.d("Blowfish", "Encrypted: " + encrypted);
-                Log.d("Blowfish", "Decrypted: " + decrypted);
-                 */
-
-                //TMSSim sim = new TMSSim(ALogName);
-                //  dmd.sendMessageToFragment("TMD");
-                // Message message = handler.obtainMessage();
-                // message.obj = "Hello from HomeFragment";
-                // handler.sendMessage(message);
+               ;
             }
         });
 
