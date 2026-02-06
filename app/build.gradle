@@ -1,13 +1,9 @@
 plugins {
     id 'com.android.application'
-
-    // Make sure that you have the Google services Gradle plugin
     id 'com.google.gms.google-services'
-
-    // Add the Crashlytics Gradle plugin
     id 'com.google.firebase.crashlytics'
     id 'org.jetbrains.kotlin.android'
-    // id 'com.google.firebase.firebase-perf'
+    id 'org.jetbrains.kotlin.plugin.compose' version '2.0.0'
 }
 
 allprojects {
@@ -75,6 +71,7 @@ android {
     buildFeatures {
         viewBinding true
         buildConfig true
+        compose = true
     }
 
  //   ndkVersion '27.3.13750724'  // Nejnovější LTS (r27d) – nainstaluj v SDK Manager, pokud nemáš. Alternativa: '28.2.13676358' pro stable r28.
@@ -100,6 +97,7 @@ dependencies {
 
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation 'androidx.core:core-ktx:1.17.0'
+    implementation 'androidx.compose.runtime:runtime:1.10.2'
 
     testImplementation(platform('org.junit:junit-bom:5.12.0'))
     testImplementation('org.junit.jupiter:junit-jupiter')
@@ -168,5 +166,20 @@ dependencies {
 
     implementation "org.greenrobot:eventbus:3.3.1"
     annotationProcessor "org.greenrobot:eventbus-annotation-processor:3.3.1"
+
+    // --- PŘIDAT TOTO PRO COMPOSE UI ---
+    // Bill of Materials (hlídá verze)
+    implementation platform('androidx.compose:compose-bom:2024.02.00')
+
+    // Základní UI prvky
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.ui:ui-graphics'
+
+    // Material Design 3 (obsahuje Card, Text, atd.)
+    implementation 'androidx.compose.material3:material3'
+
+    // Náhledy v Android Studiu
+    implementation 'androidx.compose.ui:ui-tooling-preview'
+    debugImplementation 'androidx.compose.ui:ui-tooling'
 
 }

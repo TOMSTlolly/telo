@@ -14,7 +14,11 @@ data class FileDetail @JvmOverloads constructor(
     var name: String = "",
     var iconID: Int = 0,
     // Přejmenováno interně, aby nekolidovalo s metodou getFull()
-    var internalFullName: String = ""
+    var internalFullName: String = "",
+
+    // PŘESUNUTO SEM: Aby fungovala metoda .copy(isSelected = ...)
+    var isSelected: Boolean = false,
+    var isUploaded: Boolean = false
 ) {
     // --- Properties odpovídající Java polím ---
     var id: Long = 0
@@ -27,8 +31,6 @@ data class FileDetail @JvmOverloads constructor(
     var niceName: String? = null
     var fileSize: Long = 0
 
-    var isSelected: Boolean = false
-    var isUploaded: Boolean = false
 
     // Přejmenováno, protože Java getter vrací String, ale setter bere LocalDateTime
     // Toto je backing field
@@ -97,7 +99,8 @@ data class FileDetail @JvmOverloads constructor(
 
     // Metoda pro formátované zobrazení (navíc oproti původní Javě, pro Compose)
     fun getFormattedCreated(): String {
-        return createdDt?.toString() ?: ""
+        val formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")
+        return createdDt?.format(formatter) ?: ""
     }
 
     // Pomocná metoda, kterou jsi měl v Javě
@@ -130,5 +133,43 @@ data class FileDetail @JvmOverloads constructor(
         }
         val result = String.format(Locale.US, "%.2f", fSize)
         return if (suffix.isNotEmpty()) "$result $suffix" else result
+    }
+
+    fun getDeviceTypeLabel(): String {
+        return when (deviceType) {
+            TDeviceType.dLolly3 -> "M"
+            TDeviceType.dLolly4 -> "M"
+            TDeviceType.dAD -> "D"
+            TDeviceType.dAdMicro -> "Du"
+            TDeviceType.dTermoChron -> "T"
+            TDeviceType.dUnknown -> "U"
+            else -> "!"
+        }
+    }
+
+    fun getFormattedFrom(): String {
+        val fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+        return iFrom?.format(fmt) ?: ""
+    }
+
+    fun getFormattedInto(): String {
+        val fmt = DateTimeFormatter.ofPattern("yy-MM-dd HH:mm")
+        return iInto?.format(fmt) ?: ""
+    }
+
+    fun getDisplayMinTx(): String {
+        val value = when (deviceType) {
+            TDeviceType.dLolly3, TDeviceType.dLolly4 -> min(minT1, min(minT2, minT3))
+            else -> minT1
+        }
+        return String.format("%.1f", value)
+    }
+
+    fun getDisplayMaxTx(): String {
+        val value = when (deviceType) {
+            TDeviceType.dLolly3, TDeviceType.dLolly4 -> max(maxT1, max(maxT2, maxT3))
+            else -> maxT1
+        }
+        return String.format("%.1f", value)
     }
 }
