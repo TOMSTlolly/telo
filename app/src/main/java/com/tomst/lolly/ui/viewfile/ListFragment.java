@@ -401,8 +401,7 @@ public class ListFragment extends Fragment implements OnProListener
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 FileDetail selectedItem = (FileDetail) parent.getItemAtPosition(position);
-//                SelectedFileName = selectedItem.getName();
-                SelectedFileName = selectedItem.getFull();
+                SelectedFileName = selectedItem.getName();
                 friendsAdapter.setSelectedPosition(position);
             }
         });
@@ -738,6 +737,7 @@ public class ListFragment extends Fragment implements OnProListener
         {
             for (FileDetail fileDetail : fFriends)
             {
+
                 if (fileDetail.getFull().equals(selectedFile) && !fileDetail.isUploaded())
                 {
                     allUploaded = false;
@@ -876,7 +876,7 @@ public class ListFragment extends Fragment implements OnProListener
         if (parts[1].isEmpty())
             return null;
 
-         //String s = parts[1] + "-" + parts[2] + parts[3] + parts[4]+ "-" + bef(parts[5],"\\.");
+         //String s = parts[1] + "-" + parts[2] + parts[3] + parts[4]+ "-" + bef(parts[5],".");
         String s = parts[1] + "-" + parts[2] + parts[3] + parts[4] + bef(parts[7],"\\.");
 
         return s;
@@ -928,7 +928,8 @@ public class ListFragment extends Fragment implements OnProListener
         } catch (IOException e) {
             Log.e(TAG, "Error copying DocumentFile to temp file", e);
             FileDetail fdet = new FileDetail(file.getName());
-            fdet.setErr(Constants.PARSER_ERROR);
+            fdet.errFlag = Constants.PARSER_ERROR;
+            // fdet.setErr(Constants.PARSER_ERROR);
             return fdet;
         }
     }
@@ -1051,6 +1052,7 @@ public class ListFragment extends Fragment implements OnProListener
                     );
 
                     fdet.setFull(file.getUri().toString());
+
                     fdet.setName(file.getName());
                     fdet.setNiceName(getNiceName(file.getName()));
 
@@ -1150,7 +1152,7 @@ public class ListFragment extends Fragment implements OnProListener
                     fdet.setNiceName(getNiceName(file.getName()));
 
                     fdet.setFileSize((int) file.length());
-                    //fdet.setFull(fileUri.toString());
+                    //fdet.setFullPath(fileUri.toString());
                     fdet.setFull(file.getName());
 
 

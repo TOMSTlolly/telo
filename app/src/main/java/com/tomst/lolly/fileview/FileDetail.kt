@@ -1,172 +1,134 @@
-package com.tomst.lolly.fileview;
+package com.tomst.lolly.fileview
 
-import android.location.Location;
+import android.location.Location
+import com.tomst.lolly.core.Constants
+import com.tomst.lolly.core.TDeviceType
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+import kotlin.math.max
+import kotlin.math.min
 
-import com.tomst.lolly.core.TDeviceType;
+// Data class automaticky vygeneruje gettery/settery, equals, hashCode a toString
+data class FileDetail @JvmOverloads constructor(
+    var name: String = "",
+    var iconID: Int = 0,
+    // Přejmenováno interně, aby nekolidovalo s metodou getFull()
+    var internalFullName: String = ""
+) {
+    // --- Properties odpovídající Java polím ---
+    var id: Long = 0
+    var lidLine: Long = 0
+    var location: Location? = null
+    var serialNumber: String? = null
 
-import java.time.LocalDateTime;
+    var deviceType: TDeviceType = TDeviceType.dUnknown
 
-public class FileDetail
-{
-    //  keys
-    private long id;
-    private long lidLine;
-    private Location location;
+    var niceName: String? = null
+    var fileSize: Long = 0
 
-    // seriove cislo
-    private String SerialNumber;
+    var isSelected: Boolean = false
+    var isUploaded: Boolean = false
 
-    // typ zarizeni
-    private TDeviceType deviceType;
+    // Přejmenováno, protože Java getter vrací String, ale setter bere LocalDateTime
+    // Toto je backing field
+    var createdDt: LocalDateTime? = null
 
-    // zakladni informace
-    private String name;
-    private String niceName;  // zkomprimovane jmeno souboru  20241231-9876543210
-    private int iconID;
-    private long FileSize;
-    private String fullName;
-    private boolean isSelected;
-    private boolean isUploaded;
-    private long  iCount; // pocet udalosti v souboru
-    private LocalDateTime iFrom,iInto; // data stazena od - do
-    //private double latitude, longitude; // souradnice lizatka
-    private double minT1, maxT1;
-    private double minT2, maxT2;
-    private double minT3, maxT3;
-    private double minHum,maxHum;
+    @JvmField var errFlag: Int? = null
 
-    public Integer errFlag;  // znacka chyby
-    private LocalDateTime created;
+    // Statistiky
+    // v Kotlinu var automatically generuje getMinT1() a setMinT1()
+    var minT1: Double = 0.0
+    var maxT1: Double = 0.0
+    var minT2: Double = 0.0
+    var maxT2: Double = 0.0
+    var minT3: Double = 0.0
+    var maxT3: Double = 0.0
+    var minHum: Double = 0.0
+    var maxHum: Double = 0.0
 
-    public String getSerialNumber() { return SerialNumber; }
-    public void setSerialNumber(String serialNumber) { SerialNumber = serialNumber; }
+    // Další metadata
+    @JvmField var iCount: Long = 0
+    @JvmField var iFrom: LocalDateTime? = null
+    @JvmField var iInto: LocalDateTime? = null
 
-    public long getId() { return id; }; //
-    public void setId(long id) { this.id = id; }
-    public long getLidLine() { return lidLine; }
-    public void setLidLine(long lidLine) { this.lidLine = lidLine; }
-    public void setLocation(Location location) { this.location = location; }
-    public Location  getLocation() { return location; }
+    // --- Konstruktory pro zachování kompatibility s Javou ---
 
-    // getter & setter
-    public TDeviceType getDeviceType() { return deviceType; }
-    public void setDeviceType(TDeviceType deviceType) { this.deviceType = deviceType; }
-
-    public int getErrFlag() { return errFlag; }
-    public void setErrFlag(int errFlag) {
-        this.errFlag = errFlag;
+    constructor(id: Long) : this() {
+        this.id = id
+        clearMembers()
     }
 
-    public double getMinT1() { return minT1; }
-    public double getMaxT1() {
-        return maxT1;
-    }
-    public double getMinT2() { return minT2; }
-    public double getMaxT2() { return maxT2; }
-    public double getMinT3() { return minT3; }
-    public double getMaxT3() { return maxT3; }
-    public double getMinHum() { return minHum; }
-    public double getMaxHum() { return maxHum; }
-    public void setMinT1(double minT1) { this.minT1 = minT1; }
-    public void setMaxT1(double maxT1) { this.maxT1 = maxT1; }
-    public void setMinT2(double minT2) { this.minT2 = minT2; }
-    public void setMaxT2(double maxT2) { this.maxT2 = maxT2; }
-    public void setMinT3(double minT3) { this.minT3 = minT3; }
-    public void setMaxT3(double maxT3) { this.maxT3 = maxT3; }
-    public void setMinHum(double minHum) { this.minHum = minHum; }
-    public void setMaxHum(double maxHum) { this.maxHum = maxHum; }
-
-
-    // settery pro doplnujici informace
-    public void setAnnotation(String annotation){
-        this.fullName = annotation;
+    constructor(filename: String, fullName: String, iconID: Int) : this(filename, iconID, fullName) {
+        clearMembers()
     }
 
-    public void setCount(int count){ iCount = count; }
-    public void setFrom(LocalDateTime from){ iFrom = from; }
-    public void setInto(LocalDateTime into){ iInto = into; }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-    public void setNiceName(String niceName){
-        this.niceName= niceName;
+    fun setErr(errFlag: Int) {
+        this.errFlag = errFlag
     }
 
-    public String getName() { return name; }
-    public String getNiceName() {
-        return niceName;
-    }
-    public int getIconID() { return iconID; }
-    public String getFull() { return fullName; }
-    public long getFileSize() { return FileSize; }
-    public long getiCount() {return iCount; }
-    public LocalDateTime getiFrom() {
-        return iFrom; }
-    public LocalDateTime getiInto() {
-
-        return iInto;
-    }
-    public void setFileSize(long size) { FileSize = size; }
-    public void setIconID(int iconID) { this.iconID = iconID; }
-
-
-    public void setFull(String fullName) { this.fullName = fullName; }
-    public void setSelected(boolean select)  { isSelected = select;}
-    public boolean isSelected() { return isSelected; }
-    public boolean isUploaded() { return isUploaded; }
-    public void setUploaded(boolean uploaded) { this.isUploaded = uploaded; }
-
-    // nove property
-    public void setCreated(LocalDateTime created) {
-        this.created = created;
+    fun setFrom(from: LocalDateTime?) {
+        this.iFrom = from
     }
 
-    public String getCreated() {
-        return created.toString();
-    }
-    public void setErr(int errFlag) { this.errFlag = errFlag; }
-
-    private void  ClearMembers()
-    {
-        this.fullName =  "";
-        this.isSelected = false;
-        this.isUploaded = false;
-
-        this.iCount = 0;           //  pocet udalosti
-        this.iFrom = null;        //  data stazeni od
-        this.iInto = null;          // data stazeni do
-//        this.latitude = 0;     //  souradnice lizatka
- //       this.longitude = 0;  //
-        this.FileSize = 0;         // velikost v kbytes
+    fun setInto(into: LocalDateTime?) {
+        this.iInto = into
     }
 
-    public  FileDetail(Long id)
-    {
-        ClearMembers();
-        this.id = id;
+    fun setCount(count: Long) {
+        this.iCount = count
     }
 
-    // konstruktor pro bazalni fungovani, bez doplnujicich informaci
-    public FileDetail(String filename, int iconID)
-    {
-        ClearMembers();
-        this.iconID = iconID;
-        this.name = filename;
+
+
+    // Java volá .getFull(), v Kotlinu to mapujeme na property internalFullName
+    fun getFull(): String = internalFullName
+    fun setFull(fullName: String) { this.internalFullName = fullName }
+
+    // Java getCreated() vrací String, ale setCreated bere LocalDateTime.
+    // V Kotlinu to musíme rozdělit, protože property nemůže mít různé typy pro get/set.
+    fun getCreated(): String {
+        return createdDt?.toString() ?: ""
     }
 
-    public FileDetail(String filename)
-    {
-        ClearMembers();
-        this.name = filename;
+    fun setCreated(created: LocalDateTime?) {
+        this.createdDt = created
     }
 
-    public FileDetail(String filename, String FullName,  int iconID)
-    {
-        ClearMembers();
-        this.name = filename;
-        this.iconID = iconID;
-        this.fullName = FullName;
+    // Metoda pro formátované zobrazení (navíc oproti původní Javě, pro Compose)
+    fun getFormattedCreated(): String {
+        return createdDt?.toString() ?: ""
     }
 
+    // Pomocná metoda, kterou jsi měl v Javě
+    private fun clearMembers() {
+        this.internalFullName = ""
+        this.isSelected = false
+        this.isUploaded = false
+        this.iCount = 0
+        this.iFrom = null
+        this.iInto = null
+        this.fileSize = 0
+    }
+
+    // --- Helper metody pro formátování (Logic moved from Adapter) ---
+
+    fun getFormattedSize(): String {
+        var fSize = fileSize.toDouble()
+        var suffix = ""
+        if (fSize >= 1024) {
+            suffix = "KB"
+            fSize /= 1024
+            if (fSize >= 1024) {
+                suffix = "MB"
+                fSize /= 1024
+                if (fSize >= 1024) {
+                    suffix = "GB"
+                    fSize /= 1024
+                }
+            }
+        }
+        val result = String.format(Locale.US, "%.2f", fSize)
+        return if (suffix.isNotEmpty()) "$result $suffix" else result
+    }
 }

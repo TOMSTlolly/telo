@@ -118,15 +118,17 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         ContentValues values = new ContentValues();
 
         // Populate ContentValues with FileDetail data
-        values.put(KEY_CLIST_ERR,fileDetail.getErrFlag());
+        //values.put(KEY_CLIST_ERR,fileDetail.getErrFlag());
+        values.put(KEY_CLIST_ERR,fileDetail.errFlag);
+
         values.put(KEY_CLIST_NAME, fileDetail.getName());
         values.put(KEY_CLIST_URL, fileDetail.getFull());
         values.put(KEY_CLIST_TYPE, fileDetail.getDeviceType().ordinal()); // ordinalni hodnota typu zarizeni
         values.put(KEY_CLIST_MD5, ""); // Assuming MD5 is empty, adjust as needed
         values.put(KEY_CLIST_CREATED, fileDetail.getCreated().toString());
-        values.put(KEY_CLIST_FIRST, fileDetail.getiFrom().toString());
-        values.put(KEY_CLIST_LAST, fileDetail.getiInto().toString());
-        values.put(KEY_CLIST_COUNT, fileDetail.getiCount());
+        values.put(KEY_CLIST_FIRST, fileDetail.iFrom.toString());
+        values.put(KEY_CLIST_LAST, fileDetail.iInto.toString());
+        values.put(KEY_CLIST_COUNT, fileDetail.iCount);
         values.put(KEY_CLIST_SIZE, fileDetail.getFileSize());
         values.put(KEY_CLIST_MINT1, fileDetail.getMinT1());
         values.put(KEY_CLIST_MAXT1, fileDetail.getMaxT1());
@@ -160,15 +162,15 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         ContentValues values = new ContentValues();
 
         // Populate ContentValues with FileDetail data
-        values.put(KEY_CLIST_ERR, fileDetail.getErrFlag());
+        values.put(KEY_CLIST_ERR, fileDetail.errFlag);
         values.put(KEY_CLIST_NAME, fileDetail.getName());
         values.put(KEY_CLIST_URL, fileDetail.getFull());
         values.put(KEY_CLIST_TYPE, 0); // Assuming type is 0, adjust as needed
         values.put(KEY_CLIST_MD5, ""); // Assuming MD5 is empty, adjust as needed
-        values.put(KEY_CLIST_CREATED, fileDetail.getiFrom().toString());
-        values.put(KEY_CLIST_FIRST, fileDetail.getiFrom().toString());
-        values.put(KEY_CLIST_LAST, fileDetail.getiInto().toString());
-        values.put(KEY_CLIST_COUNT, fileDetail.getiCount());
+        values.put(KEY_CLIST_CREATED, fileDetail.iFrom.toString());
+        values.put(KEY_CLIST_FIRST, fileDetail.iFrom.toString());
+        values.put(KEY_CLIST_LAST, fileDetail.iInto.toString());
+        values.put(KEY_CLIST_COUNT, fileDetail.iCount);
         values.put(KEY_CLIST_SIZE, fileDetail.getFileSize());
         values.put(KEY_CLIST_MINT1, fileDetail.getMinT1());
         values.put(KEY_CLIST_MAXT1, fileDetail.getMaxT1());
@@ -188,14 +190,14 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     public FileDetail copyCursorToFileDetail(Cursor cursor)
     {
         FileDetail fileDetail = new FileDetail(cursor.getLong(cursor.getColumnIndex(KEY_ID)));
-        fileDetail.setErrFlag(cursor.getInt(cursor.getColumnIndex(KEY_CLIST_ERR)));
+        fileDetail.errFlag = cursor.getInt(cursor.getColumnIndex(KEY_CLIST_ERR));
         fileDetail.setName(cursor.getString(cursor.getColumnIndex(KEY_CLIST_NAME)));
         fileDetail.setDeviceType(TDeviceType.values()[cursor.getInt(cursor.getColumnIndex(KEY_CLIST_TYPE))]);
         fileDetail.setFull(cursor.getString(cursor.getColumnIndex(KEY_CLIST_URL)));
         fileDetail.setCreated(LocalDateTime.parse(cursor.getString(cursor.getColumnIndex(KEY_CLIST_CREATED))));
-        fileDetail.setFrom(LocalDateTime.parse(cursor.getString(cursor.getColumnIndex(KEY_CLIST_FIRST))));
-        fileDetail.setInto(LocalDateTime.parse(cursor.getString(cursor.getColumnIndex(KEY_CLIST_LAST))));
-        fileDetail.setCount(cursor.getInt(cursor.getColumnIndex(KEY_CLIST_COUNT)));
+        fileDetail.iFrom = LocalDateTime.parse(cursor.getString(cursor.getColumnIndex(KEY_CLIST_FIRST)));
+        fileDetail.iInto = LocalDateTime.parse(cursor.getString(cursor.getColumnIndex(KEY_CLIST_LAST)));
+        fileDetail.iCount = cursor.getInt(cursor.getColumnIndex(KEY_CLIST_COUNT));
         fileDetail.setFileSize(cursor.getLong(cursor.getColumnIndex(KEY_CLIST_SIZE)));
         fileDetail.setMinT1(cursor.getDouble(cursor.getColumnIndex(KEY_CLIST_MINT1)));
         fileDetail.setMaxT1(cursor.getDouble(cursor.getColumnIndex(KEY_CLIST_MAXT1)));

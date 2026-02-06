@@ -106,29 +106,24 @@ public class FileViewerAdapter extends BaseAdapter
         DateTimeFormatter fmtFrom = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         DateTimeFormatter fmtInto  = DateTimeFormatter.ofPattern("yy-MM-dd HH:mm").withZone(ZoneId.of("UTC"));
 
-        if (currentFile.getiFrom() !=null) {
-            String formattedFrom = currentFile.getiFrom().format(fmtFrom);
+        if (currentFile.iFrom !=null) {
+            String formattedFrom = currentFile.iFrom.format(fmtFrom);
             holder.from.setText(formattedFrom);
         }
-        if (currentFile.getiInto() !=null) {
-            String formattedInto = currentFile.getiInto().format(fmtInto);
+        if (currentFile.iInto !=null) {
+            String formattedInto = currentFile.iInto.format(fmtInto);
             holder.into.setText(formattedInto);
         }
 
 
 
-        holder.count.setText(String.valueOf(currentFile.getiCount()));
-        holder.annotation.setText(currentFile.getCreated());
+        holder.count.setText(String.valueOf(currentFile.iCount));
+        holder.annotation.setText(currentFile.getFormattedCreated());
         holder.annotation.setTextColor(ContextCompat.getColor(mContext, R.color.default_text_color));
-        holder.size.setText(formatSize(currentFile.getFileSize()));
+        holder.size.setText(currentFile.getFormattedSize());
 
 
         // doplnim statistiku, pokud je to znamy datovy soubor
-        if (currentFile.errFlag == null)
-        {
-            currentFile.errFlag = Constants.PARSER_ERROR;
-        }
-
         if (currentFile.errFlag==Constants.PARSER_OK)
         {
             // maxima a mimina pro vsechny  teplomery
@@ -153,7 +148,7 @@ public class FileViewerAdapter extends BaseAdapter
 
             holder.minhum.setText(String.valueOf(currentFile.getMinHum()));
             holder.maxhum.setText(String.valueOf(currentFile.getMaxHum()));
-            String s = formatSize(currentFile.getFileSize()) ;
+            String s = currentFile.getFormattedSize() ;
             holder.size.setText(s);
 
 //          holder.trackTypeIcon.setImageResource(R.drawable.ic_expand_arrow)  ;

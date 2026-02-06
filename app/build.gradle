@@ -6,7 +6,8 @@ plugins {
 
     // Add the Crashlytics Gradle plugin
     id 'com.google.firebase.crashlytics'
-    id 'com.google.firebase.firebase-perf'
+    id 'org.jetbrains.kotlin.android'
+    // id 'com.google.firebase.firebase-perf'
 }
 
 allprojects {
@@ -21,12 +22,13 @@ ext {
 
 android {
     packagingOptions {
-        exclude "META-INF/DEPENDENCIES"
-        exclude 'META-INF/INDEX.LIST'
+        resources {
+            excludes += ['META-INF/DEPENDENCIES', 'META-INF/INDEX.LIST']
+        }
     }
 
     namespace 'com.tomst.lolly'
-    compileSdk 34
+    compileSdk 36
 
     defaultConfig {
         applicationId "com.tomst.lolly"
@@ -83,6 +85,9 @@ android {
             version '3.22.1'  // OK, ale pokud máš novější v SDK Manager, upgraduj na 3.28+
         }
     }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
 
     // Odstraň buildToolsVersion, pokud máš AGP 8.0+ – není potřebné
     // buildToolsVersion '36.0.0'
@@ -94,6 +99,7 @@ dependencies {
 //    testImplementation(":TMSSim"
 
     implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation 'androidx.core:core-ktx:1.17.0'
 
     testImplementation(platform('org.junit:junit-bom:5.12.0'))
     testImplementation('org.junit.jupiter:junit-jupiter')
