@@ -24,5 +24,7 @@ data class FilesUiState(
 
     // --- TVŮJ POŽADAVEK Z JAVY (mText) ---
     // Původně: mText.setValue("This is notifications fragment");
-    val infoText: String = "This is notifications fragment"
+    val infoText: String = "This is notifications fragment",
+
+    val fullPath: String = ""
 )

@@ -1227,8 +1227,19 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
             });
 
 
-    private void openDirectoryPicker() {
+    public void openDirectoryPicker() {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+        // --- PŘIDÁNO: Zkusíme navést uživatele rovnou do Documents ---
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            Uri uri = Uri.parse("content://com.android.externalstorage.documents/document/primary:Documents");
+            intent.putExtra(android.provider.DocumentsContract.EXTRA_INITIAL_URI, uri);
+        }
+        // -------------------------------------------------------------
+
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
+                | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION); // Důležité pro trvalý přístup
+
         directoryPickerLauncher.launch(intent);
     }
 
@@ -1337,8 +1348,6 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-
-
         super.onCreate(savedInstanceState);
 
         Intent intent = getIntent();
@@ -1382,21 +1391,20 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
             manager.createNotificationChannel(channel);
         }
 
-        //EventBus eventBus = EventBus.builder().addIndex(new EventBusIndex()).build();
-       // EventBus.builder().addIndex(new EventBusIndex()).installDefaultEventBus();
-       // EventBus.getDefault().register(this);
+        // EventBus eventBus = EventBus.builder().addIndex(new EventBusIndex()).build();
+        // EventBus.builder().addIndex(new EventBusIndex()).installDefaultEventBus();
+        // EventBus.getDefault().register(this);
 
 
         //  TOAST_VERTICAL_OFFSET = (int)(75 * getResources().getDisplayMetrics().density);
         DIRECTORY_TEMP = getApplicationContext().getCacheDir() + "/Tracks";
-        DIRECTORY_FW = getApplicationContext().getCacheDir() + "/Fw";
+        DIRECTORY_FW   = getApplicationContext().getCacheDir() + "/Fw";
         DIRECTORY_LOGS = getApplicationContext().getCacheDir() + "/Logs";
 
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);     // Location Manager
         gpsStatusListener = new MyGPSStatus();
 
         // GPS Satellites
-
         createPrivateFolders();
         gpsDataBase = new DatabaseHandler(this);
 
@@ -1420,11 +1428,18 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
         }
 
         prefExportFolder = sharedPref.getString("prefExportFolder", "");
-        if (!prefExportFolder.isEmpty()) {
-            if (!isExportFolderWritable())
-                Toast.makeText(context, "Export folder is not writable!", Toast.LENGTH_SHORT).show();
-            //   prefExportFolder = "";  // pokud neexistuje, tak se nastavi na prazdny retezec (
-            //prefExportFolder = Environment.DIRECTORY_DOWNLOADS;)
+
+        if (prefExportFolder.isEmpty()) {
+            // 1. Pokud není nic nastaveno, vyvolej dialog (SAF)
+            Toast.makeText(context, "Vyberte prosím složku pro export dat", Toast.LENGTH_LONG).show();
+            openDirectoryPicker();
+        } else {
+            // 2. Pokud je nastaveno, zkontroluj, zda máme práva pro zápis
+            if (!isExportFolderWritable()) {
+                Toast.makeText(context, "Vybraná složka pro export není zapisovatelná!", Toast.LENGTH_LONG).show();
+                // Volitelně: Pokud přestala být zapisovatelná, můžeš rovnou vynutit nový výběr:
+                // openDirectoryPicker();
+            }
         }
 
         prefShowGraph = sharedPref.getBoolean("prefShowGraph", true);

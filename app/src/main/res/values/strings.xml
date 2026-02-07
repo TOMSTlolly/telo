@@ -1,4 +1,12 @@
 <resources>
+    <string name="btn_zip_all">Zip ALL</string>
+    <string name="btn_graph">Graph</string>
+    <string name="btn_zip_logs">Zip LOGS</string>
+    <string name="storage_location">Storage Location</string>
+    <string name="change_folder">Change</string>
+    <string name="pc_path_instruction">PC: This PC \\ [Phone] \\ %s</string>
+    <string name="empty_folder">Folder is empty</string>
+    <string name="empty_folder_hint">Connect USB cable to transfer files.</string>
 
     <!-- uloz formular options !-->
     <string name="save_options">save_options</string>
