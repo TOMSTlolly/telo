@@ -334,8 +334,6 @@ public class OptionsFragment extends Fragment implements AdapterView.OnItemSelec
         binding.spiInterval.setSelection(i);
 
         // nastav checkboxy
-//        boolean b = sharedPref.getBoolean("bookmark",false);
-//        binding.bookmark.setChecked(b);
         binding.showgraph.setChecked(sharedPref.getBoolean("showgraph",false));
         binding.rotategraph.setChecked(sharedPref.getBoolean("rotategraph",false));
         binding.noledlight.setChecked(sharedPref.getBoolean("noledlight",false));

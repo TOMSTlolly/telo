@@ -534,7 +534,7 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
     }
 
     public boolean getPrefRotateGraph() {
-        prefRotateGraph = sharedPref.getBoolean("rotategraph", true);
+        prefRotateGraph = sharedPref.getBoolean("rotategraph", false);
         return prefRotateGraph;                                                  // Rotate the graph in the main activity
     }
 
@@ -1182,23 +1182,6 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
                 " - Instance: " + Integer.toHexString(System.identityHashCode(this)));
     }
 
-    /*
-
-    private void updateUi() {
-        if (directoryUri != null) {
-            // Získáme reprezentaci adresáře, se kterou se dá pracovat
-            DocumentFile dir = DocumentFile.fromTreeUri(this, directoryUri);
-            if (dir != null && dir.exists()) {
-                infoTextView.setText("Vybraný adresář:\n" + dir.getName());
-            } else {
-                infoTextView.setText("Chyba: Vybraný adresář již neexistuje nebo k němu nemáme přístup.");
-            }
-        } else {
-            infoTextView.setText("Není vybrán žádný adresář pro ukládání dat.");
-        }
-    }
-    */
-
 
     // Moderní způsob, jak získat výsledek z jiné Activity (nahrazuje onActivityResult)
     private final ActivityResultLauncher<Intent> directoryPickerLauncher = registerForActivityResult(
@@ -1215,8 +1198,11 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
 
                         // Uložíme URI do SharedPreferences
 
+                        // odvysilame info o zmene adresare
                         sharedPref.edit().putString("prefExportFolder", uri.toString()).apply();
-                        this.directoryUri = uri; // Aktualizujeme lokální proměnnou
+                        this.directoryUri = uri;
+                        setPrefExportFolder(uri.toString());
+                        org.greenrobot.eventbus.EventBus.getDefault().post(com.tomst.lolly.core.EventBusMSG.UPDATE_TRACKLIST);
                         //updateUi();
                         Toast.makeText(this, "Adresář úspěšně nastaven!", Toast.LENGTH_SHORT).show();
                     }
@@ -1227,18 +1213,30 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
             });
 
 
+
     public void openDirectoryPicker() {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
-        // --- PŘIDÁNO: Zkusíme navést uživatele rovnou do Documents ---
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            Uri uri = Uri.parse("content://com.android.externalstorage.documents/document/primary:Documents");
-            intent.putExtra(android.provider.DocumentsContract.EXTRA_INITIAL_URI, uri);
+
+        // 1. Zkusíme načíst aktuálně nastavenou složku z preferencí
+        String currentPath = sharedPref.getString("prefExportFolder", "");
+        Uri initialUri;
+
+        if (!currentPath.isEmpty()) {
+            // Pokud už máme něco nastaveno (např. .../Documents/testy), použijeme to
+            initialUri = Uri.parse(currentPath);
+        } else {
+            // Pokud je to prázdné (první spuštění), navedeme do Documents
+            initialUri = Uri.parse("content://com.android.externalstorage.documents/document/primary:Documents");
         }
-        // -------------------------------------------------------------
+
+        // 2. Řekneme systému, ať zkusí otevřít tento adresář (API 26+)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            intent.putExtra(android.provider.DocumentsContract.EXTRA_INITIAL_URI, initialUri);
+        }
 
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
                 | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-                | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION); // Důležité pro trvalý přístup
+                | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
 
         directoryPickerLauncher.launch(intent);
     }

@@ -34,15 +34,39 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+import org.greenrobot.eventbus.EventBus
+import org.greenrobot.eventbus.Subscribe
+import org.greenrobot.eventbus.ThreadMode
+import com.tomst.lolly.core.EventBusMSG
+
 class ListFragment : Fragment() {
 
     // Inicializace ViewModelu (nahrazuje `new ViewModelProvider...`)
     private val viewModel: ListViewModel by viewModels()
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        // V Kotlinu s Coroutines už ExecutorService většinou nepotřebujeme,
-        // řešíme to přes lifecycleScope.launch
+    // Registrace EventBusu při startu
+    override fun onStart() {
+        super.onStart()
+        if (!EventBus.getDefault().isRegistered(this)) {
+            EventBus.getDefault().register(this)
+        }
+    }
+
+    // Odregistrace při stopu
+    override fun onStop() {
+        super.onStop()
+        if (EventBus.getDefault().isRegistered(this)) {
+            EventBus.getDefault().unregister(this)
+        }
+    }
+
+    // Metoda, která se zavolá, když Activity pošle signál UPDATE_TRACKLIST
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    fun onMessageEvent(event: Short) { // V Javě posíláme Short
+        if (event == EventBusMSG.UPDATE_TRACKLIST) {
+            // Tady donutíme ViewModel znovu načíst data s novou cestou
+            viewModel.loadFiles()
+        }
     }
 
     override fun onResume() {
