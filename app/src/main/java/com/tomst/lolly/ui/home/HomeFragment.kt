@@ -1,890 +1,411 @@
-package com.tomst.lolly.ui.home;
+package com.tomst.lolly.ui.home
 
-import static com.tomst.lolly.core.shared.CompileFileName;
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
+import android.content.pm.ActivityInfo
+import android.os.Build
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.os.Message
+import android.os.IBinder
+import android.util.Log
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.view.WindowManager
+import android.widget.Toast
+import androidx.annotation.RequiresApi
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.collectAsState // TOTO CHYBĚLO
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.ViewModelProvider
+import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.tomst.lolly.LollyActivity
+import com.tomst.lolly.LollyService
+import com.tomst.lolly.R
+import com.tomst.lolly.core.CSVReader
+import com.tomst.lolly.core.Constants
+import com.tomst.lolly.core.DmdViewModel
+import com.tomst.lolly.core.TDevState
+import com.tomst.lolly.core.TInfo
+import com.tomst.lolly.core.TMSRec
+import com.tomst.lolly.core.TMereni
+import com.tomst.lolly.core.shared
+import java.io.BufferedWriter
+import java.io.File
+import java.io.FileWriter
+import java.io.IOException
+import java.time.Duration
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.ArrayList
 
-import android.content.ComponentName;
-import android.content.Context;
-import android.content.Intent;
-import android.content.ServiceConnection;
-import android.content.pm.ActivityInfo;
-import android.graphics.drawable.Drawable;
-import android.net.Uri;
-import android.os.Build;
-import android.os.Bundle;
-import android.os.Handler;
-import android.os.IBinder;
-import android.os.Looper;
-import android.os.Message;
-import android.util.Log;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.ImageView;
-import android.widget.TextView;
-import android.view.WindowManager;
-import android.widget.Toast;
+class HomeFragment : Fragment() {
 
-import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
-import androidx.core.content.ContextCompat;
-import androidx.documentfile.provider.DocumentFile;
-import androidx.fragment.app.Fragment;
-import androidx.lifecycle.ViewModelProvider;
+    private val homeViewModel: HomeViewModel by viewModels()
+    private lateinit var dmd: DmdViewModel
 
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
-import com.google.android.material.bottomnavigation.BottomNavigationView;
-import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
-import com.google.firebase.firestore.QuerySnapshot;
-import com.tomst.lolly.LollyActivity;
-import com.tomst.lolly.LollyService;
-import com.tomst.lolly.R;
-import com.tomst.lolly.core.CSVReader;
-import com.tomst.lolly.core.Constants;
-import com.tomst.lolly.core.DmdViewModel;
-import com.tomst.lolly.core.FileOperation;
-import com.tomst.lolly.core.PermissionManager;
-import com.tomst.lolly.core.RFirmware;
-import com.tomst.lolly.core.TDevState;
-import com.tomst.lolly.core.TDeviceType;
-import com.tomst.lolly.core.TInfo;
-import com.tomst.lolly.core.TMSReader;
-import com.tomst.lolly.core.TMSRec;
-import com.tomst.lolly.core.TMereni;
-import com.tomst.lolly.core.TMeteo;
-import com.tomst.lolly.core.shared;
-import com.tomst.lolly.databinding.FragmentHomeBinding;
-import com.tomst.lolly.core.Blowfish;
-import com.tomst.lolly.core.TauParser;
+    private var odometer: LollyService? = null
+    private var bound = false
 
-import java.io.BufferedWriter;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
+    // Logování souborů
+    private var csv: CSVReader? = null
+    private var readWasFinished = false
+    private var ALogFileName = ""
+    private var AErrFileName = ""
+    private var merold: TMereni? = null
+    private var savelog: MutableList<String>? = null
+    private var logs: MutableList<TMSRec> = ArrayList()
+    private var serialNumber = "Unknown"
+    private var heartIdx = 0
+
+    // Konstanta z původního kódu
+    private val MIN_ADANUMBER: Byte = 5
 
 
-public class HomeFragment extends Fragment {
-    LollyActivity lollyApp = LollyActivity.getInstance();
-    private Context mContext =  null;
-    static final byte MIN_ADANUMBER = 5;  // pozaduju, aby mel adapter minimalne 5 znaku
-    private FragmentHomeBinding binding;
 
-    Drawable adapterGreenDrawable = null;
-    ImageView adapterImage = null;
+    private val datahandler = object : Handler(Looper.getMainLooper()) {
+        @RequiresApi(Build.VERSION_CODES.O)
+        override fun handleMessage(msg: Message) {
+            val mer = msg.obj as? TMereni ?: return
 
+            if (merold != null && mer.dtm != null && merold?.dtm != null) {
+                val delta = Duration.between(merold!!.dtm, mer.dtm).seconds
+                if (delta > Constants.MAX_DELTA) {
+                    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                    val meroFormatted = merold!!.dtm.format(formatter)
+                    val merFormatted = mer.dtm.format(formatter)
+                    val ss = "Between messages >$delta seconds (from $meroFormatted to $merFormatted)"
 
-    private  DmdViewModel dmd;
-    private final int PERMISSION_REQUEST_CODE = 698;
-    private final int NOTIFICATION_ID = 423;
-    private PermissionManager permissionManager;
-    private boolean bound = false;
-    private LollyService odometer;
-    // load native C library
-    static {
-        //   System.loadLibrary("lolly-backend-lib");
-    }
-    private DocumentFile kmlFile;
-    private DocumentFile gpxFile;
-    private DocumentFile txtFile;
-    private CSVReader csv;
-    private int heartIdx = 0;
-    private String serialNumber = "Unknown";
-    private boolean readWasFinished=false;
-    private String ALogFileName="";
-    private String AErrFileName="";
-
-    //private Handler progressBarHandler = new Handler(Looper.getMainLooper());
-    private TMereni merold =null;
-    private List<String> savelog;  // logy, ktere se zapisuji do souboru
-    private List<TMSRec> logs;  // logy, ktere mi lezou z UARTU
-
-    @RequiresApi(api = Build.VERSION_CODES.O)
-    private  long calculateSecondsBetween(LocalDateTime start, LocalDateTime end) {
-        Duration duration = Duration.between(start, end);
-        return duration.getSeconds();
-    }
-
-    protected Handler datahandler = new Handler(Looper.getMainLooper()) {
-        @RequiresApi(api = Build.VERSION_CODES.O)
-        @Override
-        public void handleMessage(Message msg) {
-            // zkontroluj odstup od posledniho mereni
-
-            TMereni mer = (TMereni) msg.obj;
-            if (mer != null &&  merold!= null) {
-                if (mer.dtm==null || merold.dtm==null)
-                    return;
-
-               long delta = calculateSecondsBetween(merold.dtm, mer.dtm);
-               if (delta>Constants.MAX_DELTA) {
-                   // zobraz chybu
-                   DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
-                   // Format the dates
-                   String meroFormatted = merold.dtm.format(formatter);
-                   String merFormatted = mer.dtm.format(formatter);
-                   // Display the error with formatted dates
-                   String ss = String.format("Between messages >%d seconds (from %s to %s)", delta, meroFormatted, merFormatted);
-                   savelog.add(ss);
-                   binding.proMessage.setText(ss);
-               }
+                    savelog?.add(ss)
+                    homeViewModel.updateConnectionStatus(ss, bound) // Zobrazíme chybu v statusu
+                }
             }
-            merold = mer;
-            dmd.AddMereni(mer);   // array of values for graph
+            merold = mer
+            dmd.AddMereni(mer)
 
             if (csv == null) {
-                //String ss = String.format("Between messages >%d seconds (from %s to %s)", delta, meroFormatted, merFormatted);
-                String ss = "CSV is null, cannot save data";
-                savelog.add(ss);
-                binding.proMessage.setText(ss);
-            }
-            else
-              csv.AddMerToCsv(mer); // add to csv file
-        }
-    };
-
-    // logovani do souboru
-    protected Handler loghandler = new Handler(Looper.getMainLooper()) {
-        @RequiresApi(api = Build.VERSION_CODES.O)
-        @Override
-        public void handleMessage(Message msg) {
-            // vstupy a vystupy z hardware v uHer.java
-            TMSRec log = (TMSRec) msg.obj;
-            logs.add(log);
-
-            //binding.proMessage.setText(log);
-        }
-    };
-
-    @Override
-    public void onCreate(Bundle savedInstanceState){
-        super.onCreate(savedInstanceState);
-        Log.i("| DEBUG |", "Home Fragment, right above jni string");
-        if (savedInstanceState != null) {
-            Log.d("TOMST", "Activity being recreated after configuration change or process death");
-        }
-  }
-
-    @RequiresApi(api = Build.VERSION_CODES.O)
-    @Override
-    public void onDestroyView() {
-
-        // save if we skipped the tFinishedData
-        if (!readWasFinished)
-            saveLogAndData();
-
-//        odometer.pauseReading();
-        super.onDestroyView();
-        binding = null;
-    }
-
-    private ServiceConnection connection = new ServiceConnection() {
-       @Override
-       public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-           LollyService.LollyBinder odometerBinder =
-                   (LollyService.LollyBinder) iBinder;
-           odometer = odometerBinder.getOdometer();
-           odometer.SetHandler(handler);           // info o pozici ve stavovem stroji
-           odometer.SetDataHandler(datahandler);   // do tohoto handleru posilam naparsovane data
-           odometer.SetLogHandler(loghandler);
-
-           //Context mContext = getContext();
-           odometer.SetContext(mContext);      // az tady muze startovat hardware
-           odometer.startBindService();        // tady se mi rozbiha servis
-           odometer.enableLoop(true);          // lock uvolnim az po onServiceConnected
-           bound = true;
-       }
-
-
-       @Override
-       public void onServiceDisconnected(ComponentName componentName) {
-           bound = false;
-       }
-    };
-
-    @Override
-    public void onAttach(Context context) {
-        super.onAttach(context);
-        mContext = context;
-    }
-
-    @Override
-    public void onPause() {
-        super.onPause();
-
-        /*
-        if (odometer != null) {
-            odometer.enableLoop(false);
-        }
-         */
-
-    }
-
-     @Override
-     public void onResume() {
-        super.onResume();
-         // Set the orientation to landscape (90 degrees)
-         getActivity().setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-
-         // Keep screen on while the app is in foreground
-         getActivity().getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-
-     };
-
-     @Override
-     public void onStart(){
-        //Constants.showMicro =
-
-        super.onStart();
-
-        Intent intent = new Intent(getContext(), LollyService.class);
-        //getActivity().startService(intent);
-        getContext().bindService(intent, connection, Context.BIND_AUTO_CREATE);
-        /*
-        if (odometer != null) {
-            odometer.SetServiceState(TDevState.tStart);
-            odometer.enableLoop(true);
-        }
-         */
-     }
-
-    @Override
-    public void onStop() {
-
-        if (bound && odometer != null) {
-            odometer.enableLoop(false);
-            getContext().unbindService(connection);
-            bound = false;
-        }
-        super.onStop();
-    }
-
-    /*
-     public void LogMsg(String msg)
-    {
-        binding.mShowCount.append(msg+"\n");
-    }
-     */
-
-     private void switchToGraphFragment(){
-        BottomNavigationView bottomNavigationView;
-        bottomNavigationView = (BottomNavigationView) getActivity().findViewById(R.id.nav_view);
-        View view = bottomNavigationView.findViewById(R.id.navigation_graph);
-        view.performClick();
-     }
-
-     /*
-    public static void downloadFile(Context context, String url, String fileName) {
-        DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url))
-                .setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI | DownloadManager.Request.NETWORK_MOBILE)
-                .setTitle(fileName)
-                .setDescription("Downloading...")
-                .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName);
-
-        DownloadManager downloadManager = (DownloadManager) context.getSystemService(Context.DOWNLOAD_SERVICE);
-        downloadManager.enqueue(request);
-    }
-     */
-
-    private String FullName(String AFileName){
-        File[] rootDirectories = FileOperation.getAllStorages(getContext());
-        //return FILEPATH+AFileName;
-         return Constants.FILEDIR+AFileName;
-     }
-
-    // 2024-04-24_92225141_0.csv
-    // vyrobi testovaci soubor s daty, chci vyzkouset, jestli mi hraje zapis na dane misto
-    @RequiresApi(api = Build.VERSION_CODES.O)
-    private boolean CreateTestFile(String saveIntoFolder) {
-        try {
-            DocumentFile pickedDir;
-            if (saveIntoFolder.startsWith("content")) {
-                Uri uri = Uri.parse(saveIntoFolder);
-                pickedDir = DocumentFile.fromTreeUri(getContext(), uri);
+                val ss = "CSV is null, cannot save data"
+                savelog?.add(ss)
+                // homeViewModel.updateConnectionStatus(ss, bound)
             } else {
-                pickedDir = DocumentFile.fromFile(new File(saveIntoFolder));
+                csv?.AddMerToCsv(mer)
             }
-
-            if (!pickedDir.exists()) {
-                Log.w("myApp", "[#] Exporter.java - UNABLE TO CREATE THE FOLDER");
-                //exportingTask.setStatus(ExportingTask.STATUS_ENDED_FAILED);
-                return false;
-            }
-
-            String fName = "testfile";
-            txtFile = pickedDir.findFile(fName + ".txt");
-            if ((txtFile != null) && (txtFile.exists()))
-                txtFile.delete();
-            txtFile = pickedDir.createFile("", fName + ".txt");
-            Log.w("myApp", "[#] HomeFragment.java - Export " + txtFile.getUri().toString());
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        }
-        return true;
-    }
-
-
-    private void setMeteoImage(ImageView img, TMeteo met)
-    {
-        switch (met){
-            case mBasic:
-                //img.setImageResource(R.drawable.basic);
-                img.setImageResource(R.drawable.home_basic);
-                break;
-
-            case mMeteo:
-                //img.setImageResource(R.drawable.meteo);
-                img.setImageResource(R.drawable.home_meteo);
-                break;
-
-            case mSmart:
-                //img.setImageResource(R.drawable.smart);
-                img.setImageResource(R.drawable.home_smart);
-                break;
-
-            case mIntensive:
-                //img.setImageResource(R.drawable.a5);
-                img.setImageResource(R.drawable.home_5min);
-                break;
-
-            case mExperiment:
-                //img.setImageResource(R.drawable.a1);
-                img.setImageResource(R.drawable.home_1min);
-                break;
-
-            default:
-                img.setImageResource(R.drawable.shape_circle);
-                break;
         }
     }
 
-
-    private void setFirmwareInfo(RFirmware fw){
-        binding.devser.setText(fw.Serial);
-        /*
-        binding.devhw.setText(String.valueOf(rfir.Hw));
-        binding.devfw.setText(String.valueOf(rfir.Fw));
-        binding.devsub.setText(String.valueOf(rfir.Sub));
-        binding.devname.setText(rfir.DeviceName);
-        binding.devstriska.setText(rfir.Striska);
-        binding.devfile.setText(rfir.FirmwareFile);
-        binding.devpoznamka.setText(rfir.Poznamka);
-         */
-    }
-
-
-    private void  setDeviceImage(TDeviceType devType){
-        ImageView img = (ImageView)  getActivity().findViewById(R.id.devImage);
-        switch (devType){
-            case dLolly3:
-            case dLolly4:
-                img.setImageResource(R.drawable.dev_lolly);
-                break;
-
-            case dTermoChron:
-                img.setImageResource(R.drawable.dev_wurst);
-                break;
-
-            case dAD:
-                img.setImageResource(R.drawable.dev_ad);
-                break;
-
-            case dAdMicro:
-                img.setImageResource(R.drawable.dev_ad);
-                break;
-
-            default:
-                img.setImageResource(R.drawable.shape_circle);
-                break;
+    // 2. Handler pro logování (LogHandler)
+    private val loghandler = object : Handler(Looper.getMainLooper()) {
+        override fun handleMessage(msg: Message) {
+            val log = msg.obj as? TMSRec
+            if (log != null) {
+                logs.add(log)
+            }
         }
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.O)
-    private String FormatInstant(Instant value){
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(Constants.DEVICE_FORMAT)
-                .withZone(ZoneId.systemDefault());
+    // 3. Hlavní stavový handler (Handler)
+    private val handler = object : Handler(Looper.getMainLooper()) {
+        @RequiresApi(Build.VERSION_CODES.O)
+        override fun handleMessage(msg: Message) {
+            val info = msg.obj as? TInfo ?: return
+            Log.d(Constants.TAG, "${info.idx} ${info.msg}")
 
-        String result = formatter.format(value);
-        return(result);
-    }
-
-    protected Handler handler = new Handler(Looper.getMainLooper()) {
-        @RequiresApi(api = Build.VERSION_CODES.O)
-        @Override
-        public void handleMessage(Message msg) {
-            if (binding == null) {
-              //  Log.d(Constants.TAG, "binding is null, clean better !");
-                return;
-            }
-
-            TInfo info = (TInfo) msg.obj;
-            Log.d(Constants.TAG,String.valueOf(info.idx)+' '+info.msg);
-             // tady rozebiram vystupy ze stavu v threadu
-            switch(info.stat){
-
-                case tNoHardware:
-                    binding.proMessage.setText("NO HARDWARE !!!");
-                    binding.proBar.setProgress(0);
-                    break;
-
-                case tAdapterDisconnected:
-                    binding.proMessage.setText("Adapter disconnected");
-                    binding.proBar.setProgress(0);
-
-                    // vymen obrazek adapteru na cerveny
-                    adapterImage = getActivity().findViewById(R.id.adapterImage);
-                    adapterGreenDrawable = ContextCompat.getDrawable(requireContext(), R.drawable.adapter_green);
-                    adapterImage.setImageResource(R.drawable.adapter_red);
-                    break;
-
-                case tAdapterDead:
-                    // adapter bude potrebovat flash firmware, vraci 19 bytu na "D" ve stylu pomale prohlizecky
-                    // je to nejaka softwerova chyba v adapteru
-                    binding.proMessage.setText("Adapter needs firmware reflash");
-                    binding.proBar.setProgress(0);
-
-                    // vymen obrazek adapteru na cerveny
-                    adapterImage = getActivity().findViewById(R.id.adapterImage);
-                    adapterGreenDrawable = ContextCompat.getDrawable(requireContext(), R.drawable.adapter_green);
-                    adapterImage.setImageResource(R.drawable.adapter_red);
-                    break;
-
-                case tWaitForAdapter:
-                    // if (ftTMS.AdapterNumber.length()>MIN_ADANUMBER) ;
-                    // tady je zobrazeni cisla adapteru
-                    if (info.msg.length()>MIN_ADANUMBER) {
-                        binding.proMessage.setText(info.msg);
-                        adapterImage = getActivity().findViewById(R.id.adapterImage);
-                        adapterGreenDrawable = ContextCompat.getDrawable(requireContext(), R.drawable.adapter_green);
-                        if (adapterGreenDrawable == null) {
-                            Log.e("TOMST", "R.drawable.adapter_green is null");
-                        } else {
-                            Log.d("TOMST", "R.drawable.adapter_green is not null");
-                        }
-                        binding.proBar.setProgress(0);
-                        adapterImage.setImageResource(R.drawable.adapter_green);
+            when (info.stat) {
+                TDevState.tNoHardware -> {
+                    homeViewModel.updateConnectionStatus("NO HARDWARE !!!", false)
+                    homeViewModel.updateProgress(0)
+                }
+                TDevState.tAdapterDisconnected -> {
+                    homeViewModel.updateConnectionStatus("Adapter disconnected", false)
+                    homeViewModel.updateProgress(0)
+                }
+                TDevState.tAdapterDead -> {
+                    homeViewModel.updateConnectionStatus("Adapter needs firmware reflash", false)
+                    homeViewModel.updateProgress(0)
+                }
+                TDevState.tWaitForAdapter -> {
+                    if (info.msg.length > MIN_ADANUMBER) {
+                        homeViewModel.updateConnectionStatus(info.msg, true)
+                        homeViewModel.updateProgress(0)
                     }
-                    break;
-
-                case tTMDCycling:
-                    // sem me dostane adapter, ktery neumi podepsat dlouhy paket
-                    binding.proMessage.setText(info.msg);
-                    binding.proMessage.setTextColor(ContextCompat.getColor(requireContext(), R.color.color_accent)); // Set text color to red
-                    break;
-
-                case tBlockNumber:
-                    binding.proMessage.setText(info.msg);
-                    binding.proMessage.setTextColor(ContextCompat.getColor(requireContext(), R.color.black)); // Set text color to red
-                    break;
-
-                case tHead:
-                    // nastav info o firmware v lizatku
-
-                    // nastav obrazek zarizeni
-                    if (info.fw.DeviceType == null)
-                    {
-                        Log.e("TOMST","tHeade fw.devicetype=null");
-                        break;
+                }
+                TDevState.tTMDCycling -> {
+                    homeViewModel.updateConnectionStatus(info.msg, true)
+                }
+                TDevState.tBlockNumber -> {
+                    homeViewModel.updateConnectionStatus(info.msg, true)
+                }
+                TDevState.tHead -> {
+                    info.fw.DeviceType?.let {
+                        homeViewModel.setDeviceImage(it)
+                        dmd.setDeviceType(it)
                     }
-                    setDeviceImage(info.fw.DeviceType);
+                    homeViewModel.updateDeviceVersion("Device fw: ${info.fw.Fw}.${info.fw.Sub}")
+                }
+                TDevState.tError -> {
+                    homeViewModel.updateConnectionStatus(info.msg, bound)
+                    savelog?.add(info.msg)
+                }
+                TDevState.tFirmwareIsActual -> {
+                    homeViewModel.updateDeviceVersion(info.msg)
+                }
+                TDevState.tFirmware -> {
+                    homeViewModel.updateConnectionStatus(info.msg, bound)
+                    savelog?.add(info.msg)
+                }
+                TDevState.tSerial -> {
+                    serialNumber = info.msg
+                    homeViewModel.updateSerialNumber(info.msg)
 
-                    // nastav typ zarizeni do dmdViewModel a tim i LollyApplication
-                    dmd.setDeviceType(info.fw.DeviceType);
+                    // Inicializace CSV
+                    LollyActivity.getInstance().serialNumber = serialNumber
+                    val trackDir = LollyActivity.getInstance().prefExportFolder
+                    val csvFileName = shared.CompileFileName("data_", serialNumber, trackDir)
 
-                    // vypis cislo firmware zarizeni
-                    binding.devver.setText("Device fw: "+info.fw.Fw+"."+info.fw.Sub);
-                    break;
+                    csv = CSVReader(csvFileName)
+                    csv?.OpenForWrite(csvFileName)
 
-                case tError:
-                    binding.proMessage.setText(info.msg);
-                    binding.proMessage.setTextColor(ContextCompat.getColor(requireContext(), R.color.color_accent)); // Set text color to red
-                    savelog.add(info.msg);
-                    break;
+                    ALogFileName = LollyActivity.getInstance().cacheLogPath + "/log_" + shared.aft(csvFileName, "data_")
+                    AErrFileName = LollyActivity.getInstance().cacheLogPath + "/err_" + shared.aft(csvFileName, "data_")
+                }
+                TDevState.tInfo -> {
+                    homeViewModel.updateDiagnostics(info.t1, info.t2, info.t3, info.humAd)
+                    csv?.SetupFormat(info.devType)
+                }
+                TDevState.tCapacity -> {
+                    val capUsed = try { info.msg.toInt() } catch (e: Exception) { 0 }
+                    homeViewModel.updateMemory(capUsed)
+                }
+                TDevState.tGetTime -> {
+                    // val time = if (info.msg.isNotEmpty()) info.msg else "Invalid time"
+                    // homeViewModel.updateTime(...)
+                }
+                TDevState.tGetTimeError -> {
+                    // Handle error
+                }
+                TDevState.tCompareTime -> {
+                    val formatter = DateTimeFormatter.ofPattern(Constants.DEVICE_FORMAT).withZone(ZoneId.systemDefault())
+                    val phTime = LocalDateTime.now().format(formatter)
 
+                    val delta = try { info.msg.toFloat() } catch (e: Exception) { 0f }
+                    val diff = String.format("%.1f", delta / 1000.0)
 
-                case tFirmwareIsActual:
-                    binding.devver.setText(info.msg);
-                    break;
+                    homeViewModel.updateTime(
+                        devTime = homeViewModel.uiState.value.deviceTime,
+                        phoneTime = phTime,
+                        diff = diff
+                    )
+                }
+                TDevState.tReadMeteo -> {
+                    homeViewModel.setMeteoMode(info.meteo, info.msg)
+                }
+                TDevState.tProgress -> {
+                    //val progress = if (info.idx < 0) -info.idx else info.idx
+                    val progress = info.idx;
 
-                case tFirmware:
-                    binding.proMessage.setText(info.msg);
-                    savelog.add(info.msg);
-                    break;
-
-                case tSerial:
-                    serialNumber = info.msg;
-                    binding.devser.setText(info.msg);
-
-                    // csv file output, it should be unique for each device and each download
-                    LollyActivity.getInstance().setSerialNumber(serialNumber);
-
-                    //String ATrackDir = LollyActivity.getInstance().getCacheCsvPath();
-                    String ATrackDir = LollyActivity.getInstance().getPrefExportFolder();
-                    String ACsvFileName =   CompileFileName("data_",serialNumber,ATrackDir);
-                    csv = new CSVReader(ACsvFileName);
-                    csv.OpenForWrite(ACsvFileName);  // otevre vystupni stream pro addCsv vyse
-
-                    ALogFileName= "log_"+shared.aft(ACsvFileName,"data_");
-                    ALogFileName = LollyActivity.getInstance().getCacheLogPath()+"/"+ALogFileName;
-                    AErrFileName= "err_"+shared.aft(ACsvFileName,"data_");
-                    AErrFileName = LollyActivity.getInstance().getCacheLogPath()+"/"+AErrFileName;
-
-                    break;
-
-                case tInfo:
-                    int proc = (int) ((info.humAd / Constants.MAX_HUM) * 100);
-                    binding.humBar.setMax(100);
-                    binding.humBar.setProgress(proc);
-
-                    binding.devhumADVal.setText(String.valueOf(proc));
-                    binding.devt1.setText(String.format("%.1f",info.t1));
-                    binding.devt2.setText(String.format("%.1f",info.t2));
-                    binding.devt3.setText(String.format("%.1f",info.t3));
-
-                    // teprve ted vim, co mam za zarizeni na sonde a muzu nastavit format do csv
-                    csv.SetupFormat(info.devType);
-                    break;
-
-                case tCapacity:
-                    // kapacita je v %
-                    int capUsed = Integer.parseInt(info.msg);
-                    binding.devMemory.setProgress(capUsed);
-                    break;
-
-                case tGetTime:
-                    String devTime = info.msg; // cas v lizatku
-                    if (info.msg.length() <1)
-                        devTime = "Invalid time, check PCF8563";   // pokud neni cas, tak nula
-
-                    binding.devTime.setText(devTime);
-                    break;
-
-                case tGetTimeError:
-                    //String devTime = info.msg;
-                    binding.devTime.setText("Invalid time");
-                    String line = String.format("Invalid time %s",info.msg);
-                    binding.proMessage.setText(line);
-                    break;
-
-                case tCompareTime:
-                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern(Constants.DEVICE_FORMAT).withZone(ZoneId.systemDefault());
-                    LocalDateTime localDateTime = LocalDateTime.now();
-                    String phTime = localDateTime.format(formatter);
-                    binding.phoneTime.setText(phTime);       // cas v telefonu
-
-                    //String deltas = String.valueOf (ftTMS.delta /1000.0);
-                    float delta = Float.valueOf(info.msg);
-                    String deltas = String.format("%.1f", delta/1000.0);
-                    binding.diffTime.setText(deltas);
-                   break;
-
-                case tReadMeteo:
-                    // show meteo mode and image
-                    ImageView img = (ImageView)  getActivity().findViewById(R.id.modeImage);
-                    if (img == null)
-                        break;
-
-                    setMeteoImage(img,info.meteo);
-                    binding.devMode.setText(info.msg); // here is wordly description of mode
-                    break;
-
-                case tProgress:
-                    // progress bar, slouceno s infem.
-                    if (info.idx < 0)
-                        binding.proBar.setMax(-info.idx);
-                    else
-                        binding.proBar.setProgress(info.idx);
-
-                    //DateTimeFormatter buttonFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd"); //DateTimeFormatter.ofPattern(Constants.BUTTON_FORMAT);
+                    var remainStr = ""
                     if (info.currDay != null) {
-                        DateTimeFormatter buttonFormat = DateTimeFormatter.ofPattern("YY-MM-dd").withZone(ZoneId.of("UTC"));
-                        String sFmt = buttonFormat.format(info.currDay);
-                        String s = String.format("%s rem:%d days",sFmt, info.remainDays);
-                        binding.tvStatus.setText(s);
+                        val buttonFormat = DateTimeFormatter.ofPattern("YY-MM-dd").withZone(ZoneId.of("UTC"))
+                        val sFmt = buttonFormat.format(info.currDay)
+                        remainStr = "$sFmt rem:${info.remainDays} days"
                     }
 
-                    HandleHeartbeat();
-                    //binding.tvStatus.setText(info.msg);
-                    break;
+                    homeViewModel.updateProgress(progress, 100, remainStr)
+                    handleHeartbeat()
+                }
+                TDevState.tVrtule -> {
+                    handleHeartbeat()
+                }
+                TDevState.tReadType -> {
+                    homeViewModel.updateConnectionStatus(info.msg, bound)
+                }
+                TDevState.tFinishedData -> {
+                    saveLogAndData()
+                    readWasFinished = true
 
-                case tVrtule:
-                    HandleHeartbeat();
-                    break;
-
-                case tLollyService:
-                    binding.proMessage.setText("LollyService.serviceHandler");
-                    break;
-
-                case tReadType:
-                    //binding.devMode.setText(info.msg);
-                    String rs = info.msg;
-                    binding.proMessage.setText(rs);
-                    break;
-
-                case tRemainDays:
-                    break;
-
-                case tFinishedData:
-                    saveLogAndData();
-                    readWasFinished = true;
-
-                    // get option for showing graph
-                    boolean showGraph = getContext()
-                            .getSharedPreferences(
-                                    "save_options",
-                                    Context.MODE_PRIVATE
-                            )
-                            .getBoolean("showgraph", false);
+                    val showGraph = requireContext().getSharedPreferences("save_options", Context.MODE_PRIVATE)
+                        .getBoolean("showgraph", false)
 
                     if (true) {
-                        // prepni se do Grafu
-                        dmd.sendMessageToFragment("TMD " + serialNumber);
-                        switchToGraphFragment();
+                        dmd.sendMessageToFragment("TMD $serialNumber")
+                        switchToGraphFragment()
                     }
-                    break;
-
-                default:
-                   break;
-            }
-        }
-    };
-
-    private void saveLogAndData(){
-        if (csv == null)
-            return;
-
-        csv.CloseExternalCsv();
-        saveLogToFile(ALogFileName);
-        saveLogErr(AErrFileName);
-
-    }
-
-    private void saveLogErr(String ALogFileName) {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(ALogFileName))) {
-            for (String log : savelog) {
-                writer.write(log);
-                writer.newLine();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void saveLogToFile(String ALogFileName){
-            try (BufferedWriter writer = new BufferedWriter(new FileWriter(ALogFileName))) {
-                for (TMSRec log : logs) {
-                    writer.write("<<"+log.sCmd);
-                    writer.newLine();
-                    writer.write(">>"+log.sRsp);
-                    writer.newLine();
                 }
-            } catch (IOException e) {
-                e.printStackTrace();
+                else -> {}
             }
-            logs.clear();
+        }
     }
 
-
-    @Override
-    public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
-        // Perform additional view setup here, such as finding views by ID and setting up listeners
-        binding.expPath.setText("Home Fragment onViewCreated");
-    }
-
-    private void FragmentToDefaultState() {
-        //binding.proMessage.setText("Home Fragment onViewCreated");
-        binding.devser.setText("0123456789");
-        binding.devTime.setText("01.01.2000 12:34:56");
-        binding.phoneTime.setText("01.01.2000 12:34:56");
-        binding.devMode.setText("Basic");
-        binding.devMemory.setProgress(0);
-        binding.proBar.setProgress(0);
-        binding.proBar.setMax(0);
-        binding.devhumADVal.setText("0");
-        binding.devt1.setText("0");
-        binding.devt2.setText("0");
-        binding.devt3.setText("0");
-    }
-
-    @RequiresApi(api = Build.VERSION_CODES.O)
-    public View onCreateView(@NonNull LayoutInflater inflater,
-                             ViewGroup container, Bundle savedInstanceState) {
-        HomeViewModel homeViewModel = new ViewModelProvider(this).get(HomeViewModel.class);
-
-        savelog  = LollyActivity.getInstance().SAVE_LOG;
-
-        logs  = new ArrayList<>();
-
-        // sdileny datovy model
-        dmd = new ViewModelProvider(getActivity()).get(DmdViewModel.class);
-        dmd.ClearMereni();
-
-
-        // tady vybiram callbacky od jinych fragmentu a aplikace
-        dmd.getMessageContainerToFragment().observe(getViewLifecycleOwner(), message -> {
-             String exportPath = lollyApp.getPrefExportFolder();
-            //binding.expPath.setText(exportPath);
-        });
-
-        binding = FragmentHomeBinding.inflate(inflater, container, false);
-        View root = binding.getRoot();
-        root.setKeepScreenOn(true); // nedovol, aby se displej uspal
-        binding.proBar.setProgress(0); // vycisti progress bar
-
-        // do formulare nahrej defaultni nastaveni
-        FragmentToDefaultState();
-
-        Button testLollyInstance = binding.testLolly;
-        testLollyInstance.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View view) {
-                lollyApp = LollyActivity.getInstance();
-                String exportPath = lollyApp.getPrefExportFolder();
-                //binding.expPath.setText(exportPath);
+    private val connection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            val binder = service as LollyService.LollyBinder
+            odometer = binder.odometer
+            odometer?.let {
+                it.SetHandler(handler)
+                it.SetDataHandler(datahandler)
+                it.SetLogHandler(loghandler)
+                it.SetContext(context)
+                it.startBindService()
+                it.enableLoop(true)
             }
-        });
+            bound = true
+        }
 
-        Button genCommand=binding.genCommand;
-        genCommand.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View view) {
+        override fun onServiceDisconnected(name: ComponentName?) {
+            bound = false
+            odometer = null
+        }
+    }
 
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        // Inicializace
+        dmd = ViewModelProvider(requireActivity())[DmdViewModel::class.java]
+        dmd.ClearMereni()
+
+        // OPRAVA: V Kotlinu přistupujeme ke statickým proměnným Javy přes třídu, ne přes instanci
+        savelog = LollyActivity.SAVE_LOG
+
+        // Nastavení defaultních hodnot
+        homeViewModel.updateSerialNumber("0123456789")
+        homeViewModel.updateTime("01.01.2000 12:34:56", "01.01.2000 12:34:56", "---")
+
+        return ComposeView(requireContext()).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                MaterialTheme {
+                    // OPRAVA: Přidán import collectAsState
+                    val uiState = homeViewModel.uiState.collectAsState().value
+
+                    HomeScreen(
+                        state = uiState,
+                        onDebugAction = { action ->
+                            handleDebugAction(action)
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    private fun handleDebugAction(action: String) {
+        when (action) {
+            "t.Tup" -> {
+                ALogFileName = LollyActivity.getInstance().cacheLogPath + "/testlog.csv"
+                saveLogAndData()
+            }
+            "t.Blowfish" -> {
                 if (bound && odometer != null) {
-                    odometer.enableLoop(false);
-                    // Sestavíme cestu k souboru firmwaru
-                    File fwFile = new File(LollyActivity.getInstance().DIRECTORY_FW, "lolly.tau");
+                    odometer?.enableLoop(false)
+                    // OPRAVA: Přístup ke statické proměnné DIRECTORY_FW
+                    val fwFile = File(LollyActivity.DIRECTORY_FW, "lolly.tau")
 
                     if (fwFile.exists()) {
-                        Toast.makeText(getContext(), "Zahajuji flashování firmwaru...", Toast.LENGTH_SHORT).show();
-                        // Zavoláme VEŘEJNOU METODU PŘÍMO NA INSTANCI SLUŽBY
-                        odometer.startFirmwareFlash(fwFile.getAbsolutePath());
+                        Toast.makeText(context, "Zahajuji flashování...", Toast.LENGTH_SHORT).show()
+                        odometer?.startFirmwareFlash(fwFile.absolutePath)
                     } else {
-                        Toast.makeText(getContext(), "Soubor firmwaru 'lolly.tau' nenalezen!", Toast.LENGTH_LONG).show();
-                        Log.e("HomeFragment", "Soubor nenalezen: " + fwFile.getAbsolutePath());
+                        Toast.makeText(context, "Soubor lolly.tau nenalezen", Toast.LENGTH_LONG).show()
                     }
                 }
-               ;
             }
-        });
+            "t.Crash" -> throw RuntimeException("Test Crash")
+        }
+    }
 
-        // Opravneni - jak je spravne navrstvit ...
-        permissionManager = new PermissionManager(getActivity());
-        Context mContext = getContext();
+    private fun handleHeartbeat() {
+        val symbol = when (heartIdx) {
+            0 -> "\\"
+            1 -> "|"
+            2 -> "/"
+            3 -> "-"
+            else -> "\\"
+        }
+        heartIdx = if (heartIdx >= 3) 0 else heartIdx + 1
+        homeViewModel.updateHeartbeat(symbol)
+    }
 
-        // testovaci crash button
-        Button crashButton = binding.testCrash;
-        crashButton.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View view) {
-                    throw new RuntimeException("Test Crash"); // Force a crash
+    // --- Lifecycle Metody ---
+
+    override fun onResume() {
+        super.onResume()
+        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        val intent = Intent(context, LollyService::class.java)
+        context?.bindService(intent, connection, Context.BIND_AUTO_CREATE)
+    }
+
+    override fun onStop() {
+        if (bound && odometer != null) {
+            odometer?.enableLoop(false)
+            context?.unbindService(connection)
+            bound = false
+        }
+        super.onStop()
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    override fun onDestroyView() {
+        if (!readWasFinished) saveLogAndData()
+        super.onDestroyView()
+    }
+
+    // --- Pomocné metody (File I/O) ---
+
+    private fun saveLogAndData() {
+        csv?.CloseExternalCsv()
+        saveLogToFile(ALogFileName)
+        saveLogErr(AErrFileName)
+    }
+
+    private fun saveLogErr(fileName: String) {
+        if (savelog == null || fileName.isEmpty()) return
+        try {
+            BufferedWriter(FileWriter(fileName)).use { writer ->
+                for (log in savelog!!) {
+                    writer.write(log)
+                    writer.newLine()
+                }
             }
-        });
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
+    }
 
-        // nasimulu odeslani serioveho cisla z threadu
-        Button sendSerial =binding.genSerial;
-        sendSerial.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View view) {
-                ALogFileName = LollyActivity.getInstance().getCacheLogPath()+"/"+"testlog.csv";
-                saveLogAndData();
-                //odometer.SetState(TDevState.tSerial);
-                // dmd.sendMessageToFragment("TSN");
+    private fun saveLogToFile(fileName: String) {
+        if (fileName.isEmpty()) return
+        try {
+            BufferedWriter(FileWriter(fileName)).use { writer ->
+                for (log in logs) {
+                    writer.write("<<${log.sCmd}")
+                    writer.newLine()
+                    writer.write(">>${log.sRsp}")
+                    writer.newLine()
+                }
             }
-        });
-
-
-        return root;
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
+        logs.clear()
     }
 
-    private FirebaseFirestore db;
-    private TextView dataTextView;
-    private Button viewDataButton;
-    private void getData()
-    {
-        // initialize instance of cloud firestore
-        db = FirebaseFirestore.getInstance();
-
-        // get user data
-        db.collection("users").get()
-                .addOnCompleteListener(getActivity(), new OnCompleteListener<QuerySnapshot>() {
-                    @Override
-                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
-                        // check if getting data was successful
-                        if (task.isSuccessful())
-                        {
-                            // create a string builder
-                            StringBuilder userData = new StringBuilder();
-
-                            // loop through all the data
-                            for (QueryDocumentSnapshot document: task.getResult())
-                            {
-                                // get user data
-                                String userName = document.getString("name");
-                                Long userSalary = document.getLong("salary");
-
-                                // create user data list
-                                if (userName != null && userSalary != null)
-                                {
-                                    userData.append("Name: ").append(userName)
-                                            .append(", Salary: ").append(userSalary)
-                                            .append("\n");
-                                }
-
-                                Log.d("dbUsers", "onComplete: " + document.getData());
-                            }
-
-                            // display the name for each user
-                            dataTextView.setText(userData.toString());
-                        }
-                        else
-                        {
-                            // display error
-                            dataTextView.setText("Error getting data: " + task.getException().getMessage( ));
-                            Log.d("dbUsers", "onComplete: " + task.getException().getMessage());
-                        }
-                    }
-                });
+    private fun switchToGraphFragment() {
+        val bottomNav = activity?.findViewById<BottomNavigationView>(R.id.nav_view)
+        bottomNav?.findViewById<View>(R.id.navigation_graph)?.performClick()
     }
-
-    public void onViewDataButtonClick(View view) {
-        getData();
-    }
-
-    // otoc vrtuli
-    private void HandleHeartbeat(){
-       switch (heartIdx) {
-           case 0:
-               heartIdx++;
-               binding.tvHeartbeat.setText("\\");
-               break;
-           case 1:
-               heartIdx++;
-               binding.tvHeartbeat.setText("|");
-               break;
-           case 2:
-               heartIdx++;
-               binding.tvHeartbeat.setText("/");
-               break;
-           case 3:
-               heartIdx=0;
-               binding.tvHeartbeat.setText("-");
-               break;
-           default:
-               heartIdx = 0;
-               binding.tvHeartbeat.setText("\\");
-               break;
-       }
-    }
-
-
 }
