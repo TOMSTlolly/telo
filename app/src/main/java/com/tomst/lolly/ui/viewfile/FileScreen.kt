@@ -7,9 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Info
@@ -24,10 +22,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tomst.lolly.R
 import com.tomst.lolly.fileview.FileDetail
+import java.time.LocalDateTime
 
 // STATEFUL
 @Composable
@@ -70,7 +70,7 @@ fun FilesScreenContent(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFF5F5F5)) // Jemně šedé pozadí celé obrazovky
-            .padding(16.dp)
+            .padding(4.dp)
     ) {
         // --- 1. Sekce akčních tlačítek ---
         Row(
@@ -80,7 +80,6 @@ fun FilesScreenContent(
             // Zip ALL
             ActionButton(
                 text = stringResource(R.string.btn_zip_all),
-                icon = Icons.Default.Archive,
                 modifier = Modifier.weight(1f),
                 onClick = onZipAllClick
             )
@@ -105,7 +104,6 @@ fun FilesScreenContent(
             // Zip LOGS
             ActionButton(
                 text = stringResource(R.string.btn_zip_logs),
-                icon = Icons.Default.BugReport,
                 modifier = Modifier.weight(1f),
                 onClick = onZipLogsClick
             )
@@ -120,7 +118,7 @@ fun FilesScreenContent(
             colors = CardDefaults.cardColors(containerColor = Color.White),
             shape = RoundedCornerShape(16.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(8.dp)) {
                 // Horní řádek karty: Ikona složky + Název složky + Tlačítko Change
                 Row(
                     verticalAlignment = Alignment.CenterVertically
@@ -160,9 +158,9 @@ fun FilesScreenContent(
 
                 // Spodní řádek karty: Cesta pro Windows
                 if (state.fullPath.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Divider(color = Color(0xFFEEEEEE))
-                    Spacer(modifier = Modifier.height(8.dp))
+                   // Spacer(modifier = Modifier.height(12.dp))
+                   // HorizontalDivider(color = Color(0xFFEEEEEE))
+                   // Spacer(modifier = Modifier.height(8.dp))
 
                     // Lokalizovaná cesta s ikonkou PC
                     Text(
@@ -212,7 +210,7 @@ fun FilesScreenContent(
                             tint = Color.LightGray,
                             modifier = Modifier.size(48.dp)
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        //Spacer(modifier = Modifier.height(8.dp))
                         Text(stringResource(R.string.empty_folder), color = Color.Gray, fontWeight = FontWeight.Medium)
                         Text(
                             stringResource(R.string.empty_folder_hint),
@@ -225,7 +223,7 @@ fun FilesScreenContent(
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(vertical = 8.dp)
+                    contentPadding = PaddingValues(vertical = 2.dp)
                 ) {
                     items(state.files) { file ->
                         FileRowItem(
@@ -237,7 +235,7 @@ fun FilesScreenContent(
                                 onItemClick(file.internalFullName, !file.isSelected)
                             }
                         )
-                        Divider(color = Color(0xFFF0F0F0), thickness = 1.dp)
+                        HorizontalDivider(color = Color(0xFFF0F0F0), thickness = 1.dp)
                     }
                 }
             }
@@ -249,7 +247,6 @@ fun FilesScreenContent(
 @Composable
 fun ActionButton(
     text: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
@@ -278,7 +275,7 @@ fun FileRowItem(
             .fillMaxWidth()
             .clickable { onItemClick() }
             .background(if (file.isSelected) Color(0xFFE8F0FE) else Color.Transparent) // Google Blue selection tint
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Checkbox(
@@ -329,4 +326,60 @@ fun FileRowItem(
             }
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun FilesScreenPreview() {
+    val sampleFiles = listOf(
+        FileDetail(
+            name = "TD_20231027_103000.csv",
+            iconID = 0,
+            internalFullName = "/path/to/TD_20231027_103000.csv",
+            isSelected = true
+        ).apply {
+            niceName = "Lolly 1"
+            fileSize = 12345
+            createdDt = LocalDateTime.of(2023, 10, 27, 10, 30, 0)
+            iCount = 100
+        },
+        FileDetail(
+            name = "TD_20231027_113000.csv",
+            iconID = 0,
+            internalFullName = "/path/to/TD_20231027_113000.csv"
+        ).apply {
+            niceName = "Lolly 2"
+            fileSize = 23456
+            createdDt = LocalDateTime.of(2023, 10, 27, 11, 30, 0)
+            iCount = 200
+        },
+        FileDetail(
+            name = "TD_20231027_123000.csv",
+            iconID = 0,
+            internalFullName = "/path/to/TD_20231027_123000.csv"
+        ).apply {
+            niceName = "Lolly 3"
+            fileSize = 34567
+            createdDt = LocalDateTime.of(2023, 10, 27, 12, 30, 0)
+            iCount = 0
+        }
+    )
+
+    val sampleState = FilesUiState(
+        files = sampleFiles,
+        currentFolderDisplay = "Download",
+        fullPath = "Internal Storage/Download",
+        isLoading = false,
+        progress = 0
+    )
+
+    FilesScreenContent(
+        state = sampleState,
+        onGraphClick = {},
+        onZipLogsClick = {},
+        onZipAllClick = {},
+        onSelectFolderClick = {},
+        onToggleSelection = { _, _ -> },
+        onItemClick = { _, _ -> }
+    )
 }

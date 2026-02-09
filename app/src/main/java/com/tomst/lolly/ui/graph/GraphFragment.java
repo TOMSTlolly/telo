@@ -342,18 +342,18 @@ public class GraphFragment extends Fragment {
         combinedData = new CombinedData();
     }
 
-    // set the graph components  based on the device type
-    private void  setGraphLines()
-    {
+    // set the graph components based on the device type
+    private void setGraphLines() {
         // all off
         binding.vT1.setChecked(false);
         binding.vT2.setChecked(false);
         binding.vT3.setChecked(false);
         binding.vGrowth.setChecked(false);
 
-        switch (dmd.GetDeviceType())   {
+        String title = "";
+        switch (dmd.GetDeviceType()) {
             case dLolly4:
-                binding.chartTitle.setText("TMS-4");
+                title = "TMS-4";
                 binding.vT1.setChecked(true);
                 binding.vT2.setChecked(true);
                 binding.vT3.setChecked(true);
@@ -361,7 +361,7 @@ public class GraphFragment extends Fragment {
                 break;
 
             case dLolly3:
-                binding.chartTitle.setText("TMS-3");
+                title = "TMS-3";
                 binding.vT1.setChecked(true);
                 binding.vT2.setChecked(true);
                 binding.vT3.setChecked(true);
@@ -369,26 +369,27 @@ public class GraphFragment extends Fragment {
                 break;
 
             case dAdMicro:
-                binding.chartTitle.setText("Dendrometer/Micro");
+                title = "Dendrometer/Micro";
                 binding.vT1.setChecked(true);
                 binding.vGrowth.setChecked(true);
                 break;
             case dAD:
-                binding.chartTitle.setText("Dendrometer/Raw");
+                title = "Dendrometer/Raw";
                 binding.vT1.setChecked(true);
                 binding.vGrowth.setChecked(true);
                 break;
 
-            case  dTermoChron:
-                binding.chartTitle.setText("Thermochron");
+            case dTermoChron:
+                title = "Thermochron";
                 binding.vT1.setChecked(true);
                 break;
 
             default:
                 throw new UnsupportedOperationException("Not yet implemented");
         }
-
+        binding.chartTitle.setText(fSerialNumber + " / " + title);
     }
+
 
     public View onCreateView(
             @NonNull LayoutInflater inflater,
@@ -422,8 +423,8 @@ public class GraphFragment extends Fragment {
                         // the data has been sent by the TMD USB adapter using TMSReader
                         Log.d("GRAPH", "Setup dendrometer graph");
 
-                        setGraphLines();
                         fSerialNumber = msg.split(TMD_DELIM)[1];
+                        setGraphLines();
                         LoadDmdData();
 
                         //setupDMDGraph(fSerialNumber);

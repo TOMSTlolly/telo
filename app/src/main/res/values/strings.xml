@@ -4,7 +4,7 @@
     <string name="btn_zip_logs">Zip LOGS</string>
     <string name="storage_location">Storage Location</string>
     <string name="change_folder">Change</string>
-    <string name="pc_path_instruction">PC: This PC \\ [Phone] \\ %s</string>
+    <string name="pc_path_instruction">[Phone]\\%s</string>
     <string name="empty_folder">Folder is empty</string>
     <string name="empty_folder_hint">Connect USB cable to transfer files.</string>
 

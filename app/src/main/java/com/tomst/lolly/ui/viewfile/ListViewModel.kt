@@ -2,7 +2,9 @@ package com.tomst.lolly.ui.viewfile
 
 import android.app.Application
 import android.net.Uri
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -35,6 +37,7 @@ class ListViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(infoText = newText) }
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     fun loadFiles() {
         viewModelScope.launch(Dispatchers.IO) {
             // 1. Získání cest HNED na začátku

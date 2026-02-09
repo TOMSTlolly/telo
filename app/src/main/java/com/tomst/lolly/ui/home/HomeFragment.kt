@@ -369,6 +369,7 @@ class HomeFragment : Fragment() {
 
     private fun saveLogAndData() {
         csv?.CloseExternalCsv()
+        csv = null
         saveLogToFile(ALogFileName)
         saveLogErr(AErrFileName)
     }

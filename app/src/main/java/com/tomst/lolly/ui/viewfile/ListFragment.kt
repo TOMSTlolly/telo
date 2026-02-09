@@ -39,10 +39,15 @@ import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
 import com.tomst.lolly.core.EventBusMSG
 
+import androidx.lifecycle.ViewModelProvider // <--- PŘIDAT IMPORT
+import com.tomst.lolly.core.DmdViewModel  // <--- PŘIDAT IMPORT
+
+
 class ListFragment : Fragment() {
 
     // Inicializace ViewModelu (nahrazuje `new ViewModelProvider...`)
     private val viewModel: ListViewModel by viewModels()
+    private lateinit var dmd: DmdViewModel // <--- PŘIDAT DEKLARACI
 
     // Registrace EventBusu při startu
     override fun onStart() {
@@ -82,6 +87,7 @@ class ListFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View {
         // Místo XML layoutu vracíme ComposeView
+        dmd = ViewModelProvider(requireActivity())[DmdViewModel::class.java]
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
@@ -90,6 +96,8 @@ class ListFragment : Fragment() {
                     FilesScreen(
                         viewModel = viewModel,
                         onGraphClick = { fileName ->
+
+                            dmd.sendMessageToFragment(fileName)
                             // Logika pro přepnutí na graf
                             switchToGraphFragment()
                         },

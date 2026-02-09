@@ -12,6 +12,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -67,13 +68,17 @@ fun FileRowItem(
                         painter = painterResource(id = R.drawable.baseline_insert_drive_file_24), // Tvoje ikona
                         contentDescription = "File Icon",
                         tint = Color.White, // Ikona bílá na barevném pozadí
-                        modifier = Modifier.padding(8.dp).fillMaxSize()
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .fillMaxSize()
                     )
                 }
             }
 
             // --- 2. PRAVÝ SLOUPEC: Texty a Data ---
-            Column(modifier = Modifier.weight(8f).padding(start = 8.dp)) {
+            Column(modifier = Modifier
+                .weight(8f)
+                .padding(start = 8.dp)) {
 
                 // HEADER: Jméno souboru + Typ Zařízení
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -149,13 +154,28 @@ fun FileRowItem(
     }
 }
 
+@Preview(showBackground = true)
+@Composable
+fun DefaultPreview() {
+    FileRowItem(
+        file = FileDetail("SampleFile.csv").apply {
+            niceName = "Sample TMD File"
+            isSelected = true
+            errFlag = 0
+            // ... initialize other properties for a complete preview
+        },
+        onClick = {},
+        onToggleSelection = {}
+    )
+}
+
 @Composable
 fun DataLabelValue(label: String, value: String) {
     Row(modifier = Modifier.padding(vertical = 1.dp)) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = Color.Gray,
+            color = Color(0xFF666666),
             modifier = Modifier.width(50.dp)
         )
         Text(
