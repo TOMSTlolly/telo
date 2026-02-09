@@ -18,36 +18,33 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.core.content.FileProvider
 import androidx.documentfile.provider.DocumentFile
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.tomst.lolly.BuildConfig
 import com.tomst.lolly.LollyActivity
 import com.tomst.lolly.R
+import com.tomst.lolly.core.DmdViewModel
+import com.tomst.lolly.core.EventBusMSG
 import com.tomst.lolly.core.ZipFiles
-import com.tomst.lolly.core.shared
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.greenrobot.eventbus.EventBus
+import org.greenrobot.eventbus.Subscribe
+import org.greenrobot.eventbus.ThreadMode
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-
-import org.greenrobot.eventbus.EventBus
-import org.greenrobot.eventbus.Subscribe
-import org.greenrobot.eventbus.ThreadMode
-import com.tomst.lolly.core.EventBusMSG
-
-import androidx.lifecycle.ViewModelProvider // <--- PŘIDAT IMPORT
-import com.tomst.lolly.core.DmdViewModel  // <--- PŘIDAT IMPORT
 
 
 class ListFragment : Fragment() {
 
     // Inicializace ViewModelu (nahrazuje `new ViewModelProvider...`)
     private val viewModel: ListViewModel by viewModels()
-    private lateinit var dmd: DmdViewModel // <--- PŘIDAT DEKLARACI
+    private val dmd: DmdViewModel by activityViewModels()
 
     // Registrace EventBusu při startu
     override fun onStart() {
@@ -66,6 +63,7 @@ class ListFragment : Fragment() {
     }
 
     // Metoda, která se zavolá, když Activity pošle signál UPDATE_TRACKLIST
+    @RequiresApi(Build.VERSION_CODES.O)
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onMessageEvent(event: Short) { // V Javě posíláme Short
         if (event == EventBusMSG.UPDATE_TRACKLIST) {
@@ -74,6 +72,7 @@ class ListFragment : Fragment() {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onResume() {
         super.onResume()
         // Vynucení orientace (tvůj starý kód)
@@ -81,13 +80,13 @@ class ListFragment : Fragment() {
         viewModel.loadFiles()
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
         // Místo XML layoutu vracíme ComposeView
-        dmd = ViewModelProvider(requireActivity())[DmdViewModel::class.java]
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {

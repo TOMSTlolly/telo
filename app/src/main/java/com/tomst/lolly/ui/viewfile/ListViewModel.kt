@@ -11,9 +11,12 @@ import androidx.lifecycle.viewModelScope
 import com.tomst.lolly.LollyActivity
 import com.tomst.lolly.core.CSVReader
 import com.tomst.lolly.core.Constants
+import com.tomst.lolly.core.DatabaseHandler
 import com.tomst.lolly.core.shared
 import com.tomst.lolly.fileview.FileDetail
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,14 +26,18 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.time.Instant
 import java.time.ZoneId
+import java.util.concurrent.atomic.AtomicInteger
 
 class ListViewModel(application: Application) : AndroidViewModel(application) {
 
+    private val db = DatabaseHandler(application)
     private val _uiState = MutableStateFlow(FilesUiState())
     val uiState: StateFlow<FilesUiState> = _uiState.asStateFlow()
 
     init {
-        loadFiles()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            loadFiles()
+        }
     }
 
     fun updateInfoText(newText: String) {
@@ -40,44 +47,21 @@ class ListViewModel(application: Application) : AndroidViewModel(application) {
     @RequiresApi(Build.VERSION_CODES.O)
     fun loadFiles() {
         viewModelScope.launch(Dispatchers.IO) {
-            // 1. Získání cest HNED na začátku
             val sharedPath = LollyActivity.getInstance().getPrefExportFolder() ?: ""
             val folderDisplay = shared.extractFolderNameFromEncodedUri(sharedPath)
             val humanReadablePath = getHumanReadablePath(sharedPath)
 
-            // 2. Okamžitý update UI (aby byla cesta vidět, i když se točí kolečko)
             _uiState.update {
                 it.copy(
                     isLoading = true,
                     progress = 0,
                     error = null,
                     currentFolderDisplay = folderDisplay,
-                    fullPath = humanReadablePath // <--- Tady to posíláme do UI
+                    fullPath = humanReadablePath
                 )
             }
 
-            val context = getApplication<Application>()
-            val sharedFolder = if (sharedPath.startsWith("content")) {
-                try {
-                    // 1. KROK: Ruční oprava URI řetězce
-                    // Pokud cesta obsahuje "tree/primary:", nahradíme ji za "tree/primary%3A"
-                    var correctedPath = sharedPath
-                    if (correctedPath.contains("tree/primary:")) {
-                        correctedPath = correctedPath.replace("tree/primary:", "tree/primary%3A")
-                    }
-
-                    // 2. KROK: Teď parsujeme opravenou cestu
-                    val uri = Uri.parse(correctedPath)
-
-                    // 3. KROK: Vytvoření DocumentFile
-                    DocumentFile.fromTreeUri(context, uri)
-                } catch (e: Exception) {
-                    Log.e("ListViewModel", "Chyba při parsování URI: $sharedPath", e)
-                    null
-                }
-            } else {
-                DocumentFile.fromFile(File(sharedPath))
-            }
+            val sharedFolder = getFolderFromPath(sharedPath)
 
             if (sharedFolder == null || !sharedFolder.isDirectory) {
                 _uiState.update { it.copy(isLoading = false, error = "Invalid export folder") }
@@ -86,56 +70,88 @@ class ListViewModel(application: Application) : AndroidViewModel(application) {
 
             val files = sharedFolder.listFiles()
             if (files.isEmpty()) {
-                // I když je seznam prázdný, cesta v 'it' už zůstává z předchozího kroku
                 _uiState.update { it.copy(isLoading = false, files = emptyList()) }
                 return@launch
             }
 
-            // Parsování souborů...
-            val loadedFiles = ArrayList<FileDetail>()
+            // Optimalizace: Načtení všech detailů z DB najednou
+            val fileDetailsMap = db.allFileDetailsAsMap
+
             val reader = CSVReader()
+            val progressCounter = AtomicInteger(0)
 
-            files.filter { it.name?.lowercase()?.endsWith(".csv") == true && it.length() > 0 }
-                .forEachIndexed { index, file ->
-                    try {
-                        val fdet = reader.FirstLast(file)
-
-                        fdet.name = file.name ?: ""
-                        fdet.niceName = getNiceName(fdet.name)
-                        fdet.internalFullName = file.uri.toString()
-                        fdet.fileSize = file.length()
-                        fdet.createdDt = Instant.ofEpochMilli(file.lastModified())
-                            .atZone(ZoneId.systemDefault())
-                            .toLocalDateTime()
-
-                        if (fdet.errFlag == null) {
-                            fdet.errFlag = Constants.PARSER_ERROR
-                        }
-                        loadedFiles.add(fdet)
-
-                    } catch (e: Exception) {
-                        Log.e("ListViewModel", "Error parsing ${file.name}", e)
-                        val errorDetail = FileDetail(
-                            name = file.name ?: "Error File",
-                            iconID = 0,
-                            internalFullName = file.uri.toString()
-                        ).apply {
-                            errFlag = Constants.PARSER_ERROR
-                        }
-                        loadedFiles.add(errorDetail)
+            val deferredResults = files.map { file ->
+                async(Dispatchers.IO) {
+                    val fileName = file.name ?: ""
+                    if (fileName.isBlank() || !fileName.lowercase().endsWith(".csv") || file.length() == 0L) {
+                        return@async null // Skip invalid files
                     }
 
-                    if (index % 5 == 0) {
-                        val progress = ((index + 1).toFloat() / files.size * 100).toInt()
-                        _uiState.update { it.copy(progress = progress) }
+                    val fdet: FileDetail
+                    if (fileDetailsMap.containsKey(fileName)) {
+                        // Cache HIT
+                        fdet = fileDetailsMap[fileName]!!
+                        fdet.niceName = getNiceName(fileName)
+                    } else {
+                        // Cache MISS
+                        try {
+                            fdet = reader.readFileContent(file.uri)
+                            fdet.name = fileName
+                            fdet.niceName = getNiceName(fileName)
+                            fdet.fileSize = file.length()
+                            if (fdet.errFlag == Constants.PARSER_OK || fdet.errFlag == Constants.PARSER_HOLE_ERR) {
+                                db.addFile(fdet, null)
+                            }
+                        } catch (e: Exception) {
+                            Log.e("ListViewModel", "Error parsing ${file.name}", e)
+                            return@async FileDetail(
+                                name = file.name ?: "Error File",
+                                iconID = 0,
+                                internalFullName = file.uri.toString()
+                            ).apply { errFlag = Constants.PARSER_ERROR }
+                        }
                     }
+
+                    // Společná logika pro oba případy
+                    fdet.internalFullName = file.uri.toString()
+                    fdet.createdDt = Instant.ofEpochMilli(file.lastModified())
+                        .atZone(ZoneId.systemDefault())
+                        .toLocalDateTime()
+
+                    val currentProgress = progressCounter.incrementAndGet()
+                    val progressPercentage = (currentProgress.toFloat() / files.size * 100).toInt()
+                    _uiState.update { it.copy(progress = progressPercentage) }
+
+                    fdet
                 }
+            }
+
+            val loadedFiles = deferredResults.awaitAll().filterNotNull()
 
             withContext(Dispatchers.Main) {
                 _uiState.update {
                     it.copy(files = loadedFiles, isLoading = false, progress = 0)
                 }
             }
+        }
+    }
+
+    private fun getFolderFromPath(path: String): DocumentFile? {
+        val context = getApplication<Application>()
+        return if (path.startsWith("content")) {
+            try {
+                var correctedPath = path
+                if (correctedPath.contains("tree/primary:")) {
+                    correctedPath = correctedPath.replace("tree/primary:", "tree/primary%3A")
+                }
+                val uri = Uri.parse(correctedPath)
+                DocumentFile.fromTreeUri(context, uri)
+            } catch (e: Exception) {
+                Log.e("ListViewModel", "Chyba při parsování URI: $path", e)
+                null
+            }
+        } else {
+            DocumentFile.fromFile(File(path))
         }
     }
 
