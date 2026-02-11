@@ -7,6 +7,7 @@
     <string name="pc_path_instruction">[Phone]\\%s</string>
     <string name="empty_folder">Folder is empty</string>
     <string name="empty_folder_hint">Connect USB cable to transfer files.</string>
+    <string name="check_to_select_file">Check to select file %1$s</string>
 
     <!-- uloz formular options !-->
     <string name="save_options">save_options</string>
@@ -173,7 +174,7 @@
 
     <string name="warning_location_denied">The App cannot access the Location</string>
     <string name="warning_background_restricted">The App cannot work in Background.\nClick here to go to System Settings where, in battery Section, you can allow the Background Activity</string>
-    <string name="warning_enable_location_service">The GPS Sensor is Disabled.\nClick here to go to System Settings, where you can enable the Location Service and set a Locating Method that uses the GPS sensor</string>
+    <string name="warning_enable_location_.service">The GPS Sensor is Disabled.\nClick here to go to System Settings, where you can enable the Location Service and set a Locating Method that uses the GPS sensor</string>
 
     <!-- Track -->
     <string name="track_id">Track</string>

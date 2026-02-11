@@ -27,6 +27,7 @@ import java.io.File
 import java.time.Instant
 import java.time.ZoneId
 import java.util.concurrent.atomic.AtomicInteger
+import com.tomst.lolly.core.TDeviceType
 
 class ListViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -128,6 +129,43 @@ class ListViewModel(application: Application) : AndroidViewModel(application) {
 
             val loadedFiles = deferredResults.awaitAll().filterNotNull()
 
+            // --- VÝPOČET STATISTIK ---
+            var cTms4 = 0
+            var cTms3 = 0
+            var cDendro = 0
+            var cThermo = 0
+
+            loadedFiles.forEach { file ->
+                // Počítáme jen pokud je soubor v pořádku (volitelně, nebo počítat vše)
+                if (file.errFlag == Constants.PARSER_OK) {
+                    when (file.deviceType) {
+                        TDeviceType.dLolly4 -> cTms4++
+                        TDeviceType.dLolly3 -> cTms3++
+                        // Sloučíme AD a ADMicro do jedné kategorie "Dendro"
+                        TDeviceType.dAD, TDeviceType.dAdMicro -> cDendro++
+                        TDeviceType.dTermoChron -> cThermo++
+                        else -> {} // Ostatní nebo neznámé
+                    }
+                }
+            }
+            // --------------------------
+
+            withContext(Dispatchers.Main) {
+                _uiState.update {
+                    it.copy(
+                        files = loadedFiles,
+                        isLoading = false,
+                        progress = 0,
+                        // Aktualizace statistik do State
+                        statTotal = loadedFiles.size,
+                        statTms4 = cTms4,
+                        statTms3 = cTms3,
+                        statDendro = cDendro,
+                        statThermo = cThermo
+                    )
+                }
+            }
+
             withContext(Dispatchers.Main) {
                 _uiState.update {
                     it.copy(files = loadedFiles, isLoading = false, progress = 0)
@@ -185,9 +223,16 @@ class ListViewModel(application: Application) : AndroidViewModel(application) {
 
     fun toggleSelection(fileFullPath: String, isSelected: Boolean) {
         _uiState.update { state ->
-            val updatedList = state.files.map {
-                if (it.internalFullName == fileFullPath) it.copy(isSelected = isSelected) else it
+            // Vytvoříme nový seznam, kde vyměníme jen ten jeden změněný soubor
+            val updatedList = state.files.map { file ->
+                if (file.internalFullName == fileFullPath) {
+                    // Použijeme naši novou metodu pro bezpečnou kopii
+                    file.cloneWithSelection(isSelected)
+                } else {
+                    file
+                }
             }
+            // Uložíme nový seznam do StateFlow -> Compose pozná změnu a překreslí UI
             state.copy(files = updatedList)
         }
     }

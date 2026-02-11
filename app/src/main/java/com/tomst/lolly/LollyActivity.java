@@ -500,9 +500,6 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
         }
     }
 
-
-
-
     public String getCacheCsvPath() {
         String ret = null;
         try {

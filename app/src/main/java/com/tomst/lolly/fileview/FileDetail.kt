@@ -172,4 +172,42 @@ data class FileDetail @JvmOverloads constructor(
         }
         return String.format("%.1f", value)
     }
+
+    fun getDisplayMinHum(): String = String.format(Locale.US, "%.0f", minHum)
+    fun getDisplayMaxHum(): String = String.format(Locale.US, "%.0f", maxHum)
+
+    fun cloneWithSelection(newSelected: Boolean): FileDetail {
+        // 1. Zavoláme standardní copy pro parametry v konstruktoru
+        val newObj = this.copy(isSelected = newSelected)
+
+        // 2. Ručně zkopírujeme VŠECHNY proměnné z těla třídy
+        newObj.id = this.id
+        newObj.lidLine = this.lidLine
+        newObj.location = this.location
+        newObj.serialNumber = this.serialNumber
+        newObj.deviceType = this.deviceType
+        newObj.niceName = this.niceName
+        newObj.fileSize = this.fileSize
+        newObj.createdDt = this.createdDt
+        newObj.errFlag = this.errFlag
+
+        // Statistiky
+        newObj.minT1 = this.minT1
+        newObj.maxT1 = this.maxT1
+        newObj.minT2 = this.minT2
+        newObj.maxT2 = this.maxT2
+        newObj.minT3 = this.minT3
+        newObj.maxT3 = this.maxT3
+        newObj.minHum = this.minHum
+        newObj.maxHum = this.maxHum
+
+        // Ostatní
+        newObj.iCount = this.iCount
+        newObj.iFrom = this.iFrom
+        newObj.iInto = this.iInto
+        newObj.internalFullName = this.internalFullName
+        newObj.isUploaded = this.isUploaded
+
+        return newObj
+    }
 }

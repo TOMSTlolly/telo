@@ -549,6 +549,7 @@ public class CSVReader extends Thread
         fileDetail.setMaxT3(maxT3);
         fileDetail.setMinT3(minT3);
         fileDetail.setMaxHum(maxHm);
+
         fileDetail.setMinHum(minHm);
         fileDetail.setDeviceType(Mer.dev);
         fileDetail.setErr(Mer.Err);

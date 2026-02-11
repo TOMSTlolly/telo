@@ -1,5 +1,6 @@
 package com.tomst.lolly.ui.viewfile
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,8 +19,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -27,8 +30,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tomst.lolly.R
 import com.tomst.lolly.fileview.FileDetail
-import java.time.LocalDateTime
-
+import java.time.ZoneId
+import java.util.Calendar
 // STATEFUL
 @Composable
 fun FilesScreen(
@@ -48,9 +51,6 @@ fun FilesScreen(
         onSelectFolderClick = onSelectFolderClick,
         onToggleSelection = { path, isSelected ->
             viewModel.toggleSelection(path, isSelected)
-        },
-        onItemClick = { path, isSelected ->
-            viewModel.toggleSelection(path, isSelected)
         }
     )
 }
@@ -63,8 +63,7 @@ fun FilesScreenContent(
     onZipLogsClick: () -> Unit,
     onZipAllClick: () -> Unit,
     onSelectFolderClick: () -> Unit,
-    onToggleSelection: (String, Boolean) -> Unit,
-    onItemClick: (String, Boolean) -> Unit
+    onToggleSelection: (String, Boolean) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -72,108 +71,151 @@ fun FilesScreenContent(
             .background(Color(0xFFF5F5F5)) // Jemně šedé pozadí celé obrazovky
             .padding(4.dp)
     ) {
-        // --- 1. Sekce akčních tlačítek ---
+        // --- 1. Sekce akčních tlačítek (KOMPAKTNÍ VERZE) ---
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 4.dp), // Menší mezera pod tlačítky
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Zip ALL
-            ActionButton(
+            // 1. Zip ALL (Méně výrazné - Outlined)
+            CompactButton(
                 text = stringResource(R.string.btn_zip_all),
+                icon = Icons.Default.Folder, // Nebo jiná ikona
+                isPrimary = false,
                 modifier = Modifier.weight(1f),
                 onClick = onZipAllClick
             )
 
-            // Graph (Zvýrazněný)
-            Button(
+            // 2. Graph (Výrazné - Primary, ale malé)
+            CompactButton(
+                text = stringResource(R.string.btn_graph),
+                icon = Icons.Default.BarChart,
+                isPrimary = true,
+                modifier = Modifier.weight(1f),
                 onClick = {
                     val selectedFiles = state.files.filter { it.isSelected }
                     val fileNames = selectedFiles.joinToString(";") { it.name }
                     if (fileNames.isNotEmpty()) onGraphClick(fileNames)
-                },
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                shape = RoundedCornerShape(12.dp),
-                contentPadding = PaddingValues(vertical = 12.dp)
-            ) {
-                Icon(Icons.Default.BarChart, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(stringResource(R.string.btn_graph), maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
+                }
+            )
 
-            // Zip LOGS
-            ActionButton(
+            // 3. Zip LOGS (Méně výrazné - Outlined)
+            CompactButton(
                 text = stringResource(R.string.btn_zip_logs),
+                icon = Icons.Default.Info, // Nebo jiná ikona
+                isPrimary = false,
                 modifier = Modifier.weight(1f),
                 onClick = onZipLogsClick
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // --- 2. Informační Karta o úložišti ---
+        //Spacer(modifier = Modifier.height(16.dp))
+        // --- 2. Karta: Statistiky (hlavní) + Cesta (pod tím) ---
         Card(
             modifier = Modifier.fillMaxWidth(),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White),
             shape = RoundedCornerShape(16.dp)
         ) {
-            Column(modifier = Modifier.padding(8.dp)) {
-                // Horní řádek karty: Ikona složky + Název složky + Tlačítko Change
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
+            Row(
+                modifier = Modifier
+                    .padding(start = 2.dp,top=2.dp,end=2.dp,bottom=2.dp)
+                    .fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // 1. IKONA SLOŽKY (Vlevo)
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.size(40.dp)
                 ) {
-                    // Ikona
-                    Surface(
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    // Název a Label
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = stringResource(R.string.storage_location),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = Color.Gray
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Default.Folder,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
                         )
-                        Text(
-                            text = state.currentFolderDisplay.ifEmpty { "N/A" },
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-
-                    // Tlačítko Edit (Change)
-                    IconButton(onClick = onSelectFolderClick) {
-                        Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.change_folder), tint = MaterialTheme.colorScheme.primary)
                     }
                 }
 
-                // Spodní řádek karty: Cesta pro Windows
-                if (state.fullPath.isNotEmpty()) {
-                   // Spacer(modifier = Modifier.height(12.dp))
-                   // HorizontalDivider(color = Color(0xFFEEEEEE))
-                   // Spacer(modifier = Modifier.height(8.dp))
+               // Spacer(modifier = Modifier.width(12.dp))
 
-                    // Lokalizovaná cesta s ikonkou PC
+                // 2. PROSTŘEDNÍ ČÁST (Statistiky + Cesta)
+                Column(modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 4.dp)
+                ) {
+
+                    // A) STATISTIKY (Místo nápisu "Documents")
+                    // Použijeme Row s 'Arrangement.SpaceBetween' nebo jen 'spacedBy', aby se to vešlo
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Total (Tučně)
+                        Text(
+                            text = "Total: ${state.statTotal}",
+                            style = MaterialTheme.typography.bodyMedium, // Nebo titleSmall
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
+                        )
+
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("|", color = Color.DarkGray)
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        // Jednotlivé typy (Barevně a menší)
+                        Text(
+                            text = "T4:${state.statTms4}",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF2E7D32) // Tmavě zelená
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+
+                        Text(
+                            text = "T3:${state.statTms3}",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF1B5E20) // Světle zelená
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+
+                        Text(
+                            text = "D:${state.statDendro}",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF795548) // Hnědá
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+
+                        Text(
+                            text = "Th:${state.statThermo}",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF1565C0) // Modrá
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // B) CESTA K ADRESÁŘI (Storage location)
+                    // Vrácena zpět, jak jsi chtěl
                     Text(
-                        text = stringResource(R.string.pc_path_instruction, state.fullPath.replace("/", "\\")),
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 11.sp
-                        ),
-                        color = Color(0xFF555555),
-                        modifier = Modifier
-                            .background(Color(0xFFF0F0F0), RoundedCornerShape(4.dp))
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                            .fillMaxWidth()
+                        text = "${state.fullPath}",
+                        style = MaterialTheme.typography.labelSmall, // Menší písmo pro cestu
+                        color = Color.DarkGray,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                // 3. TLAČÍTKO EDIT (Vpravo)
+                IconButton(onClick = onSelectFolderClick) {
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = stringResource(R.string.change_folder),
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -189,7 +231,7 @@ fun FilesScreenContent(
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(2.dp))
 
         // --- 3. Seznam souborů ---
         Card(
@@ -223,16 +265,13 @@ fun FilesScreenContent(
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(vertical = 2.dp)
+                    contentPadding = PaddingValues(top = 2.dp, bottom= 50.dp)
                 ) {
                     items(state.files) { file ->
                         FileRowItem(
                             file = file,
                             onToggleSelection = { isSelected ->
                                 onToggleSelection(file.internalFullName, isSelected)
-                            },
-                            onItemClick = {
-                                onItemClick(file.internalFullName, !file.isSelected)
                             }
                         )
                         HorizontalDivider(color = Color(0xFFF0F0F0), thickness = 1.dp)
@@ -264,69 +303,7 @@ fun ActionButton(
     }
 }
 
-@Composable
-fun FileRowItem(
-    file: FileDetail,
-    onToggleSelection: (Boolean) -> Unit,
-    onItemClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onItemClick() }
-            .background(if (file.isSelected) Color(0xFFE8F0FE) else Color.Transparent) // Google Blue selection tint
-            .padding(horizontal = 16.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Checkbox(
-            checked = file.isSelected,
-            onCheckedChange = { onToggleSelection(it) },
-            colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
-        )
 
-        Spacer(modifier = Modifier.width(12.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = file.niceName ?: file.name,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF333333)
-            )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = file.getFormattedSize(),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray,
-                    fontSize = 11.sp
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "|",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.LightGray,
-                    fontSize = 11.sp
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = file.getFormattedCreated(),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray,
-                    fontSize = 11.sp
-                )
-            }
-            if (file.iCount > 0) {
-                Text(
-                    text = "${file.getDeviceTypeLabel()} · ${file.iCount} recs",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontSize = 10.sp,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
-            }
-        }
-    }
-}
 
 @Preview(showBackground = true)
 @Composable
@@ -338,9 +315,9 @@ fun FilesScreenPreview() {
             internalFullName = "/path/to/TD_20231027_103000.csv",
             isSelected = true
         ).apply {
-            niceName = "Lolly 1"
+            niceName = "data_96648721_2025_12_15_0.csv"
             fileSize = 12345
-            createdDt = LocalDateTime.of(2023, 10, 27, 10, 30, 0)
+            createdDt = Calendar.getInstance().time.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime()
             iCount = 100
         },
         FileDetail(
@@ -348,9 +325,9 @@ fun FilesScreenPreview() {
             iconID = 0,
             internalFullName = "/path/to/TD_20231027_113000.csv"
         ).apply {
-            niceName = "Lolly 2"
+            niceName = "data_96648721_2025_12_16_0.csv"
             fileSize = 23456
-            createdDt = LocalDateTime.of(2023, 10, 27, 11, 30, 0)
+            createdDt = Calendar.getInstance().time.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime()
             iCount = 200
         },
         FileDetail(
@@ -358,9 +335,9 @@ fun FilesScreenPreview() {
             iconID = 0,
             internalFullName = "/path/to/TD_20231027_123000.csv"
         ).apply {
-            niceName = "Lolly 3"
+            niceName = "data_96648748_2025_12_01_11_0.csv"
             fileSize = 34567
-            createdDt = LocalDateTime.of(2023, 10, 27, 12, 30, 0)
+            createdDt = Calendar.getInstance().time.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime()
             iCount = 0
         }
     )
@@ -379,7 +356,85 @@ fun FilesScreenPreview() {
         onZipLogsClick = {},
         onZipAllClick = {},
         onSelectFolderClick = {},
-        onToggleSelection = { _, _ -> },
-        onItemClick = { _, _ -> }
+        onToggleSelection = { _, _ -> }
+    )
+}
+
+@Composable
+fun StatItem(label: String, count: Int, color: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = count.toString(),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = color
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = Color.Gray,
+            fontSize = 10.sp
+        )
+    }
+}
+
+@Composable
+fun CompactButton(
+    text: String,
+    icon: ImageVector,
+    isPrimary: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    // Rozhodnutí o barvách a typu tlačítka
+    val colors = if (isPrimary) {
+        ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = Color.White
+        )
+    } else {
+        ButtonDefaults.outlinedButtonColors(
+            contentColor = MaterialTheme.colorScheme.primary
+        )
+    }
+
+    // Pokud je Primary, použijeme Button (plný), jinak OutlinedButton (rámeček)
+    if (isPrimary) {
+        Button(
+            onClick = onClick,
+            modifier = modifier.defaultMinSize(minHeight = 48.dp).widthIn(max = 320.dp), // Fixní malá výška (standard je 48dp+)
+            shape = RoundedCornerShape(8.dp),
+            colors = colors,
+            contentPadding = PaddingValues(horizontal = 8.dp) // Žádný vertikální padding
+        ) {
+            CompactButtonContent(text, icon)
+        }
+    } else {
+        OutlinedButton(
+            onClick = onClick,
+            modifier = modifier.defaultMinSize(minHeight = 48.dp).widthIn(max = 320.dp),
+            shape = RoundedCornerShape(8.dp),
+            colors = colors,
+            border = BorderStroke(1.dp, Color.LightGray),
+            contentPadding = PaddingValues(horizontal = 8.dp)
+        ) {
+            CompactButtonContent(text, icon)
+        }
+    }
+}
+
+@Composable
+fun CompactButtonContent(text: String, icon: ImageVector) {
+    Icon(
+        imageVector = icon,
+        contentDescription = null,
+        modifier = Modifier.size(16.dp) // Menší ikona
+    )
+    Spacer(modifier = Modifier.width(6.dp))
+    Text(
+        text = text,
+        fontSize = 12.sp, // Menší písmo
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis
     )
 }

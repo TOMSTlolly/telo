@@ -26,5 +26,12 @@ data class FilesUiState(
     // Původně: mText.setValue("This is notifications fragment");
     val infoText: String = "This is notifications fragment",
 
-    val fullPath: String = ""
+    val fullPath: String = "",
+
+    // --- NOVÉ STATISTIKY ---
+    val statTotal: Int = 0,
+    val statTms4: Int = 0,
+    val statTms3: Int = 0,
+    val statDendro: Int = 0,
+    val statThermo: Int = 0
 )
