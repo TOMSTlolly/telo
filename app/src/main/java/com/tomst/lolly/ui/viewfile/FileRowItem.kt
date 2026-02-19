@@ -29,13 +29,12 @@ fun FileRowItem(
     onToggleSelection: (Boolean) -> Unit,
     onClick: () -> Unit = {}
 ) {
-    // State pro otevření detailu (ikona "i")
+    // State pro otevření detailu (ikona "i") zůstává, to je správně
     var showDetail by remember { mutableStateOf(false) }
 
-    // State pro vizuální zvýraznění řádku
-    var isHighlighted by remember { mutableStateOf(false) }
-
-    val backgroundColor = if (file.isSelected || isHighlighted) Color(0xFFE3F2FD) else Color.White
+    // ZMĚNA: Úplně jsme odstranili lokální `isHighlighted`
+    // Barva pozadí se teď řídí VÝHRADNĚ stavem `file.isSelected` z ViewModelu
+    val backgroundColor = if (file.isSelected) Color(0xFFE3F2FD) else Color.White
 
     // Definice úzkého fontu pro tento řádek
     val condensedFontFamily = FontFamily(
@@ -56,7 +55,7 @@ fun FileRowItem(
                 .padding(start = 8.dp, top = 4.dp, bottom = 4.dp, end = 0.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // A) CHECKBOX
+            // A) CHECKBOX (Slouží pro Multi-Select)
             Checkbox(
                 checked = file.isSelected,
                 onCheckedChange = { isChecked ->
@@ -66,12 +65,13 @@ fun FileRowItem(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // B) TEXT (Kliknutí jen zvýrazní)
+            // B) TEXT (Slouží pro Single-Select, exkluzivní výběr)
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .clickable {
-                        isHighlighted = !isHighlighted
+                        // ZMĚNA: Odstraněno `isHighlighted = !isHighlighted`
+                        // Nyní jen pošleme signál nahoru, ať to vyřeší ViewModel
                         onClick()
                     }
                     .padding(vertical = 8.dp)
@@ -114,7 +114,6 @@ fun FileRowItem(
     }
 
     // 2. LOGIKA ZOBRAZENÍ DIALOGU
-    // Zde voláme funkci, která je definována v DRUHÉM souboru (FileDetailDialog.kt)
     if (showDetail) {
         FileDetailDialog(
             file = file,
@@ -145,15 +144,6 @@ fun FileRowItemPreview() {
         errFlag = Constants.PARSER_OK
     }
 
-    val fileLong = FileDetail("long_name.csv").apply {
-        niceName = "Měření_Velmi_Dlouhý_Název_Pro_Test_Kondenzovaného_Fontu_A_Zalamování_2025_Final"
-        fileSize = 1024
-        createdDt = LocalDateTime.now()
-        deviceType = TDeviceType.dAdMicro
-        isSelected = false
-        errFlag = Constants.PARSER_OK
-    }
-
     MaterialTheme {
         Column(
             modifier = Modifier
@@ -164,8 +154,6 @@ fun FileRowItemPreview() {
             FileRowItem(file = fileNormal, onToggleSelection = {})
             Spacer(modifier = Modifier.height(16.dp))
             FileRowItem(file = fileSelected, onToggleSelection = {})
-            Spacer(modifier = Modifier.height(16.dp))
-            FileRowItem(file = fileLong, onToggleSelection = {})
         }
     }
 }

@@ -77,9 +77,15 @@ class ListViewModel(application: Application) : AndroidViewModel(application) {
 
             // Optimalizace: Načtení všech detailů z DB najednou
             val fileDetailsMap = db.allFileDetailsAsMap
-
             val reader = CSVReader()
+
+            // Vláknově bezpečné proměnné pro sběr statistik
             val progressCounter = AtomicInteger(0)
+            val statTotal = AtomicInteger(0)
+            val statTms4 = AtomicInteger(0)
+            val statTms3 = AtomicInteger(0)
+            val statDendro = AtomicInteger(0)
+            val statThermo = AtomicInteger(0)
 
             val deferredResults = files.map { file ->
                 async(Dispatchers.IO) {
@@ -119,59 +125,54 @@ class ListViewModel(application: Application) : AndroidViewModel(application) {
                         .atZone(ZoneId.systemDefault())
                         .toLocalDateTime()
 
+                    // --- VÝPOČET STATISTIKY (Thread-safe) ---
+                    if (fdet.errFlag == Constants.PARSER_OK || fdet.errFlag == Constants.PARSER_HOLE_ERR) {
+                        when (fdet.deviceType) {
+                            TDeviceType.dLolly4 -> statTms4.incrementAndGet()
+                            TDeviceType.dLolly3 -> statTms3.incrementAndGet()
+                            TDeviceType.dAD, TDeviceType.dAdMicro -> statDendro.incrementAndGet()
+                            TDeviceType.dTermoChron -> statThermo.incrementAndGet()
+                            else -> {}
+                        }
+                        statTotal.incrementAndGet()
+                    }
+
+                    // Průběžná aktualizace UI (živý nárůst čísel a progress baru)
                     val currentProgress = progressCounter.incrementAndGet()
                     val progressPercentage = (currentProgress.toFloat() / files.size * 100).toInt()
-                    _uiState.update { it.copy(progress = progressPercentage) }
+
+                    _uiState.update {
+                        it.copy(
+                            progress = progressPercentage,
+                            statTotal = statTotal.get(),
+                            statTms4 = statTms4.get(),
+                            statTms3 = statTms3.get(),
+                            statDendro = statDendro.get(),
+                            statThermo = statThermo.get()
+                        )
+                    }
 
                     fdet
                 }
             }
 
+
+            // Čekáme na dokončení analýzy všech souborů
             val loadedFiles = deferredResults.awaitAll().filterNotNull()
 
-            // --- VÝPOČET STATISTIK ---
-            var cTms4 = 0
-            var cTms3 = 0
-            var cDendro = 0
-            var cThermo = 0
-
-            loadedFiles.forEach { file ->
-                // Počítáme jen pokud je soubor v pořádku (volitelně, nebo počítat vše)
-                if (file.errFlag == Constants.PARSER_OK) {
-                    when (file.deviceType) {
-                        TDeviceType.dLolly4 -> cTms4++
-                        TDeviceType.dLolly3 -> cTms3++
-                        // Sloučíme AD a ADMicro do jedné kategorie "Dendro"
-                        TDeviceType.dAD, TDeviceType.dAdMicro -> cDendro++
-                        TDeviceType.dTermoChron -> cThermo++
-                        else -> {} // Ostatní nebo neznámé
-                    }
-                }
-            }
-            // --------------------------
-
+            // Závěrečná aktualizace po načtení všeho (schováme spinner/progress)
             withContext(Dispatchers.Main) {
                 _uiState.update {
                     it.copy(
                         files = loadedFiles,
                         isLoading = false,
-                        progress = 0,
-                        // Aktualizace statistik do State
-                        statTotal = loadedFiles.size,
-                        statTms4 = cTms4,
-                        statTms3 = cTms3,
-                        statDendro = cDendro,
-                        statThermo = cThermo
+                        progress = 0
                     )
                 }
             }
-
-            withContext(Dispatchers.Main) {
-                _uiState.update {
-                    it.copy(files = loadedFiles, isLoading = false, progress = 0)
-                }
-            }
         }
+
+
     }
 
     private fun getFolderFromPath(path: String): DocumentFile? {
@@ -221,6 +222,25 @@ class ListViewModel(application: Application) : AndroidViewModel(application) {
         return "${parts[1]}-${parts[2]}${parts[3]}${parts[4]}$suffix"
     }
 
+    // Nová metoda pro exkluzivní výběr (klik na řádek)
+    fun selectSingleFile(fileFullPath: String) {
+        _uiState.update { state ->
+            val updatedList = state.files.map { file ->
+                if (file.internalFullName == fileFullPath) {
+                    // Tento jsme zaklikli -> VYBRAT
+                    file.cloneWithSelection(true)
+                } else if (file.isSelected) {
+                    // Tento byl vybraný dřív, ale už není -> ODZNAČIT
+                    file.cloneWithSelection(false)
+                } else {
+                    // Ostatní necháme beze změny
+                    file
+                }
+            }
+            state.copy(files = updatedList)
+        }
+    }
+
     fun toggleSelection(fileFullPath: String, isSelected: Boolean) {
         _uiState.update { state ->
             // Vytvoříme nový seznam, kde vyměníme jen ten jeden změněný soubor
@@ -235,5 +255,14 @@ class ListViewModel(application: Application) : AndroidViewModel(application) {
             // Uložíme nový seznam do StateFlow -> Compose pozná změnu a překreslí UI
             state.copy(files = updatedList)
         }
+    }
+
+    // Přidat do ListViewModel.kt
+    fun updateProgress(newProgress: Int) {
+        _uiState.update { it.copy(progress = newProgress) }
+    }
+
+    fun setLoadingState(isLoading: Boolean) {
+        _uiState.update { it.copy(isLoading = isLoading) }
     }
 }

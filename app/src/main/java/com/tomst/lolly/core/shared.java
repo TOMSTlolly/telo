@@ -38,26 +38,21 @@ public class shared {
         DocumentFile targetDirectory = DocumentFile.fromTreeUri(context, treeUri);
 
         LocalDateTime now = LocalDateTime.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy_MM_dd_HH_mm_ss");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy_MM_dd");
         String timestamp = now.format(formatter);
 
         // Vytvoření základního názvu, např. "data_92221411_2023_10_26_14_30_05"
         String baseFileName = Prefix  + Serial + "_" + timestamp;
+
+        int index = 0;
         String finalFileName = baseFileName + ".csv";
-
-
-        // 3. Kontrola unikátnosti a přidání číselného sufixu v případě kolize
-        // (např. pokud se metoda zavolá dvakrát během stejné sekundy)
-        int counter = 0;
-        // Metoda findFile je efektivní pro kontrolu existence souboru v DocumentFile
+        // Kontrola existence souboru - dokud nachází shodu, zvyšuje index
         while (targetDirectory.findFile(finalFileName) != null) {
-            counter++;
-            finalFileName = baseFileName + "_" + counter + ".csv";
+            index++;
+            finalFileName = baseFileName + "_" + index + ".csv";
             Log.w("CompileFileName", "File already exists, generating new name: " + finalFileName);
         }
 
-        // 4. Vytvoření souboru v cílovém adresáři a vrácení jeho URI
-        // Vracíme URI jako string, protože to je nejlepší identifikátor pro práci se SAF.
         DocumentFile newFile = targetDirectory.createFile("text/csv", finalFileName);
 
         if (newFile != null) {

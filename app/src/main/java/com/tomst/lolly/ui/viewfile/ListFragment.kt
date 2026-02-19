@@ -153,8 +153,13 @@ class ListFragment : Fragment() {
         val cacheDir = context.cacheDir
         val logsDir = File(cacheDir, "Logs")
 
-        if (!logsDir.exists() || !logsDir.isDirectory || (logsDir.listFiles()?.isEmpty() == true)) {
-            Toast.makeText(context, "Logs directory is empty or does not exist.", Toast.LENGTH_SHORT).show()
+        if (!logsDir.exists() || !logsDir.isDirectory ) {
+            Toast.makeText(context, "Logs directory does not exist.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (logsDir.listFiles()?.isEmpty() == true) {
+            Toast.makeText(context, "Logs directory is empty", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -169,7 +174,7 @@ class ListFragment : Fragment() {
 
             // Listener pro progress bar
             val progressListener = com.tomst.lolly.core.OnProListener { progress ->
-                // Zde bychom mohli aktualizovat progress ve ViewModelu, pokud chceme
+                viewModel.updateProgress(progress)
             }
 
             val success = zipFiles.zipDirectory(logsDir, zipFile.absolutePath, progressListener)
@@ -217,7 +222,7 @@ class ListFragment : Fragment() {
 
             val zipFiles = ZipFiles()
             val progressListener = com.tomst.lolly.core.OnProListener { progress ->
-                // Update progress
+                viewModel.updateProgress(progress)
             }
 
             val success = zipFiles.zipDocumentFileDirectory(exportFolder, zipFile.absolutePath, context, progressListener)

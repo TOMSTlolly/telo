@@ -174,7 +174,7 @@ class HomeFragment : Fragment() {
                     csv = CSVReader(csvFileName)
                     csv?.OpenForWrite(csvFileName)
 
-                    ALogFileName = LollyActivity.getInstance().cacheLogPath + "/log_" + shared.aft(csvFileName, "data_")
+                    ALogFileName = LollyActivity.getInstance().cacheLogPath + "/command_" + shared.aft(csvFileName, "data_")
                     AErrFileName = LollyActivity.getInstance().cacheLogPath + "/err_" + shared.aft(csvFileName, "data_")
                 }
                 TDevState.tInfo -> {
