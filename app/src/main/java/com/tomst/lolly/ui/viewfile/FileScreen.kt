@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,22 +19,20 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
+import androidx.compose.material3.ListItemDefaults.contentColor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.tomst.lolly.R
 import com.tomst.lolly.fileview.FileDetail
-import java.time.ZoneId
-import java.util.Calendar
 
 // STATEFUL
 @Composable
@@ -56,7 +55,6 @@ fun FilesScreen(
             viewModel.toggleSelection(path, isSelected)
         },
         onSelectSingleFile = { path ->
-            // Klik na řádek -> Single select
             viewModel.selectSingleFile(path)
         }
     )
@@ -73,80 +71,23 @@ fun FilesScreenContent(
     onToggleSelection: (String, Boolean) -> Unit,
     onSelectSingleFile: (String) -> Unit
 ) {
-    // Zjištění stavu pro kontextovou lištu
     val selectedFiles = state.files.filter { it.isSelected }
     val hasSelection = selectedFiles.isNotEmpty()
 
-    // Hlavní obal pro umožnění plovoucí lišty nad seznamem
+    // Hlavní obal pro umožnění plovoucí lišty
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF5F5F5)) // Jemně šedé pozadí
+            .background(Color(0xFFF5F5F5))
     ) {
-        // --- KONTEXTOVÁ LIŠTA NAHOŘE (Top Contextual Action Bar) ---
-        AnimatedVisibility(
-            visible = hasSelection,
-            // Změna: Animace shora dolů (všimni si mínus u initialOffsetY)
-            enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
-            exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(),
-            modifier = Modifier.align(Alignment.TopCenter) // Změna zarovnání
-        ) {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                shadowElevation = 8.dp
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(64.dp)
-                        .padding(horizontal = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Počet vybraných položek
-                    Text(
-                        text = "Selected: ${selectedFiles.size}",
-                        modifier = Modifier.padding(start = 16.dp),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
 
-                    Spacer(modifier = Modifier.weight(1f))
-
-                    // Akce: GRAF
-                    IconButton(onClick = {
-                        val fileNames = selectedFiles.joinToString(";") { it.name }
-                        onGraphClick(fileNames)
-                    }) {
-                        Icon(Icons.Default.BarChart, contentDescription = stringResource(R.string.btn_graph))
-                    }
-
-                    // Akce: ZIP DATA
-                    IconButton(onClick = onZipAllClick) {
-                        Icon(Icons.Default.Archive, contentDescription = stringResource(R.string.btn_zip_all))
-                    }
-
-                    // Akce: ZIP LOGY
-                    IconButton(onClick = onZipLogsClick) {
-                        Icon(Icons.Default.Description, contentDescription = stringResource(R.string.btn_zip_logs))
-                    }
-                }
-            }
-        }
-    }
-
-        // --- HLAVNÍ OBSAH (Statistiky + Seznam) ---
+        // --- 1. VRSTVA: HLAVNÍ OBSAH (Statistiky + Seznam) ---
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                // Pokud je lišta viditelná, přidáme padding dolů, aby neposunula poslední položku mimo obrazovku
-                .padding(top = if (hasSelection) 64.dp else 0.dp)
                 .padding(4.dp)
-        )
-
-        {
-            // --- 1. Karta: Statistiky (hlavní) + Cesta (pod tím) ---
+        ) {
+            // --- Karta: Statistiky ---
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -159,7 +100,6 @@ fun FilesScreenContent(
                         .fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // IKONA SLOŽKY (Vlevo)
                     Surface(
                         color = MaterialTheme.colorScheme.primaryContainer,
                         shape = RoundedCornerShape(8.dp),
@@ -174,7 +114,6 @@ fun FilesScreenContent(
                         }
                     }
 
-                    // PROSTŘEDNÍ ČÁST (Statistiky + Cesta)
                     Column(modifier = Modifier
                         .weight(1f)
                         .padding(start = 4.dp)
@@ -207,11 +146,10 @@ fun FilesScreenContent(
                         )
                     }
 
-                    // TLAČÍTKO EDIT (Vpravo)
                     IconButton(onClick = onSelectFolderClick) {
                         Icon(
                             Icons.Default.Edit,
-                            contentDescription = stringResource(R.string.change_folder),
+                            contentDescription = "Změnit složku",
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -230,7 +168,7 @@ fun FilesScreenContent(
 
             Spacer(modifier = Modifier.height(2.dp))
 
-            // --- 2. Seznam souborů ---
+            // --- Seznam souborů ---
             Card(
                 modifier = Modifier
                     .weight(1f)
@@ -243,13 +181,7 @@ fun FilesScreenContent(
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(Icons.Default.Info, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(48.dp))
-                            Text(stringResource(R.string.empty_folder), color = Color.Gray, fontWeight = FontWeight.Medium)
-                            Text(
-                                stringResource(R.string.empty_folder_hint),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color.LightGray,
-                                modifier = Modifier.padding(top = 4.dp)
-                            )
+                            Text("Prázdná složka", color = Color.Gray, fontWeight = FontWeight.Medium)
                         }
                     }
                 } else {
@@ -257,15 +189,16 @@ fun FilesScreenContent(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(top = 2.dp, bottom = 8.dp)
                     ) {
-                        items(state.files) { file ->
+                        items(
+                            items = state.files,
+                            key = { file -> file.internalFullName }
+                        ) { file ->
                             FileRowItem(
                                 file = file,
                                 onToggleSelection = { isSelected ->
                                     onToggleSelection(file.internalFullName, isSelected)
                                 },
-                                // Tady můžeš napojit zobrazení grafu na kliknutí řádku (rychlá volba)
                                 onClick = {
-                                    //onGraphClick(file.name)
                                     onSelectSingleFile(file.internalFullName)
                                 }
                             )
@@ -274,16 +207,117 @@ fun FilesScreenContent(
                     }
                 }
             }
+        }
+
+        // --- 2. VRSTVA: KONTEXTOVÁ LIŠTA NAHOŘE ---
+        AnimatedVisibility(
+            visible = hasSelection,
+            enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(),
+            modifier = Modifier.align(Alignment.TopCenter)
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                shadowElevation = 8.dp
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Počet vybraných položek
+                    Text(
+                        text = "Selected: ${selectedFiles.size}",
+                        modifier = Modifier.padding(start = 16.dp),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    // Akce: GRAF
+                    ActionButtonWithText(
+                        icon = Icons.Default.BarChart,
+                        label = "Graph",
+                        enabled = selectedFiles.size == 1, // <-- Tlačítko bude aktivní jen pro 1, 2 nebo 3 soubory
+                        onClick = {
+                            val fileNames = selectedFiles.joinToString(";") { it.name }
+                            onGraphClick(fileNames)
+                        }
+                    )
+
+                    // Akce: ZIP DATA
+                    ActionButtonWithText(
+                        icon = Icons.Default.Archive,
+                        label = "Data",
+                        onClick = onZipAllClick
+                    )
+
+                    // Akce: ZIP LOGY
+                    ActionButtonWithText(
+                        icon = Icons.Default.Description,
+                        label = "Logs",
+                        onClick = onZipLogsClick
+                    )
+                }
+            }
+        }
     }
 }
+
+// --- POMOCNÁ KOMPONENTA PRO TLAČÍTKA ---
+// --- POMOCNÁ KOMPONENTA PRO TLAČÍTKA ---
+@Composable
+fun ActionButtonWithText(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    enabled: Boolean = true, // <-- TADY JE TEN CHYBĚJÍCÍ PARAMETR
+    onClick: () -> Unit
+) {
+    // Pokud je zakázáno, barva zešedne (Material standard je alpha 0.38f)
+    val contentColor = if (enabled) {
+        MaterialTheme.colorScheme.onPrimaryContainer
+    } else {
+        MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.38f)
+    }
+
+    Column(
+        modifier = Modifier
+            .clickable(
+                enabled = enabled, // <-- Tady se fyzicky vypíná reakce na dotyk
+                onClick = onClick
+            )
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = contentColor // Aplikace barvy na ikonu
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
+            color = contentColor // Aplikace barvy na text
+        )
+    }
+}
+
 
 @Preview(showBackground = true)
 @Composable
 fun FilesScreenPreview() {
     val sampleFiles = listOf(
-        FileDetail("TD_20231027_103000.csv").apply { niceName = "Data 1"; isSelected = true; iCount = 100 },
-        FileDetail("TD_20231027_113000.csv").apply { niceName = "Data 2"; isSelected = true; iCount = 200 },
-        FileDetail("TD_20231027_123000.csv").apply { niceName = "Data 3"; isSelected = false; iCount = 0 }
+        FileDetail(name = "TD_20231027_103000.csv", internalFullName = "TD_20231027_103000.csv").apply { niceName = "Data 1"; isSelected = true; iCount = 100 },
+        FileDetail(name = "TD_20231027_113000.csv", internalFullName = "TD_20231027_113000.csv").apply { niceName = "Data 2"; isSelected = true; iCount = 200 },
+        FileDetail(name = "TD_20231027_123000.csv", internalFullName = "TD_20231027_123000.csv").apply { niceName = "Data 3"; isSelected = false; iCount = 0 }
     )
 
     val sampleState = FilesUiState(
