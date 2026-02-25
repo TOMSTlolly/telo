@@ -45,18 +45,21 @@ import java.time.format.DateTimeFormatter;
 
 public class CSVReader extends Thread
 {
-    public static  Handler handler = null;
+    public static Handler handler = null;
     private static Handler progressBarHandler = new Handler(Looper.getMainLooper());  // handler pro vysilani z Threadu
 
     private OutputStream fNewCsv;
-
-    private int  oldPos=0;
-
+    private int oldPos=0;
     private int iline=0;
+
+    // Zůstává pouze pro formátování ZÁPISU do CSV, aby byl výstup vždy konzistentní
     private static final String DMD_PATTERN = "yyyy.MM.dd HH:mm";
+
+    // TADY JE NOVÝ DYNAMICKÝ FORMATTER PRO ČTENÍ
+    private DateTimeFormatter currentFormatter = null;
+
     private static final int MAXTX = 1000;
     private static final int MINTX = -1000;
-
     private static final int MAXHM = 10000;
     private static final int MINHM = 0;
 
@@ -65,9 +68,7 @@ public class CSVReader extends Thread
     private static final byte iT1=3;
     private static final byte iT2=4;
     private static final byte iT3=5;
-
     private static final byte iHum=6;
-
     private static final byte iMvs=7;
 
     private static String sFmt="";  // nastav formatovani podle zarizeni
@@ -77,22 +78,18 @@ public class CSVReader extends Thread
     double minT1, minT2, minT3;
     long currIx,currHm,minHm,maxHm;
     private Integer currDay;
-   // private Date currDate;
     private LocalDateTime currDate;
     private final String TAG = "TOMST";
 
     public void SetHandler(Handler han){
         CSVReader.handler = han;
     }
+
     TMereni Mer = new TMereni(); // mereni
     TMereni Mol = new TMereni(); // stare mereni
 
-
     private OnProListener progressListener; // listener field
-
     public OnProListener mFinListener; // listener field
-
-    //private Handler progressBarHandler = new Handler();  // handler pro vysilani z Threadu
 
     private String FileName="";
 
@@ -137,7 +134,9 @@ public class CSVReader extends Thread
         currDay = 0;
         iline = 0;
         currIx = 1;
+        currentFormatter = null; // Reset formátovače
     }
+
     // constructor
     public CSVReader(String AFileName)
     {
@@ -151,11 +150,11 @@ public class CSVReader extends Thread
 
     public CSVReader()
     {
-        super("CSVReaderThread"); // nazev vlakna pro debugger<
-       CSVReader.context = LollyActivity.getInstance().getApplicationContext();
-       this.FileName = null;
-       ClearPrivate();
-       ClearAvg();
+        super("CSVReaderThread"); // nazev vlakna pro debugger
+        CSVReader.context = LollyActivity.getInstance().getApplicationContext();
+        this.FileName = null;
+        ClearPrivate();
+        ClearAvg();
     }
 
     private void sendMessage (TMereni mer)
@@ -181,7 +180,6 @@ public class CSVReader extends Thread
         }
     }
 
-
     @RequiresApi(api = Build.VERSION_CODES.O)
     public void AddMerToCsv(TMereni Mer)
     {
@@ -194,7 +192,6 @@ public class CSVReader extends Thread
             throw new RuntimeException(e);
         }
     }
-
 
     public void OpenForWrite(String AFileName) {
         CSVReader.context = LollyActivity.getInstance().getApplicationContext();
@@ -210,7 +207,6 @@ public class CSVReader extends Thread
     // format staci nastavit jenom jednou na zacatku
     public String SetupFormat(TDeviceType dev)
     {
-
         switch (dev)
         {
             default:
@@ -227,7 +223,7 @@ public class CSVReader extends Thread
         return sFmt;
     }
 
-    // csv radek z TMereni
+    // csv radek z TMereni (Používá výchozí masku DMD_PATTERN pro konzistentní export)
     @RequiresApi(api = Build.VERSION_CODES.O)
     private String FormatLine(TMereni Mer)
     {
@@ -239,15 +235,15 @@ public class CSVReader extends Thread
 
         int hum = Mer.adc; // v defaultu ukladam vystup z prevodniku, bez prepoctu na mikrometry
         if (Mer.dev == TDeviceType.dAD)
-         {
+        {
             if (Constants.showMicro) {
                 Mer.mvs = TDeviceType.dAdMicro.ordinal() + Constants.MVS_OFFSET;
                 hum = Mer.hum;
             }
             else
                 Mer.mvs = TDeviceType.dAD.ordinal() + Constants.MVS_OFFSET;
-         }
-         return String.format(sFmt,Mer.idx, dts, Mer.gtm, Mer.t1, Mer.t2, Mer.t3, hum, Mer.mvs, Mer.Err);
+        }
+        return String.format(sFmt,Mer.idx, dts, Mer.gtm, Mer.t1, Mer.t2, Mer.t3, hum, Mer.mvs, Mer.Err);
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
@@ -311,25 +307,16 @@ public class CSVReader extends Thread
         return (mer.dev);
     }
 
-
     private void FindMinMax(TMereni Mer)
     {
-        if (Mer.t1 > maxT1)
-            maxT1 = Mer.t1;
-        if (Mer.t2 > maxT2)
-            maxT2 = Mer.t2;
-        if (Mer.t3 > maxT3)
-            maxT3 = Mer.t3;
-        if (Mer.t1 < minT1)
-            minT1 = Mer.t1;
-        if (Mer.t2 < minT2)
-            minT2 = Mer.t2;
-        if (Mer.t3 < minT3)
-            minT3 = Mer.t3;
-        if (Mer.hum > maxHm)
-            maxHm = Mer.hum;
-        if (Mer.hum < minHm)
-            minHm = Mer.hum;
+        if (Mer.t1 > maxT1) maxT1 = Mer.t1;
+        if (Mer.t2 > maxT2) maxT2 = Mer.t2;
+        if (Mer.t3 > maxT3) maxT3 = Mer.t3;
+        if (Mer.t1 < minT1) minT1 = Mer.t1;
+        if (Mer.t2 < minT2) minT2 = Mer.t2;
+        if (Mer.t3 < minT3) minT3 = Mer.t3;
+        if (Mer.hum > maxHm) maxHm = Mer.hum;
+        if (Mer.hum < minHm) minHm = Mer.hum;
     }
 
     private void copyMerToMol(TMereni Mer) {
@@ -361,6 +348,71 @@ public class CSVReader extends Thread
         }
     }
 
+    // --- PRE-SCAN FUNKCE ---
+    public static String detectDateFormat(Context ctx, Uri uri) {
+        String dateFormat = "dd.MM.yyyy"; // Výchozí fallback (evropský)
+        String timeFormat = "HH:mm";
+
+        // TADY JE ZMĚNA: Používáme předaný 'ctx' místo vnitřního 'context'
+        try (ParcelFileDescriptor pfd = ctx.getContentResolver().openFileDescriptor(uri, "r");
+             FileInputStream fis = new FileInputStream(pfd.getFileDescriptor());
+             BufferedReader reader = new BufferedReader(new InputStreamReader(fis))) {
+
+            String line;
+            int maxLinesToRead = 2000; // Pojistka (přečte max. ~20 dní měření)
+            int lineCount = 0;
+
+            while ((line = reader.readLine()) != null && lineCount < maxLinesToRead) {
+                lineCount++;
+                String[] str = line.split(";");
+                if (str.length < 8) continue;
+
+                String dateString = str[1].trim();
+                String[] parts = dateString.split(" ");
+                if (parts.length < 2) continue;
+
+                String datePart = parts[0];
+                String timePart = parts[1];
+
+                // Detekce času (jestli obsahuje vteřiny)
+                if (timePart.split(":").length == 3) {
+                    timeFormat = "HH:mm:ss";
+                }
+
+                // Detekce data
+                String[] dTokens = datePart.split("\\.");
+                if (dTokens.length == 3) {
+                    // 1. případ: Rok je na začátku (2019.11.29) -> ISO
+                    if (dTokens[0].length() == 4) {
+                        dateFormat = "yyyy.MM.dd";
+                        break;
+                    }
+                    // 2. případ: Rok je na konci (28.03.2019 nebo 03.28.2019)
+                    else if (dTokens[2].length() == 4) {
+                        try {
+                            int v1 = Integer.parseInt(dTokens[0]);
+                            int v2 = Integer.parseInt(dTokens[1]);
+
+                            if (v1 > 12) {
+                                dateFormat = "dd.MM.yyyy"; // Den je první
+                                break;
+                            } else if (v2 > 12) {
+                                dateFormat = "MM.dd.yyyy"; // Den je druhý (US formát)
+                                break;
+                            }
+                            // Pokud obě hodnoty <= 12, pre-scan pokračuje dál...
+                        } catch (NumberFormatException e) {
+                            // Vadný řádek ignorujeme
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.e("TOMST", "Chyba při pre-scanu formátu data", e);
+        }
+
+        return dateFormat + " " + timeFormat;
+    }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     private boolean ProcessLine(String currentline) {
@@ -370,12 +422,19 @@ public class CSVReader extends Thread
         // rozsekej radku
         String[] str = currentline.split(";", 0);
         if (str.length < 8) return false;
+
         // datum
         try {
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern(DMD_PATTERN);
-            LocalDateTime dateTime = LocalDateTime.parse(str[1], formatter);
+            // Pojistka, pokud by pre-scan z nějakého důvodu neprošel
+            if (currentFormatter == null) {
+                currentFormatter = DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm");
+            }
+
+            // TADY JE ZMĚNA: Používáme dynamický formatter
+            LocalDateTime dateTime = LocalDateTime.parse(str[1], currentFormatter);
             Mer.dtm = dateTime;
             Mer.day = dateTime.getDayOfMonth();
+
             if (currDay == 0) {
                 currDay = Mer.day;
                 currDate = Mer.dtm;
@@ -394,20 +453,23 @@ public class CSVReader extends Thread
             Mer.mvs = Integer.parseInt(str[iMvs]);
 
             // zjisti typ zarizeni
-            if (Mer.mvs >0)
+            if (Mer.mvs > 0)
                 Mer.dev = shared.MvsToDevice(Mer.mvs);
             else
                 Mer.dev = GuessDevice(Mer);
         }
         catch (Exception e) {
-                System.out.println(e);
-                return(false);
+            System.out.println(e);
+            return false;
         }
-        return (true);
+        return true;
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     public FileDetail FirstLast(DocumentFile file) {
+        // Nejprve si dynamicky načteme formát z hlavičky souboru
+        currentFormatter = DateTimeFormatter.ofPattern(detectDateFormat(context,file.getUri()));
+
         FileDetail fdet = new FileDetail(file.getName());
         fdet.setErr(Constants.PARSER_OK);
 
@@ -436,7 +498,7 @@ public class CSVReader extends Thread
             // Read last line using FileChannel from a new FileInputStream
             try (FileInputStream fis = new FileInputStream(fd);
                  FileChannel channel = fis.getChannel()) {
-                 channel.position(0); // Reset position for reading
+                channel.position(0); // Reset position for reading
                 long fileSize = channel.size();
                 if (fileSize > 0) {
                     int bufferSize = (int) Math.min(fileSize, 8192);
@@ -447,12 +509,12 @@ public class CSVReader extends Thread
                     int lastNewline = chunk.lastIndexOf('\n');
                     String lastLine = (lastNewline == -1) ? chunk : chunk.substring(lastNewline + 1);
 
-                     if (!ProcessLine(lastLine.trim())) {
-                         fdet.setErr(Constants.PARSER_ERROR);
-                         return fdet;
-                     }
-                     fdet.setInto(Mer.dtm);
-                     fdet.setCount(Mer.idx);
+                    if (!ProcessLine(lastLine.trim())) {
+                        fdet.setErr(Constants.PARSER_ERROR);
+                        return fdet;
+                    }
+                    fdet.setInto(Mer.dtm);
+                    fdet.setCount(Mer.idx);
                 }
             }
 
@@ -487,6 +549,9 @@ public class CSVReader extends Thread
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     public FileDetail readFileContent(Uri uri) throws IOException {
+        // Nejprve si dynamicky načteme formát z hlavičky souboru
+        currentFormatter = DateTimeFormatter.ofPattern(detectDateFormat(context,uri));
+
         FileDetail fileDetail = new FileDetail(uri.getLastPathSegment());
         ClearAvg();
         ClearPrivate();
@@ -552,7 +617,8 @@ public class CSVReader extends Thread
 
         fileDetail.setMinHum(minHm);
         fileDetail.setDeviceType(Mer.dev);
-        fileDetail.setErr(Mer.Err);
+        fileDetail.setErr(0);
+        //fileDetail.setErr(Mer.Err);
 
         det = fileDetail;
         DoFinished();

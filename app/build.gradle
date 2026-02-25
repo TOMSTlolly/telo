@@ -91,9 +91,13 @@ android {
 }
 
 dependencies {
-    // Required -- JUnit 4 framework
-    //    testImplementation "junit:junit:$jUnitVersion"
-//    testImplementation(":TMSSim"
+   // Required -- JUnit 4 framework
+   //    testImplementation "junit:junit:$jUnitVersion"
+   //    testImplementation(":TMSSim"
+
+    implementation("com.patrykandpatrick.vico:core:2.0.0-alpha.28")
+    implementation("com.patrykandpatrick.vico:compose:2.0.0-alpha.28")
+    implementation("com.patrykandpatrick.vico:compose-m3:2.0.0-alpha.28")
 
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation 'androidx.core:core-ktx:1.17.0'

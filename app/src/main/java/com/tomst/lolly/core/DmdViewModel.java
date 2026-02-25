@@ -15,6 +15,7 @@ import java.util.ArrayList;
 
 public class DmdViewModel extends ViewModel
 {
+
     private final SavedStateHandle state;
     // Holds the names of one or more datasets the user will want to visualize
     private final MutableLiveData<String> messageContainerToFragment;
@@ -24,6 +25,17 @@ public class DmdViewModel extends ViewModel
     private ArrayList<Entry> valT2 = new ArrayList<>();
     private ArrayList<Entry> valT3 = new ArrayList<>();
     private ArrayList<Entry> valHA = new ArrayList<>();
+
+    // --- NOVÁ PROMĚNNÁ PRO FORMÁT DATA ---
+    private String currentGraphDateFormat = "yyyy.MM.dd HH:mm";
+
+    public void setGraphDateFormat(String format) {
+        this.currentGraphDateFormat = format;
+    }
+
+    public String getGraphDateFormat() {
+        return this.currentGraphDateFormat;
+    }
 
 
     public void setDeviceType(TDeviceType val){

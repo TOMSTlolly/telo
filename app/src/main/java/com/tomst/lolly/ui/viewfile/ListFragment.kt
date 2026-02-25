@@ -80,6 +80,41 @@ class ListFragment : Fragment() {
         viewModel.loadFiles()
     }
 
+    private fun prepareAndSwitchToGraph(fileNames: String) {
+        // Spustíme asynchronní úlohu na IO vlákně, aby UI nezamrzlo
+        lifecycleScope.launch(Dispatchers.IO) {
+            var detectedFormat = "yyyy.MM.dd HH:mm" // Výchozí fallback
+
+            // Vezmeme první soubor ze seznamu pro odhad formátu
+            val firstFileName = fileNames.split(";").firstOrNull() ?: ""
+
+            if (firstFileName.isNotEmpty()) {
+                val sharedPath = LollyActivity.getInstance().prefExportFolder ?: ""
+                val exportFolder = if (sharedPath.startsWith("content")) {
+                    DocumentFile.fromTreeUri(requireContext(), Uri.parse(sharedPath))
+                } else {
+                    DocumentFile.fromFile(File(sharedPath))
+                }
+
+                val file = exportFolder?.findFile(firstFileName)
+                if (file != null) {
+                    // Zavoláme naši statickou funkci z CSVReaderu
+                    detectedFormat = com.tomst.lolly.core.CSVReader.detectDateFormat(requireContext(), file.uri)
+                }
+            }
+
+            // Přepneme zpět na hlavní (UI) vlákno
+            withContext(Dispatchers.Main) {
+                // 1. Předáme zjištěný formát do javovského ViewModelu
+                dmd.setGraphDateFormat(detectedFormat)
+
+                // 2. Tvoje původní logika pro spuštění grafu
+                dmd.sendMessageToFragment(fileNames)
+                switchToGraphFragment()
+            }
+        }
+    }
+
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -96,9 +131,9 @@ class ListFragment : Fragment() {
                         viewModel = viewModel,
                         onGraphClick = { fileName ->
 
-                            dmd.sendMessageToFragment(fileName)
-                            // Logika pro přepnutí na graf
-                            switchToGraphFragment()
+                            //dmd.sendMessageToFragment(fileName)
+                            //switchToGraphFragment()
+                            prepareAndSwitchToGraph(fileName)
                         },
                         onZipLogsClick = {
                             showZipDialog()

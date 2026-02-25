@@ -104,10 +104,17 @@ fun FileRowItem(
             IconButton(
                 onClick = { showDetail = true }
             ) {
+                // Vizuální indikace chyby - červená barva, pokud je errFlag > 0
+                val iconTint = if ((file.errFlag ?: 0) > 0) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    Color.LightGray
+                }
+
                 Icon(
                     imageVector = Icons.Default.Info,
                     contentDescription = "Detail souboru",
-                    tint = Color.LightGray
+                    tint = iconTint
                 )
             }
         }

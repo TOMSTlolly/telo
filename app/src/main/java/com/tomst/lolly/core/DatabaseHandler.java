@@ -155,7 +155,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
             values.put(KEY_LOCATION_NUMBEROFSATELLITESUSEDINFIX, 0); // Assuming 0, adjust as needed
         }
         long result = db.insert(TABLE_CLIST, null, values);
-        db.close();
+        //db.close();
         return 0;
     }
 
@@ -184,7 +184,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         values.put(KEY_CLIST_MAXHUM, fileDetail.getMaxHum());
 
         db.update(TABLE_CLIST, values, KEY_ID + " = ?", new String[]{String.valueOf(fileDetail.getId())});
-        db.close();
+        //db.close();
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
@@ -268,7 +268,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
             } while (cursor.moveToNext());
         }
         cursor.close();
-        db.close();
+       // db.close();
 
         return fileDetailsMap;
     }
@@ -285,7 +285,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
             fileDetail = copyCursorToFileDetail(cursor);
             cursor.close();
         }
-        db.close();
+       // db.close();
         return fileDetail;
     }
 
@@ -324,7 +324,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         }
 
         cursor.close();
-        db.close();
+      //  db.close();
         return i; // vracim, pocet vymazanych zaznamu
     }
 

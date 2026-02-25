@@ -187,7 +187,7 @@ fun FilesScreenContent(
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(top = 2.dp, bottom = 8.dp)
+                        contentPadding = PaddingValues(top = 2.dp, bottom = 80.dp)
                     ) {
                         items(
                             items = state.files,
