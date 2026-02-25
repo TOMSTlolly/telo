@@ -171,7 +171,6 @@ public class GraphFragment extends Fragment {
         chart.zoomAndCenterAnimated(7f, 1f, 0, 0, chart.getAxisLeft().getAxisDependency(), 3000);
 
     }
-
     private  float min(float a, float b, float c) {
         return Math.min(Math.min(a, b), c);
     }
