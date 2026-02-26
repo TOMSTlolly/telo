@@ -1,20 +1,50 @@
-package com.tomst.lolly.ui.graph;
+package com.tomst.lolly.ui.graph
 
-import androidx.lifecycle.LiveData;
-import androidx.lifecycle.MutableLiveData;
-import androidx.lifecycle.ViewModel;
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 
+class GraphViewModel(application: Application) : AndroidViewModel(application) {
 
+    var lastLoadedFileName: String = ""
+    private val _uiState = MutableStateFlow(GraphUiState())
+    val uiState: StateFlow<GraphUiState> = _uiState.asStateFlow()
 
-public class GraphViewModel extends ViewModel {
-    private final MutableLiveData<String> mText;
-
-    public GraphViewModel() {
-        mText = new MutableLiveData<>();
-        mText.setValue("This is dashboard fragment");
+    fun setTitle(newTitle: String) {
+        _uiState.update { it.copy(title = newTitle) }
     }
 
-    public LiveData<String> getText() {
-        return mText;
+    fun updateProgress(current: Int, max: Int? = null) {
+        _uiState.update {
+            it.copy(
+                progress = current,
+                maxProgress = max ?: it.maxProgress,
+                isLoading = current < (max ?: it.maxProgress)
+            )
+        }
+    }
+
+    fun toggleLineVisibility(tag: Int, isChecked: Boolean) {
+        _uiState.update { state ->
+            when (tag) {
+                1 -> state.copy(showT1 = isChecked)
+                2 -> state.copy(showT2 = isChecked)
+                3 -> state.copy(showT3 = isChecked)
+                4 -> state.copy(showGrowth = isChecked)
+                else -> state
+            }
+        }
+    }
+
+    // --- NOVÉ: Funkce pro zapnutí/vypnutí odečítání z grafu ---
+    fun setHighlightingEnabled(enabled: Boolean) {
+        _uiState.update { it.copy(isHighlightingEnabled = enabled) }
+    }
+
+    fun notifyDataChanged() {
+        _uiState.update { it.copy(dataTimestamp = System.currentTimeMillis()) }
     }
 }

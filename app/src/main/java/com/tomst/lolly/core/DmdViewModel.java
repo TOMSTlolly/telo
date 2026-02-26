@@ -25,6 +25,13 @@ public class DmdViewModel extends ViewModel
     private ArrayList<Entry> valT3 = new ArrayList<>();
     private ArrayList<Entry> valHA = new ArrayList<>();
 
+    private ArrayList<Long> timestamps = new ArrayList<>();
+
+    // 2. Přidej getter k ostatním getterům (getT1, getT2...)
+    public ArrayList<Long> getTimestamps() {
+        return timestamps;
+    }
+
 
     public void setDeviceType(TDeviceType val){
         fDevType = val;
@@ -122,6 +129,16 @@ public class DmdViewModel extends ViewModel
             default:
                 throw new UnsupportedOperationException("AddMereni, Unknown device");
         }
+
+        // 3. V metodě AddMereni ulož čas (přidej na úplný konec metody, těsně před fIdx++)
+        // Převádíme LocalDateTime na klasický UNIX timestamp v milisekundách
+        if (mer.dtm != null) {
+            long epochMillis = mer.dtm.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+            timestamps.add(epochMillis);
+        } else {
+            timestamps.add(0L); // Pojistka pro prázdná data
+        }
+
         fIdx ++;
     }
 
@@ -132,6 +149,7 @@ public class DmdViewModel extends ViewModel
         valT2.clear();
         valT3.clear();
         valHA.clear();
+        timestamps.clear();
         fIdx = 0;
     }
 
