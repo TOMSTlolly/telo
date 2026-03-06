@@ -20,6 +20,7 @@ import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tomst.lolly.R
@@ -31,7 +32,6 @@ private val TextPrimary = Color(0xFF0F172A)
 private val TextSecondary = Color(0xFF334155)
 private val DividerColor = Color(0xFFCBD5E1)
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OptionsScreen(
     viewModel: OptionsViewModel,
@@ -43,6 +43,31 @@ fun OptionsScreen(
     onAboutClick: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    OptionsScreenContent(
+        uiState = uiState,
+        onUpdateState = { viewModel.updateState(it) },
+        onSaveClick = onSaveClick,
+        onExportFolderClick = onExportFolderClick,
+        onPickDateClick = onPickDateClick,
+        onLoginClick = onLoginClick,
+        onLogoutClick = onLogoutClick,
+        onAboutClick = onAboutClick
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun OptionsScreenContent(
+    uiState: OptionsUiState,
+    onUpdateState: ((OptionsUiState) -> OptionsUiState) -> Unit,
+    onSaveClick: () -> Unit,
+    onExportFolderClick: () -> Unit,
+    onPickDateClick: () -> Unit,
+    onLoginClick: () -> Unit,
+    onLogoutClick: () -> Unit,
+    onAboutClick: () -> Unit
+) {
     val scrollState = rememberScrollState()
 
     val downloadOptions = stringArrayResource(id = R.array.download_array)
@@ -135,7 +160,7 @@ fun OptionsScreen(
                                     DropdownMenuItem(
                                         text = { Text(option) },
                                         onClick = {
-                                            viewModel.updateState { it.copy(readFrom = index) }
+                                            onUpdateState { it.copy(readFrom = index) }
                                             expanded = false
                                         }
                                     )
@@ -154,7 +179,7 @@ fun OptionsScreen(
                             Text("Bookmark Days", modifier = Modifier.weight(1f).padding(horizontal = 8.dp), color = TextPrimary, fontWeight = FontWeight.Medium)
                             TextField(
                                 value = uiState.bookmarkVal,
-                                onValueChange = { newValue -> viewModel.updateState { it.copy(bookmarkVal = newValue) } },
+                                onValueChange = { newValue -> onUpdateState { it.copy(bookmarkVal = newValue) } },
                                 modifier = Modifier.width(120.dp),
                                 placeholder = { Text("# days") },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -213,7 +238,7 @@ fun OptionsScreen(
                                 DropdownMenuItem(
                                     text = { Text(option) },
                                     onClick = {
-                                        viewModel.updateState { it.copy(mode = index) }
+                                        onUpdateState { it.copy(mode = index) }
                                         expanded = false
                                     }
                                 )
@@ -255,19 +280,19 @@ fun OptionsScreen(
                     HorizontalDivider(color = DividerColor, modifier = Modifier.padding(vertical = 4.dp))
 
                     OptionSwitch("show graph after reading data", uiState.showGraph, Color(0xFF3F51B5)) { newValue ->
-                        viewModel.updateState { it.copy(showGraph = newValue) }
+                        onUpdateState { it.copy(showGraph = newValue) }
                     }
                     OptionSwitch("rotate graph after reading data", uiState.rotateGraph, Color(0xFF3F51B5)) { newValue ->
-                        viewModel.updateState { it.copy(rotateGraph = newValue) }
+                        onUpdateState { it.copy(rotateGraph = newValue) }
                     }
                     OptionSwitch("No led light", uiState.noLedLight, Color(0xFFFBC02D)) { newValue ->
-                        viewModel.updateState { it.copy(noLedLight = newValue) }
+                        onUpdateState { it.copy(noLedLight = newValue) }
                     }
                     OptionSwitch("Use micrometers for dendrometer", uiState.showMicro, Color(0xFF2E7D32)) { newValue ->
-                        viewModel.updateState { it.copy(showMicro = newValue) }
+                        onUpdateState { it.copy(showMicro = newValue) }
                     }
                     OptionSwitch("Set time", uiState.setTime, Color.Gray) { newValue ->
-                        viewModel.updateState { it.copy(setTime = newValue) }
+                        onUpdateState { it.copy(setTime = newValue) }
                     }
 
                     HorizontalDivider(color = DividerColor, modifier = Modifier.padding(vertical = 8.dp))
@@ -285,7 +310,7 @@ fun OptionsScreen(
                         )
                         TextField(
                             value = uiState.decimalSeparator,
-                            onValueChange = { newValue -> viewModel.updateState { it.copy(decimalSeparator = newValue) } },
+                            onValueChange = { newValue -> onUpdateState { it.copy(decimalSeparator = newValue) } },
                             modifier = Modifier.width(80.dp),
                             singleLine = true
                         )
@@ -356,5 +381,34 @@ fun OptionSwitch(label: String, checked: Boolean, iconTint: Color, onCheckedChan
             fontWeight = FontWeight.Medium
         )
         Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun OptionsScreenPreview() {
+    MaterialTheme {
+        OptionsScreenContent(
+            uiState = OptionsUiState(
+                readFrom = 0,
+                mode = 1,
+                exportFolder = "/storage/emulated/0/Lolly",
+                showGraph = true,
+                rotateGraph = false,
+                noLedLight = true,
+                showMicro = false,
+                setTime = true,
+                decimalSeparator = ".",
+                bookmarkVal = "7",
+                fromDate = "01.01.2024"
+            ),
+            onUpdateState = {},
+            onSaveClick = {},
+            onExportFolderClick = {},
+            onPickDateClick = {},
+            onLoginClick = {},
+            onLogoutClick = {},
+            onAboutClick = {}
+        )
     }
 }

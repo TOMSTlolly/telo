@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -18,12 +19,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
+import com.tomst.lolly.R
 
 class AboutFragment : Fragment() {
 
@@ -100,10 +104,12 @@ fun AboutScreen(onBackClick: () -> Unit) {
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "Add your text here. This is a simple about page that you can customize later.",
+                        text = "Lolly for Android",
                         fontSize = 16.sp,
                         color = textSecondary,
-                        lineHeight = 22.sp
+                        lineHeight = 22.sp,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center
                     )
                     Spacer(modifier = Modifier.height(24.dp))
                     Text(
@@ -115,6 +121,37 @@ fun AboutScreen(onBackClick: () -> Unit) {
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.tomst_logo),
+                    contentDescription = "TOMST Logo",
+                    modifier = Modifier.size(120.dp)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "by TOMST",
+                    fontSize = 16.sp,
+                    color = textSecondary,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            // Added spacer to lift the logo a bit higher from the bottom
+            Spacer(modifier = Modifier.height(48.dp))
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun AboutScreenPreview() {
+    MaterialTheme {
+        AboutScreen(onBackClick = {})
     }
 }
