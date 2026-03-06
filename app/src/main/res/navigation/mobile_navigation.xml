@@ -28,4 +28,9 @@
         android:name="com.tomst.lolly.ui.viewfile.ListFragment"
         android:label="@string/title_notifications"
         tools:layout="@layout/fragment_viewer" />
+
+    <fragment
+        android:id="@+id/navigation_about"
+        android:name="com.tomst.lolly.ui.about.AboutFragment"
+        android:label="About" />
 </navigation>

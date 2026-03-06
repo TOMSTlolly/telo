@@ -279,8 +279,7 @@ class HomeFragment : Fragment() {
         savelog = LollyActivity.SAVE_LOG
 
         // Nastavení defaultních hodnot
-        homeViewModel.updateSerialNumber("0123456789")
-        homeViewModel.updateTime("01.01.2000 12:34:56", "01.01.2000 12:34:56", "---")
+        homeViewModel.updateSerialNumber("--------")
 
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
