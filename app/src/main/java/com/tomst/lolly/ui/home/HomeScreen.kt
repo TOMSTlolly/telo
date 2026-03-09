@@ -1,368 +1,585 @@
 package com.tomst.lolly.ui.home
 
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.tomst.lolly.R
+
+
+// --- 🎨 FIELD-READY HIGH CONTRAST PALETTE ---
+private val AppBackground = Color(0xFFF2F6F3)
+private val SurfaceColor = Color(0xFFFFFFFF)
+private val TextPrimary = Color(0xFF0F172A)
+private val TextSecondary = Color(0xFF334155)
+private val DividerColor = Color(0xFFCBD5E1)
+private val DangerColor = Color(0xFFDC2626)
+
+// Progress Bar Colors (Lightened slightly so dark text always remains readable over them)
+private val ProgressAdColor = Color(0xFFF59E0B)
+private val ProgressMemColor = Color(0xFF94A3B8)
+
+// Dynamic Download & Connection Colors (Optimized for Sunlight)
+private val DwnlActiveColor = Color(0xFF7DD3FC)
+private val DwnlDoneColor = Color(0xFF6EE7B7)
+private val ConnectedColor = Color(0xFF15803D)
 
 @Composable
 fun HomeScreen(
     state: HomeUiState,
     onDebugAction: (String) -> Unit
 ) {
-    Column(
+    val showAdProgressBar = true
+
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF0F5F1))
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+            .background(AppBackground),
+        contentAlignment = Alignment.TopCenter
     ) {
-
-        // --- 1. KARTA: DEVICE INFO ---
-        HomeCard(
-            title = "Device Info",
-            iconVector = Icons.Default.Settings
+        Column(
+            modifier = Modifier
+                .widthIn(max = 600.dp)
+                .fillMaxHeight()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Column {
+
+            // =========================================================
+            // 1. HEADER CARD (Serial & Mode)
+            // =========================================================
+            DashboardCard {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(IntrinsicSize.Min),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "SN: ${state.serialNumber}",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
 
-                    if (state.deviceImageRes != 0) {
-                        Icon(
-                            painter = painterResource(id = state.deviceImageRes),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .width(120.dp)
-                                .height(30.dp),
-                            tint = Color.Unspecified
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.Home,
-                            contentDescription = null,
-                            modifier = Modifier.size(32.dp),
-                            tint = MaterialTheme.colorScheme.primary
+                    // LEFT SIDE: Serial Number
+                    Column(modifier = Modifier.weight(1.4f)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(text = "SERIAL NO.", fontSize = 11.sp, color = TextSecondary, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
+
+                            // ROTATED DEVICE IMAGE
+                            if (state.deviceImageRes != 0) {
+                                Image(
+                                    painter = painterResource(id = state.deviceImageRes),
+                                    contentDescription = "Device Type",
+                                    modifier = Modifier
+                                        .width(56.dp)
+                                        .height(18.dp)
+                                        .rotateVertically(-90f),
+                                    contentScale = ContentScale.Fit,
+                                    alignment = Alignment.Center
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        // Strict pass-through of the UI State!
+                        Text(
+                            text = state.serialNumber,
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Black,
+                            color = TextPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
-                }
 
-                Spacer(modifier = Modifier.height(6.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = "FW: ${state.appVersion}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.Gray
+                    // CENTER: Vertical Divider
+                    Box(
+                        modifier = Modifier
+                            .padding(horizontal = 12.dp)
+                            .width(1.dp)
+                            .fillMaxHeight()
+                            .background(DividerColor)
                     )
 
-                    Text(
-                        text = "TMD: ${state.tmdVersion}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.Gray
-                    )
-
-                    Surface(
-                        color = Color(0xFFE0E0E0),
-                        shape = RoundedCornerShape(6.dp),
+                    // RIGHT SIDE: Mode
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
+                            Text(text = "MODE", fontSize = 11.sp, color = TextSecondary, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
+                            Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = state.mode,
-                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.Black
+                                color = TextPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
-                            if (state.modeImageRes != 0) {
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Icon(
-                                    painter = painterResource(id = state.modeImageRes),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(10.dp),
-                                    tint = Color.Unspecified
+                        }
+
+                        // MASSIVE MODE ICON
+                        if (state.modeImageRes != 0) {
+                            Image(
+                                painter = painterResource(id = state.modeImageRes),
+                                contentDescription = "Mode Icon",
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .padding(start = 8.dp)
+                                    .width(42.dp),
+                                contentScale = ContentScale.Fit,
+                                alignment = Alignment.CenterEnd
+                            )
+                        }
+                    }
+                }
+            }
+
+            // =========================================================
+            // 2. AD & MEMORY PROGRESS BARS
+            // =========================================================
+            DashboardCard {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    val memProg = (state.memoryUsage / 100f).coerceIn(0f, 1f)
+                    LabeledProgressBar("MEMORY", memProg, ProgressMemColor)
+
+                    if (showAdProgressBar && state.humAD != "--" && state.humAD.isNotEmpty()) {
+                        val adProg = (state.humProc / 100f).coerceIn(0f, 1f)
+                        LabeledProgressBar("AD", adProg, ProgressAdColor)
+                    }
+                }
+            }
+
+            // =========================================================
+            // 3. SENSORS GRID
+            // =========================================================
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                SensorCard("HUM", state.humAD, Modifier.weight(1f))
+                SensorCard("T1/°C", state.temp1, Modifier.weight(1f))
+                SensorCard("T2/°C", state.temp2, Modifier.weight(1f))
+                SensorCard("T3/°C", state.temp3, Modifier.weight(1f))
+            }
+
+            // =========================================================
+            // 4. HIGHLY COMPACTED TIMES
+            // =========================================================
+            DashboardCard(padding = 12.dp) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    CompactTimeBlock(
+                        label = "DEV TIME",
+                        value = state.deviceTime,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    Box(modifier = Modifier.width(1.dp).fillMaxHeight().padding(vertical = 4.dp).background(DividerColor))
+
+                    CompactTimeBlock(
+                        label = "PHN TIME",
+                        value = state.phoneTime,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    Box(modifier = Modifier.width(1.dp).fillMaxHeight().padding(vertical = 4.dp).background(DividerColor))
+
+                    val isDiffOk = state.timeDiff == "OK" || state.timeDiff == "0" || state.timeDiff == "0.0" || state.timeDiff.startsWith("0.") || state.timeDiff.startsWith("-0.") || state.timeDiff == "---" || state.timeDiff.isEmpty()
+
+                    CompactTimeBlock(
+                        label = "DIFF",
+                        value = state.timeDiff,
+                        valueColor = if (isDiffOk) TextPrimary else DangerColor,
+                        modifier = Modifier.weight(0.7f),
+                        isDiffBlock = true
+                    )
+                }
+            }
+
+            // =========================================================
+            // 5. HARDWARE CONNECTION & DOWNLOAD (MOVED TO BOTTOM)
+            // =========================================================
+            DashboardCard {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val isConnected = state.isAdapterConnected
+
+                    // Adapter Image Box
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.width(64.dp)
+                    ) {
+                        if (state.adapterImageRes != 0) {
+                            Image(
+                                painter = painterResource(id = state.adapterImageRes),
+                                contentDescription = "Adapter Status",
+                                modifier = Modifier.height(56.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = state.connectionStatus,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isConnected) ConnectedColor else DangerColor,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            lineHeight = 18.sp
+                        )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // Download Progress Fill Bar
+                        val maxProg = if (state.downloadProgress < 0) -state.downloadProgress else 100
+                        val actProg = if (state.downloadProgress < 0) 0 else state.downloadProgress
+                        val dlProg = if (maxProg > 0) (actProg.toFloat() / maxProg).coerceIn(0f, 1f) else 0f
+
+                        val barColor = when {
+                            actProg >= 100 -> DwnlDoneColor
+                            actProg > 0 -> DwnlActiveColor
+                            else -> Color.Transparent
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(28.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(Color(0xFFF1F5F9))
+                        ) {
+                            if (dlProg > 0f) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxHeight()
+                                        .fillMaxWidth(dlProg)
+                                        .background(barColor)
                                 )
+                            }
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("DWNL", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                    if (state.remainDays.isNotEmpty()) {
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(state.remainDays, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = TextSecondary)
+                                    }
+                                }
+
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("${actProg}%", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                    Spacer(modifier = Modifier.width(12.dp))
+
+                                    // Anti-Jitter Box for Heartbeat
+                                    Box(modifier = Modifier.width(16.dp), contentAlignment = Alignment.Center) {
+                                        Text(
+                                            text = state.heartbeat,
+                                            fontSize = 12.sp,
+                                            color = TextPrimary,
+                                            fontFamily = FontFamily.Monospace,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
-        }
 
-        // --- 2. KARTA: CONNECTION ---
-        HomeCard(
-            title = "Connection",
-            iconPainter = painterResource(id = state.adapterImageRes)
-        ) {
-            Column {
+            // =========================================================
+            // 6. DEBUG BUTTONS
+            // =========================================================
+            Spacer(modifier = Modifier.height(8.dp))
+            Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = state.connectionStatus,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold
+                    text = "DEBUG CONTROLS",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextSecondary,
+                    letterSpacing = 1.sp,
+                    modifier = Modifier.padding(bottom = 8.dp)
                 )
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                var maxProgress by remember { mutableIntStateOf(100) }
-                if (state.downloadProgress < 0) {
-                    maxProgress = -state.downloadProgress
-                } else {
-                    LinearProgressIndicator(
-                        progress = { state.downloadProgress.toFloat() / maxProgress.toFloat() },
-                        modifier = Modifier
-                            .height(10.dp)
-                            .fillMaxWidth(),
-                        trackColor = Color(0xFFE0E0E0),
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                }
-
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    val prog = (state.downloadProgress.toFloat() / maxProgress.toFloat() * 100).toInt()
-                    Text("$prog%", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-
-                    if (state.remainDays.isNotEmpty()) {
-                        Text(state.remainDays, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                    }
-                    Text("Act: ${state.heartbeat}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                    DebugButton("t.Tup", Modifier.weight(1f)) { onDebugAction("t.Tup") }
+                    DebugButton("t.Blowfish", Modifier.weight(1f)) { onDebugAction("t.Blowfish") }
+                    DebugButton("t.Crash", Modifier.weight(1f)) { onDebugAction("t.Crash") }
                 }
             }
+
+            Spacer(modifier = Modifier.height(32.dp))
         }
-
-        // --- 3. KARTA: DIAGNOSTICS & TIME (SLOUČENÁ) ---
-        HomeCard(
-            title = "Diagnostics & Time",
-            iconVector = Icons.Default.Info
-        ) {
-            Column {
-                // --- ČÁST A: DIAGNOSTIKA ---
-                // Řádek Paměť a Vlhkost
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    // Paměť
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Memory", style = MaterialTheme.typography.labelMedium, color = Color.Gray)
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("${state.memoryUsage}%", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                        }
-
-                        Spacer(modifier = Modifier.height(2.dp))
-
-                        LinearProgressIndicator(
-                            progress = { state.memoryUsage / 100f },
-                            modifier = Modifier
-                                .height(6.dp)
-                                .fillMaxWidth(),
-                            color = Color(0xFF6200EE),
-                            trackColor = Color(0xFFE0E0E0)
-                        )
-                    }
-
-                    // odsazeni AD/hum ciselnych hodnot
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    // AD / Hum
-                    Column(modifier = Modifier.weight(0.6f)) {
-                        Text("AD/Hum", style = MaterialTheme.typography.labelMedium, color = Color.Gray)
-                        Text(
-                            text = state.humAD,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Řádek Teploty
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    TempItem(label = "T1 (CPU)", value = state.temp1)
-                    TempItem(label = "T2 (Board)", value = state.temp2)
-                    TempItem(label = "T3 (Probe)", value = state.temp3)
-                }
-
-                // --- ODDĚLOVAČ ---
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 12.dp),
-                    color = Color(0xFFEEEEEE)
-                )
-
-                // --- ČÁST B: ČAS ---
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    // Device Time
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Device Time", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                        Text(state.deviceTime, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                    }
-
-                    // Phone Time
-                    Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                        Text("Phone Time", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                        Text(state.phoneTime, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Time Difference
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    Text("Diff: ", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                    Text(
-                        text = state.timeDiff,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = if (state.timeDiff == "OK" || state.timeDiff == "0" || state.timeDiff.startsWith("0.") || state.timeDiff.startsWith("-0."))
-                            Color(0xFF4CAF50) else Color.Red
-                    )
-                }
-            }
-        }
-
-        // --- DEBUG BUTTONS ---
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            OutlinedButton(
-                onClick = { onDebugAction("t.Tup") },
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                modifier = Modifier.height(36.dp)
-            ) { Text("Log", style = MaterialTheme.typography.labelMedium) }
-
-            OutlinedButton(
-                onClick = { onDebugAction("t.Blowfish") },
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                modifier = Modifier.height(36.dp)
-            ) { Text("Flash", style = MaterialTheme.typography.labelMedium) }
-
-            OutlinedButton(
-                onClick = { onDebugAction("t.Crash") },
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                modifier = Modifier.height(36.dp)
-            ) { Text("Crash", style = MaterialTheme.typography.labelMedium) }
-        }
-
-        Spacer(modifier = Modifier.height(60.dp))
     }
 }
 
-// --- POMOCNÉ KOMPONENTY (Tyto chyběly) ---
+// ============================================================================
+// 🧱 CUSTOM REUSABLE UI COMPONENTS
+// ============================================================================
 
 @Composable
-fun HomeCard(
-    title: String,
-    iconVector: ImageVector? = null,
-    iconPainter: Painter? = null,
-    content: @Composable () -> Unit
+private fun DashboardCard(
+    modifier: Modifier = Modifier,
+    padding: androidx.compose.ui.unit.Dp = 16.dp,
+    content: @Composable ColumnScope.() -> Unit
 ) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(8.dp),
-        modifier = Modifier.fillMaxWidth()
+    ElevatedCard(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = SurfaceColor),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            // Hlavička
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(bottom = 8.dp)
-            ) {
-                if (iconVector != null) {
-                    Icon(imageVector = iconVector, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                } else if (iconPainter != null) {
-                    Icon(painter = iconPainter, contentDescription = null, tint = Color.Unspecified, modifier = Modifier.size(18.dp))
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = Color.Gray)
-            }
-
-            HorizontalDivider(color = Color(0xFFF0F0F0))
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Obsah
+        Column(modifier = Modifier.padding(padding)) {
             content()
         }
     }
 }
 
 @Composable
-fun TempItem(label: String, value: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-        Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+private fun LabeledProgressBar(
+    label: String,
+    progress: Float,
+    fillColor: Color
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(44.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color(0xFFF1F5F9))
+    ) {
+        if (progress > 0f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(progress.coerceIn(0f, 1f))
+                    .background(fillColor)
+            )
+        }
+        Text(
+            text = label,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Black,
+            letterSpacing = 1.sp,
+            color = if (progress > 0.5f) Color.White else TextPrimary,
+            modifier = Modifier.align(Alignment.Center)
+        )
+    }
+}
+
+/**
+ * 🧠 Smart Date/Time Parser
+ * Intelligently separates dates and times, handling empty/default states gracefully.
+ */
+@Composable
+private fun CompactTimeBlock(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    valueColor: Color = TextPrimary,
+    isDiffBlock: Boolean = false
+) {
+    val cleanValue = value.trim()
+    val displayTime: String
+    val displayDate: String
+
+    if (isDiffBlock) {
+        displayTime = if (cleanValue.isEmpty()) "---" else cleanValue
+        displayDate = ""
+    } else {
+        val parts = cleanValue.split(" ")
+        if (parts.size >= 2) {
+            displayDate = parts[0]
+            displayTime = parts[1]
+        } else if (parts.size == 1) {
+            if (cleanValue.contains(":")) {
+                displayTime = cleanValue
+                displayDate = "--.--.----"
+            } else {
+                displayDate = cleanValue
+                displayTime = "--:--:--"
+            }
+        } else {
+            displayDate = "--.--.----"
+            displayTime = "--:--:--"
+        }
+    }
+
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(text = label, fontSize = 9.sp, color = TextSecondary, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.5.sp)
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(
+                text = displayTime,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Black,
+                color = valueColor,
+                fontFamily = FontFamily.Monospace,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (isDiffBlock && displayTime != "---" && displayTime != "OK" && !displayTime.endsWith("s")) {
+                Text(
+                    text = "s",
+                    fontSize = 10.sp,
+                    color = TextSecondary,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 2.dp, start = 2.dp)
+                )
+            }
+        }
+
+        if (!isDiffBlock) {
+            Text(
+                text = displayDate,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Medium,
+                color = TextSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
 
 @Composable
-fun TimeItem(label: String, value: String, modifier: Modifier = Modifier) {
-    Column(modifier = modifier) {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-        Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+private fun SensorCard(label: String, value: String, modifier: Modifier = Modifier) {
+    ElevatedCard(
+        modifier = modifier,
+        shape = RoundedCornerShape(10.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = SurfaceColor),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp, horizontal = 2.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(text = label, fontSize = 11.sp, color = TextSecondary, fontWeight = FontWeight.ExtraBold)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = value,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
 
-@Preview(showBackground = true)
 @Composable
-fun HomeScreenPreview() {
-    val mockState = HomeUiState(
-        serialNumber = "98765432",
-        appVersion = "1.1",
-        tmdVersion = "1.92",
-        mode = "Work",
-        memoryUsage = 75,
-        connectionStatus = "Connected",
-        downloadProgress = 45,
-        temp1 = "24", temp2 = "25", temp3 = "19",
-        humAD = "15"
-    )
+private fun DebugButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier.height(36.dp),
+        shape = RoundedCornerShape(8.dp),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
+        border = BorderStroke(1.dp, DividerColor),
+        contentPadding = PaddingValues(0.dp)
+    ) {
+        Text(text = text, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+    }
+}
+
+fun Modifier.rotateVertically(rotation: Float = -90f): Modifier = this
+    .layout { measurable, constraints ->
+        val swappedConstraints = constraints.copy(
+            minWidth = constraints.minHeight,
+            maxWidth = constraints.maxHeight,
+            minHeight = constraints.minWidth,
+            maxHeight = constraints.maxWidth
+        )
+        val placeable = measurable.measure(swappedConstraints)
+        layout(placeable.height, placeable.width) {
+            placeable.place(
+                x = -(placeable.width - placeable.height) / 2,
+                y = -(placeable.height - placeable.width) / 2
+            )
+        }
+    }
+    .graphicsLayer { rotationZ = rotation }
+
+// ============================================================================
+// 🔮 PREVIEW (Populated with mock data ONLY for Android Studio layout design!)
+// ============================================================================
+
+@Preview(showBackground = true, backgroundColor = 0xFFF2F6F3, widthDp = 400, heightDp = 850)
+@Composable
+private fun HomeScreenPreview() {
     MaterialTheme {
-        HomeScreen(state = mockState, onDebugAction = {})
+        // Here we pass fully populated dummy data SOLELY so the preview looks good.
+        // This does NOT affect the actual phone app, which still uses the HomeUiState() defaults.
+        HomeScreen(
+            state = HomeUiState(
+                serialNumber = "96386678",
+                appVersion = "1.0",
+                tmdVersion = "1.92",
+                mode = "Smart",
+                memoryUsage = 75,
+                connectionStatus = "Downloading Data...",
+                isAdapterConnected = true,
+                downloadProgress = 45,
+                temp1 = "19.5", temp2 = "24.1", temp3 = "24.0", humAD = "500", humProc = 50,
+                deviceTime = "06.03.2024 14:30:00",
+                phoneTime = "06.03.2024 14:30:05",
+                timeDiff = "5.0",
+                deviceImageRes = R.drawable.dev_lolly,
+                modeImageRes = R.drawable.home_smart,
+                adapterImageRes = R.drawable.adapter_green,
+                remainDays = "14d rem", heartbeat = "\\"
+            ),
+            onDebugAction = {}
+        )
     }
 }

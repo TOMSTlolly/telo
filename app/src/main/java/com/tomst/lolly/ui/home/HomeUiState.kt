@@ -5,11 +5,11 @@ import com.tomst.lolly.R
 
 data class HomeUiState(
     // Hlavička
-    val serialNumber: String = "Reading...",
-    val appVersion: String = "v1.0.0", // Můžeš načíst z BuildConfig
+    val serialNumber: String = "--------",
+    val appVersion: String = "v1.0.0",
     val tmdVersion: String = "1.92",
     val mode: String = "Basic",
-    @DrawableRes val deviceImageRes: Int = R.drawable.dev_lollyhor, // Výchozí obrázek
+    @DrawableRes val deviceImageRes: Int = R.drawable.dev_lolly, // Výchozí obrázek
     @DrawableRes val modeImageRes: Int = R.drawable.home_basic,
 
     // Stav adaptéru

@@ -78,7 +78,7 @@ class HomeViewModel : ViewModel() {
         val res = when (devType) {
             TDeviceType.dLolly3, TDeviceType.dLolly4 -> R.drawable.dev_lolly
             TDeviceType.dTermoChron -> R.drawable.dev_wurst
-            TDeviceType.dAD, TDeviceType.dAdMicro -> R.drawable.dev_ad
+            TDeviceType.dAD, TDeviceType.dAdMicro -> R.drawable.dev_dendro
             else -> R.drawable.shape_circle
         }
         _uiState.update { it.copy(deviceImageRes = res) }

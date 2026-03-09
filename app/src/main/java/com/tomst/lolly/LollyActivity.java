@@ -256,6 +256,7 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
     private boolean prefRotateGraph = true;                         // Rotate the graph in the main activity
     private View view;
     private ActivityMainBinding binding;
+    private NavController navController;
     private DmdViewModel dmdViewModel;
     private LollyService lolly;
     private ServiceConnection connection = new ServiceConnection() {
@@ -1368,7 +1369,9 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
 
 
         // remove stupid line on bottom of action bar
-        getSupportActionBar().setElevation(0);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().hide();
+        }
 
         // create notification channel
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -1465,11 +1468,11 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
         dmdViewModel = new ViewModelProvider(this).get(DmdViewModel.class);
 
         //BottomNavigationView navView = findViewById(R.id.nav_view);
-        AppBarConfiguration appBarConfiguration = new AppBarConfiguration.Builder(
-                R.id.navigation_home, R.id.navigation_graph, R.id.navigation_notifications, R.id.navigation_options)
-                .build();
-        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_activity_main);
-        NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
+        // AppBarConfiguration appBarConfiguration = new AppBarConfiguration.Builder(
+        //        R.id.navigation_home, R.id.navigation_graph, R.id.navigation_notifications, R.id.navigation_options)
+        //        .build();
+        navController = Navigation.findNavController(this, R.id.nav_host_fragment_activity_main);
+        // NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
         NavigationUI.setupWithNavController(binding.navView, navController);
     }
 
@@ -1559,7 +1562,7 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
             if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 builder.setMessage(getResources().getString(R.string.dlg_app_killed) + "\n\n" + getResources().getString(R.string.dlg_app_killed_description));
                 builder.setNeutralButton(R.string.open_android_app_settings, new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
+                    public void onClick(DialogInterface dialog, id) {
                         Intent intent = new Intent();
                         intent.setAction(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
                         Uri uri = Uri.fromParts("package", getPackageName(), null);
