@@ -267,13 +267,14 @@ fun HomeScreen(
                         Spacer(modifier = Modifier.height(10.dp))
 
                         // Download Progress Fill Bar
-                        val maxProg = if (state.downloadProgress < 0) -state.downloadProgress else 100
-                        val actProg = if (state.downloadProgress < 0) 0 else state.downloadProgress
-                        val dlProg = if (maxProg > 0) (actProg.toFloat() / maxProg).coerceIn(0f, 1f) else 0f
+                        val actProg = state.downloadProgress
+                        val maxProg = if (state.maxProgress > 0) state.maxProgress else 100
+                        val dlProg = (actProg.toFloat() / maxProg).coerceIn(0f, 1f)
+                        val dlPercent = (dlProg * 100).toInt()
 
                         val barColor = when {
-                            actProg >= 100 -> DwnlDoneColor
-                            actProg > 0 -> DwnlActiveColor
+                            dlPercent >= 100 -> DwnlDoneColor
+                            dlPercent > 0 -> DwnlActiveColor
                             else -> Color.Transparent
                         }
 
@@ -309,7 +310,7 @@ fun HomeScreen(
                                 }
 
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text("${actProg}%", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                    Text("${dlPercent}%", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                                     Spacer(modifier = Modifier.width(12.dp))
 
                                     // Anti-Jitter Box for Heartbeat
@@ -570,6 +571,7 @@ private fun HomeScreenPreview() {
                 connectionStatus = "Downloading Data...",
                 isAdapterConnected = true,
                 downloadProgress = 45,
+                maxProgress = 100,
                 temp1 = "19.5", temp2 = "24.1", temp3 = "24.0", humAD = "500", humProc = 50,
                 deviceTime = "06.03.2024 14:30:00",
                 phoneTime = "06.03.2024 14:30:05",

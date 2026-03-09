@@ -11,7 +11,6 @@ import android.os.Handler
 import android.os.Looper
 import android.os.Message
 import android.os.IBinder
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -19,7 +18,7 @@ import android.view.WindowManager
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.collectAsState // TOTO CHYBĚLO
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
@@ -56,7 +55,6 @@ class HomeFragment : Fragment() {
     private var odometer: LollyService? = null
     private var bound = false
 
-    // Logování souborů
     private var csv: CSVReader? = null
     private var readWasFinished = false
     private var ALogFileName = ""
@@ -67,10 +65,7 @@ class HomeFragment : Fragment() {
     private var serialNumber = "Unknown"
     private var heartIdx = 0
 
-    // Konstanta z původního kódu
     private val MIN_ADANUMBER: Byte = 5
-
-
 
     private val datahandler = object : Handler(Looper.getMainLooper()) {
         @RequiresApi(Build.VERSION_CODES.O)
@@ -84,9 +79,8 @@ class HomeFragment : Fragment() {
                     val meroFormatted = merold!!.dtm.format(formatter)
                     val merFormatted = mer.dtm.format(formatter)
                     val ss = "Between messages >$delta seconds (from $meroFormatted to $merFormatted)"
-
                     savelog?.add(ss)
-                    homeViewModel.updateConnectionStatus(ss, bound) // Zobrazíme chybu v statusu
+                    homeViewModel.updateConnectionStatus(ss, bound)
                 }
             }
             merold = mer
@@ -95,14 +89,12 @@ class HomeFragment : Fragment() {
             if (csv == null) {
                 val ss = "CSV is null, cannot save data"
                 savelog?.add(ss)
-                // homeViewModel.updateConnectionStatus(ss, bound)
             } else {
                 csv?.AddMerToCsv(mer)
             }
         }
     }
 
-    // 2. Handler pro logování (LogHandler)
     private val loghandler = object : Handler(Looper.getMainLooper()) {
         override fun handleMessage(msg: Message) {
             val log = msg.obj as? TMSRec
@@ -112,38 +104,32 @@ class HomeFragment : Fragment() {
         }
     }
 
-    // 3. Hlavní stavový handler (Handler)
     private val handler = object : Handler(Looper.getMainLooper()) {
         @RequiresApi(Build.VERSION_CODES.O)
         override fun handleMessage(msg: Message) {
             val info = msg.obj as? TInfo ?: return
-            Log.d(Constants.TAG, "${info.idx} ${info.msg}")
 
             when (info.stat) {
                 TDevState.tNoHardware -> {
                     homeViewModel.updateConnectionStatus("NO HARDWARE !!!", false)
-                    homeViewModel.updateProgress(0)
+                    homeViewModel.updateProgress(0, 100)
                 }
                 TDevState.tAdapterDisconnected -> {
                     homeViewModel.updateConnectionStatus("Adapter disconnected", false)
-                    homeViewModel.updateProgress(0)
+                    homeViewModel.updateProgress(0, 100)
                 }
                 TDevState.tAdapterDead -> {
                     homeViewModel.updateConnectionStatus("Adapter needs firmware reflash", false)
-                    homeViewModel.updateProgress(0)
+                    homeViewModel.updateProgress(0, 100)
                 }
                 TDevState.tWaitForAdapter -> {
                     if (info.msg.length > MIN_ADANUMBER) {
                         homeViewModel.updateConnectionStatus(info.msg, true)
-                        homeViewModel.updateProgress(0)
+                        homeViewModel.updateProgress(0, 100)
                     }
                 }
-                TDevState.tTMDCycling -> {
-                    homeViewModel.updateConnectionStatus(info.msg, true)
-                }
-                TDevState.tBlockNumber -> {
-                    homeViewModel.updateConnectionStatus(info.msg, true)
-                }
+                TDevState.tTMDCycling -> homeViewModel.updateConnectionStatus(info.msg, true)
+                TDevState.tBlockNumber -> homeViewModel.updateConnectionStatus(info.msg, true)
                 TDevState.tHead -> {
                     info.fw.DeviceType?.let {
                         homeViewModel.setDeviceImage(it)
@@ -155,9 +141,7 @@ class HomeFragment : Fragment() {
                     homeViewModel.updateConnectionStatus(info.msg, bound)
                     savelog?.add(info.msg)
                 }
-                TDevState.tFirmwareIsActual -> {
-                    homeViewModel.updateDeviceVersion(info.msg)
-                }
+                TDevState.tFirmwareIsActual -> homeViewModel.updateDeviceVersion(info.msg)
                 TDevState.tFirmware -> {
                     homeViewModel.updateConnectionStatus(info.msg, bound)
                     savelog?.add(info.msg)
@@ -165,15 +149,11 @@ class HomeFragment : Fragment() {
                 TDevState.tSerial -> {
                     serialNumber = info.msg
                     homeViewModel.updateSerialNumber(info.msg)
-
-                    // Inicializace CSV
                     LollyActivity.getInstance().serialNumber = serialNumber
                     val trackDir = LollyActivity.getInstance().prefExportFolder
                     val csvFileName = shared.CompileFileName("data_", serialNumber, trackDir)
-
                     csv = CSVReader(csvFileName)
                     csv?.OpenForWrite(csvFileName)
-
                     ALogFileName = LollyActivity.getInstance().cacheLogPath + "/command_" + shared.aft(csvFileName, "data_")
                     AErrFileName = LollyActivity.getInstance().cacheLogPath + "/err_" + shared.aft(csvFileName, "data_")
                 }
@@ -185,60 +165,43 @@ class HomeFragment : Fragment() {
                     val capUsed = try { info.msg.toInt() } catch (e: Exception) { 0 }
                     homeViewModel.updateMemory(capUsed)
                 }
-                TDevState.tGetTime -> {
-                    // val time = if (info.msg.isNotEmpty()) info.msg else "Invalid time"
-                    // homeViewModel.updateTime(...)
-                }
-                TDevState.tGetTimeError -> {
-                    // Handle error
-                }
                 TDevState.tCompareTime -> {
                     val formatter = DateTimeFormatter.ofPattern(Constants.DEVICE_FORMAT).withZone(ZoneId.systemDefault())
                     val phTime = LocalDateTime.now().format(formatter)
-
                     val delta = try { info.msg.toFloat() } catch (e: Exception) { 0f }
-                    val diff = String.format("%.1f", delta / 1000.0)
-
+                    val diff = "%.1f".format(delta / 1000.0)
                     homeViewModel.updateTime(
                         devTime = homeViewModel.uiState.value.deviceTime,
                         phoneTime = phTime,
                         diff = diff
                     )
                 }
-                TDevState.tReadMeteo -> {
-                    homeViewModel.setMeteoMode(info.meteo, info.msg)
-                }
+                TDevState.tReadMeteo -> homeViewModel.setMeteoMode(info.meteo, info.msg)
                 TDevState.tProgress -> {
-                    //val progress = if (info.idx < 0) -info.idx else info.idx
-                    val progress = info.idx;
-
+                    val progress = info.idx
                     var remainStr = ""
                     if (info.currDay != null) {
                         val buttonFormat = DateTimeFormatter.ofPattern("YY-MM-dd").withZone(ZoneId.of("UTC"))
-                        val sFmt = buttonFormat.format(info.currDay)
+                        val sFmt = buttonFormat.format(info.currDay.atZone(ZoneId.of("UTC")))
                         remainStr = "$sFmt rem:${info.remainDays} days"
                     }
 
-                    homeViewModel.updateProgress(progress, 100, remainStr)
+                    if (progress < 0) {
+                        // Negative value indicates total number of records (max)
+                        homeViewModel.updateProgress(0, -progress, remainStr)
+                    } else {
+                        // Positive value indicates current record index
+                        homeViewModel.updateProgress(progress, -1, remainStr)
+                    }
                     handleHeartbeat()
                 }
-                TDevState.tVrtule -> {
-                    handleHeartbeat()
-                }
-                TDevState.tReadType -> {
-                    homeViewModel.updateConnectionStatus(info.msg, bound)
-                }
+                TDevState.tVrtule -> handleHeartbeat()
+                TDevState.tReadType -> homeViewModel.updateConnectionStatus(info.msg, bound)
                 TDevState.tFinishedData -> {
                     saveLogAndData()
                     readWasFinished = true
-
-                    val showGraph = requireContext().getSharedPreferences("save_options", Context.MODE_PRIVATE)
-                        .getBoolean("showgraph", false)
-
-                    if (true) {
-                        dmd.sendMessageToFragment("TMD $serialNumber")
-                        switchToGraphFragment()
-                    }
+                    dmd.sendMessageToFragment("TMD $serialNumber")
+                    switchToGraphFragment()
                 }
                 else -> {}
             }
@@ -271,28 +234,19 @@ class HomeFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        // Inicializace
         dmd = ViewModelProvider(requireActivity())[DmdViewModel::class.java]
         dmd.ClearMereni()
-
-        // OPRAVA: V Kotlinu přistupujeme ke statickým proměnným Javy přes třídu, ne přes instanci
         savelog = LollyActivity.SAVE_LOG
-
-        // Nastavení defaultních hodnot
         homeViewModel.updateSerialNumber("--------")
 
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
                 MaterialTheme {
-                    // OPRAVA: Přidán import collectAsState
-                    val uiState = homeViewModel.uiState.collectAsState().value
-
+                    val uiState by homeViewModel.uiState.collectAsState()
                     HomeScreen(
                         state = uiState,
-                        onDebugAction = { action ->
-                            handleDebugAction(action)
-                        }
+                        onDebugAction = { action -> handleDebugAction(action) }
                     )
                 }
             }
@@ -308,9 +262,7 @@ class HomeFragment : Fragment() {
             "t.Blowfish" -> {
                 if (bound && odometer != null) {
                     odometer?.enableLoop(false)
-                    // OPRAVA: Přístup ke statické proměnné DIRECTORY_FW
                     val fwFile = File(LollyActivity.DIRECTORY_FW, "lolly.tau")
-
                     if (fwFile.exists()) {
                         Toast.makeText(context, "Zahajuji flashování...", Toast.LENGTH_SHORT).show()
                         odometer?.startFirmwareFlash(fwFile.absolutePath)
@@ -331,11 +283,9 @@ class HomeFragment : Fragment() {
             3 -> "-"
             else -> "\\"
         }
-        heartIdx = if (heartIdx >= 3) 0 else heartIdx + 1
+        heartIdx = (heartIdx + 1) % 4
         homeViewModel.updateHeartbeat(symbol)
     }
-
-    // --- Lifecycle Metody ---
 
     override fun onResume() {
         super.onResume()
@@ -363,8 +313,6 @@ class HomeFragment : Fragment() {
         if (!readWasFinished) saveLogAndData()
         super.onDestroyView()
     }
-
-    // --- Pomocné metody (File I/O) ---
 
     private fun saveLogAndData() {
         csv?.CloseExternalCsv()
@@ -405,7 +353,7 @@ class HomeFragment : Fragment() {
     }
 
     private fun switchToGraphFragment() {
-        val bottomNav = activity?.findViewById<BottomNavigationView>(R.id.nav_view)
-        bottomNav?.findViewById<View>(R.id.navigation_graph)?.performClick()
+        val bottomNav = requireActivity().findViewById<BottomNavigationView>(R.id.nav_view)
+        bottomNav.selectedItemId = R.id.navigation_graph
     }
 }

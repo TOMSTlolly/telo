@@ -19,6 +19,7 @@ data class HomeUiState(
 
     // Průběh stahování
     val downloadProgress: Int = 0,
+    val maxProgress: Int = 100,
     val heartbeat: String = "/",
     val remainDays: String = "",
 
