@@ -161,6 +161,9 @@ class GraphFragment : Fragment() {
         return true
     }
 
+
+    // testgit
+
     private fun setGraphTitleAndCheckboxes() {
         val title: String
         when (dmd.GetDeviceType()) {
