@@ -32,7 +32,7 @@ import com.tomst.lolly.R
 // --- 🎨 PREMIUM PALETTE ---
 private val AppBackground = Color(0xFFF8FAFC)
 private val SurfaceColor = Color(0xFFFFFFFF)
-private val PrimaryColor = Color(0xFF2563EB) // Blue for unsaved
+private val UnsavedColor = Color(0xFFFF9800) // Hi-vis Orange for unsaved
 private val SavedColor = Color(0xFF4CAF50)   // Green for saved
 private val TextPrimary = Color(0xFF1E293B)
 private val TextSecondary = Color(0xFF475569)
@@ -109,7 +109,7 @@ fun OptionsScreenContent(
                 onClick = onSaveClick,
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (hasUnsavedChanges) PrimaryColor else SavedColor
+                    containerColor = if (hasUnsavedChanges) UnsavedColor else SavedColor
                 ),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
             ) {
@@ -183,7 +183,7 @@ fun OptionsScreenContent(
                                 onClick = onPickDateClick,
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(8.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = PrimaryColor.copy(alpha = 0.1f), contentColor = PrimaryColor)
+                                colors = ButtonDefaults.buttonColors(containerColor = UnsavedColor.copy(alpha = 0.1f), contentColor = UnsavedColor)
                             ) {
                                 Icon(painterResource(R.drawable.ic_schedule), null, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(8.dp))
@@ -339,7 +339,7 @@ fun OptionsScreenContent(
                                     .padding(12.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(painterResource(R.drawable.ic_folder_export), null, tint = PrimaryColor, modifier = Modifier.size(24.dp))
+                                Icon(painterResource(R.drawable.ic_folder_export), null, tint = UnsavedColor, modifier = Modifier.size(24.dp))
                                 Spacer(Modifier.width(12.dp))
                                 Text(
                                     text = if (uiState.exportFolder.isEmpty()) "Not set - tap to choose" else uiState.exportFolder,
@@ -545,7 +545,7 @@ private fun OptionSwitch(
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = Color.White,
-                checkedTrackColor = if (customLedLogic) PrimaryColor else SavedColor,
+                checkedTrackColor = if (customLedLogic) UnsavedColor else SavedColor,
                 uncheckedThumbColor = Color.White,
                 uncheckedTrackColor = DividerColor
             )
