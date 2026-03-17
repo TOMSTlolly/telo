@@ -3,13 +3,17 @@ package com.tomst.lolly.ui.viewfile
 import android.graphics.Typeface
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.outlined.InsertDriveFile
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -22,98 +26,113 @@ import com.tomst.lolly.fileview.FileDetail
 import java.time.LocalDateTime
 import com.tomst.lolly.core.TDeviceType
 
-// --- HLAVNÍ KOMPONENTA ŘÁDKU ---
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FileRowItem(
     file: FileDetail,
     onToggleSelection: (Boolean) -> Unit,
-    onClick: () -> Unit = {}
+    onClick: () -> Unit = {},
+    onDoubleClick: () -> Unit = {}
 ) {
-    // State pro otevření detailu (ikona "i") zůstává, to je správně
     var showDetail by remember { mutableStateOf(false) }
+    var lastClickTime by remember { mutableStateOf(0L) }
+    val interactionSource = remember { MutableInteractionSource() }
 
-    // ZMĚNA: Úplně jsme odstranili lokální `isHighlighted`
-    // Barva pozadí se teď řídí VÝHRADNĚ stavem `file.isSelected` z ViewModelu
-    val backgroundColor = if (file.isSelected) Color(0xFFE3F2FD) else Color.White
+    val backgroundColor = if (file.isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+    val contentColor = if (file.isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
 
-    // Definice úzkého fontu pro tento řádek
-    val condensedFontFamily = FontFamily(
-        Typeface.create("sans-serif-condensed", Typeface.BOLD)
-    )
-
-    // 1. KARTA ŘÁDKU
-    Card(
+    ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 2.dp, horizontal = 4.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        colors = CardDefaults.cardColors(containerColor = backgroundColor)
+            .padding(vertical = 4.dp, horizontal = 8.dp),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = if (file.isSelected) 4.dp else 1.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = backgroundColor, contentColor = contentColor),
+        shape = RoundedCornerShape(12.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 8.dp, top = 4.dp, bottom = 4.dp, end = 0.dp),
+                .padding(start = 4.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // A) CHECKBOX (Slouží pro Multi-Select)
             Checkbox(
                 checked = file.isSelected,
                 onCheckedChange = { isChecked ->
                     onToggleSelection(isChecked)
-                }
+                },
+                colors = CheckboxDefaults.colors(
+                    checkedColor = MaterialTheme.colorScheme.primary,
+                    uncheckedColor = MaterialTheme.colorScheme.outline
+                )
             )
 
-            Spacer(modifier = Modifier.width(8.dp))
+            Surface(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(8.dp)),
+                color = if (file.isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = if (file.isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Outlined.InsertDriveFile,
+                        contentDescription = "File Icon",
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
 
-            // B) TEXT (Slouží pro Single-Select, exkluzivní výběr)
+            Spacer(modifier = Modifier.width(12.dp))
+
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .clickable {
-                        // ZMĚNA: Odstraněno `isHighlighted = !isHighlighted`
-                        // Nyní jen pošleme signál nahoru, ať to vyřeší ViewModel
-                        onClick()
+                    .clickable(
+                        interactionSource = interactionSource,
+                        indication = null
+                    ) {
+                        val currentTime = System.currentTimeMillis()
+                        if (currentTime - lastClickTime < 300) {
+                            onDoubleClick()
+                        } else {
+                            onClick()
+                        }
+                        lastClickTime = currentTime
                     }
-                    .padding(vertical = 8.dp)
             ) {
                 Text(
                     text = file.niceName ?: file.name,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontFamily = condensedFontFamily,
-                        fontSize = 15.sp,
-                        letterSpacing = (-0.5).sp,
-                        fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = (-0.5).sp
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    "${file.getDeviceTypeLabel()} | ${file.getFormattedSize()} | ${file.getFormattedCreated()}",
+                    text = "${file.getDeviceTypeLabel()} • ${file.getFormattedSize()} • ${file.getFormattedCreated()}",
                     style = MaterialTheme.typography.bodySmall.copy(
-                        fontFamily = FontFamily.SansSerif,
-                        letterSpacing = (-0.3).sp,
-                        fontSize = 11.sp
+                        fontWeight = FontWeight.Medium
                     ),
-                    color = Color.Gray,
+                    color = if (file.isSelected) contentColor.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
 
-            // C) IKONA "i" (Spouští dialog)
             IconButton(
                 onClick = { showDetail = true }
             ) {
                 Icon(
                     imageVector = Icons.Default.Info,
-                    contentDescription = "Detail souboru",
-                    tint = Color.LightGray
+                    contentDescription = "File Details",
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
         }
     }
 
-    // 2. LOGIKA ZOBRAZENÍ DIALOGU
     if (showDetail) {
         FileDetailDialog(
             file = file,
@@ -122,7 +141,6 @@ fun FileRowItem(
     }
 }
 
-// --- PREVIEW ---
 @Preview(showBackground = true, widthDp = 360, name = "Všechny stavy řádku")
 @Composable
 fun FileRowItemPreview() {

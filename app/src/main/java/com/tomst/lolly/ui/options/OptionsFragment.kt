@@ -78,7 +78,7 @@ class OptionsFragment : Fragment() {
                 OptionsScreen(
                     viewModel = viewModel,
                     onSaveClick = {
-                        saveForm()
+                        saveOptions()
                         Toast.makeText(context, "Options saved", Toast.LENGTH_SHORT).show()
                     },
                     onExportFolderClick = {
@@ -107,10 +107,24 @@ class OptionsFragment : Fragment() {
                     },
                     onAboutClick = {
                         findNavController().navigate(R.id.navigation_about)
+                    },
+                    onNavigateBack = {
+                        revertOptions()
+                        findNavController().navigateUp()
                     }
                 )
             }
         }
+    }
+
+    fun saveOptions() {
+        saveForm()
+        viewModel.markSaved()
+        viewModel.setInitialState(viewModel.uiState.value)
+    }
+
+    fun revertOptions() {
+        viewModel.markSaved() // Prevents BackHandler from blocking again
     }
 
     override fun onResume() {
@@ -118,8 +132,16 @@ class OptionsFragment : Fragment() {
         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
     }
 
+    override fun onPause() {
+        super.onPause()
+        // Save form on pause if needed, but the user wants a prompt.
+        // For the bottom nav interception, we'd need more complex logic in Activity.
+    }
+
     override fun onDestroyView() {
-        saveForm()
+        // We don't auto-save anymore if user wants a prompt, 
+        // but for safety in Android lifecycle we might still want to ensure data isn't lost.
+        // However, the user specifically asked for a prompt when "leaving".
         synchronizeAppCache()
         super.onDestroyView()
     }
@@ -179,23 +201,24 @@ class OptionsFragment : Fragment() {
         val folderUri = sharedPref.getString("prefExportFolder", "") ?: ""
         val folderName = extractFolderNameFromEncodedUri(folderUri)
 
-        viewModel.updateState {
-            it.copy(
-                readFrom = sharedPref.getInt("readFrom", 0),
-                commandBookmark = sharedPref.getString("commandBookmark", "") ?: "",
-                checkboxBookmark = sharedPref.getBoolean("checkboxBookmark", false),
-                mode = sharedPref.getInt("mode", 0),
-                showGraph = sharedPref.getBoolean("showgraph", true),
-                rotateGraph = sharedPref.getBoolean("rotategraph", true),
-                noLedLight = sharedPref.getBoolean("noledlight", true),
-                showMicro = sharedPref.getBoolean("showmicro", true),
-                setTime = sharedPref.getBoolean("settime", true),
-                decimalSeparator = sharedPref.getString("decimalseparator", ",") ?: ",",
-                exportFolder = folderName,
-                bookmarkVal = sharedPref.getInt("bookmarkVal", 0).let { v -> if (v == 0) "" else v.toString() },
-                fromDate = sharedPref.getString("fromDate", "") ?: ""
-            )
-        }
+        val loadedState = OptionsUiState(
+            readFrom = sharedPref.getInt("readFrom", 0),
+            commandBookmark = sharedPref.getString("commandBookmark", "") ?: "",
+            checkboxBookmark = sharedPref.getBoolean("checkboxBookmark", false),
+            mode = sharedPref.getInt("mode", 0),
+            showGraph = sharedPref.getBoolean("showgraph", true),
+            rotateGraph = sharedPref.getBoolean("rotategraph", true),
+            noLedLight = sharedPref.getBoolean("noledlight", true),
+            showMicro = sharedPref.getBoolean("showmicro", true),
+            setTime = sharedPref.getBoolean("settime", true),
+            decimalSeparator = sharedPref.getString("decimalseparator", ",") ?: ",",
+            exportFolder = folderName,
+            bookmarkVal = sharedPref.getInt("bookmarkVal", 0).let { v -> if (v == 0) "" else v.toString() },
+            fromDate = sharedPref.getString("fromDate", "") ?: ""
+        )
+        
+        viewModel.updateState { loadedState }
+        viewModel.setInitialState(loadedState)
     }
 
     private fun updateUserInfo() {

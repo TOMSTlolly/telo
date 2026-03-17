@@ -7,6 +7,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,10 +20,10 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
-import androidx.compose.material3.ListItemDefaults.contentColor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -169,25 +170,23 @@ fun FilesScreenContent(
             Spacer(modifier = Modifier.height(2.dp))
 
             // --- Seznam souborů ---
-            Card(
+            Box(
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                shape = RoundedCornerShape(16.dp)
+                    .fillMaxWidth()
             ) {
                 if (state.files.isEmpty() && !state.isLoading) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(Icons.Default.Info, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(48.dp))
-                            Text("Prázdná složka", color = Color.Gray, fontWeight = FontWeight.Medium)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("Empty folder", color = Color.Gray, fontWeight = FontWeight.Medium)
                         }
                     }
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(top = 2.dp, bottom = 8.dp)
+                        contentPadding = PaddingValues(top = 4.dp, bottom = 80.dp) // Extra padding for HUD
                     ) {
                         items(
                             items = state.files,
@@ -200,9 +199,11 @@ fun FilesScreenContent(
                                 },
                                 onClick = {
                                     onSelectSingleFile(file.internalFullName)
+                                },
+                                onDoubleClick = {
+                                    onGraphClick(file.name)
                                 }
                             )
-                            HorizontalDivider(color = Color(0xFFF0F0F0), thickness = 1.dp)
                         }
                     }
                 }
@@ -269,7 +270,6 @@ fun FilesScreenContent(
 }
 
 // --- POMOCNÁ KOMPONENTA PRO TLAČÍTKA ---
-// --- POMOCNÁ KOMPONENTA PRO TLAČÍTKA ---
 @Composable
 fun ActionButtonWithText(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
@@ -287,6 +287,8 @@ fun ActionButtonWithText(
     Column(
         modifier = Modifier
             .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
                 enabled = enabled, // <-- Tady se fyzicky vypíná reakce na dotyk
                 onClick = onClick
             )
@@ -309,6 +311,7 @@ fun ActionButtonWithText(
         )
     }
 }
+
 
 
 @Preview(showBackground = true)
