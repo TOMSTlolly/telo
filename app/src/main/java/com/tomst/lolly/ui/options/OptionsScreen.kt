@@ -1,14 +1,19 @@
 package com.tomst.lolly.ui.options
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,18 +24,22 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tomst.lolly.R
 
-// --- 🎨 CONSISTENT PALETTE (Matched with HomeScreen) ---
-private val AppBackground = Color(0xFFF2F6F3)
+// --- 🎨 PREMIUM PALETTE ---
+private val AppBackground = Color(0xFFF8FAFC)
 private val SurfaceColor = Color(0xFFFFFFFF)
-private val TextPrimary = Color(0xFF0F172A)
-private val TextSecondary = Color(0xFF334155)
-private val DividerColor = Color(0xFFCBD5E1)
+private val UnsavedColor = Color(0xFFFF9800) // Hi-vis Orange for unsaved
+private val SavedColor = Color(0xFF4CAF50)   // Green for saved
+private val TextPrimary = Color(0xFF1E293B)
+private val TextSecondary = Color(0xFF475569)
+private val DividerColor = Color(0xFFE2E8F0)
+private val LedOnColor = Color(0xFF22C55E)
+private val LedOffColor = Color(0xFF94A3B8)
+private val LedBlueColor = Color(0xFF2196F3)
 
 @Composable
 fun OptionsScreen(
@@ -40,12 +49,15 @@ fun OptionsScreen(
     onPickDateClick: () -> Unit,
     onLoginClick: () -> Unit,
     onLogoutClick: () -> Unit,
-    onAboutClick: () -> Unit
+    onAboutClick: () -> Unit,
+    onNavigateBack: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
-
+    val hasUnsavedChanges = viewModel.hasUnsavedChanges()
+    
     OptionsScreenContent(
         uiState = uiState,
+        hasUnsavedChanges = hasUnsavedChanges,
         onUpdateState = { viewModel.updateState(it) },
         onSaveClick = onSaveClick,
         onExportFolderClick = onExportFolderClick,
@@ -60,6 +72,7 @@ fun OptionsScreen(
 @Composable
 fun OptionsScreenContent(
     uiState: OptionsUiState,
+    hasUnsavedChanges: Boolean,
     onUpdateState: ((OptionsUiState) -> OptionsUiState) -> Unit,
     onSaveClick: () -> Unit,
     onExportFolderClick: () -> Unit,
@@ -69,272 +82,319 @@ fun OptionsScreenContent(
     onAboutClick: () -> Unit
 ) {
     val scrollState = rememberScrollState()
-
     val downloadOptions = stringArrayResource(id = R.array.download_array)
     val intervalOptions = stringArrayResource(id = R.array.modes_array)
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(AppBackground),
-        contentAlignment = Alignment.TopCenter
+            .background(AppBackground)
     ) {
+        // Sticky Header: Simple "Settings" with Save button next to it
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 20.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "Settings",
+                style = MaterialTheme.typography.headlineMedium,
+                color = TextPrimary,
+                fontWeight = FontWeight.Bold
+            )
+            
+            Button(
+                onClick = onSaveClick,
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (hasUnsavedChanges) UnsavedColor else SavedColor
+                ),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Icon(Icons.Default.Save, null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(if (hasUnsavedChanges) "Save" else "Saved", fontWeight = FontWeight.Bold)
+            }
+        }
+
+        // Scrollable Content
         Column(
             modifier = Modifier
-                .widthIn(max = 600.dp)
                 .fillMaxSize()
                 .verticalScroll(scrollState)
-                .padding(16.dp),
+                .padding(start = 16.dp, end = 16.dp, bottom = 100.dp)
+                .widthIn(max = 600.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 1. Save Header
-            OptionsCard(padding = 0.dp) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color(0xFFA1E1E1))
-                        .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.cog),
-                        contentDescription = null,
-                        modifier = Modifier.size(48.dp),
-                        tint = Color.Gray
-                    )
-                    Text(
-                        text = "Save all settings below",
-                        modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = TextPrimary,
-                        fontWeight = FontWeight.Bold
-                    )
-                    IconButton(onClick = onSaveClick) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.content_save),
-                            contentDescription = "Save",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(32.dp)
-                        )
-                    }
-                }
-            }
-
-            // 2. Download Options
-            OptionsCard {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_file_download),
-                            contentDescription = null,
-                            modifier = Modifier.size(48.dp),
-                            tint = Color.Gray
-                        )
-
-                        var expanded by remember { mutableStateOf(false) }
-                        ExposedDropdownMenuBox(
-                            expanded = expanded,
-                            onExpandedChange = { expanded = !expanded },
-                            modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
+            // Section: Data Reading
+            OptionsSection("DATA RETRIEVAL") {
+                OptionsCard {
+                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        OptionRow(
+                            title = "Download Scope",
+                            description = "Choose how much data to retrieve",
+                            icon = R.drawable.ic_file_download
                         ) {
-                            TextField(
-                                value = downloadOptions.getOrElse(uiState.readFrom) { "" },
-                                onValueChange = {},
-                                readOnly = true,
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                                colors = ExposedDropdownMenuDefaults.textFieldColors(
-                                    focusedContainerColor = Color.Transparent,
-                                    unfocusedContainerColor = Color.Transparent
-                                ),
-                                modifier = Modifier.menuAnchor().fillMaxWidth(),
-                                textStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
-                            )
-                            ExposedDropdownMenu(
+                            var expanded by remember { mutableStateOf(false) }
+                            ExposedDropdownMenuBox(
                                 expanded = expanded,
-                                onDismissRequest = { expanded = false }
+                                onExpandedChange = { expanded = !expanded }
                             ) {
-                                downloadOptions.forEachIndexed { index, option ->
-                                    DropdownMenuItem(
-                                        text = { Text(option) },
-                                        onClick = {
-                                            onUpdateState { it.copy(readFrom = index) }
-                                            expanded = false
-                                        }
-                                    )
+                                OutlinedTextField(
+                                    value = downloadOptions.getOrElse(uiState.readFrom) { "" },
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                                    modifier = Modifier.menuAnchor().fillMaxWidth(),
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                ExposedDropdownMenu(
+                                    expanded = expanded,
+                                    onDismissRequest = { expanded = false }
+                                ) {
+                                    downloadOptions.forEachIndexed { index, option ->
+                                        DropdownMenuItem(
+                                            text = { Text(option) },
+                                            onClick = {
+                                                onUpdateState { it.copy(readFrom = index) }
+                                                expanded = false
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    if (uiState.readFrom == 1) {
-                        HorizontalDivider(color = DividerColor, thickness = 1.dp)
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(painterResource(R.drawable.ic_all_inbox), null, modifier = Modifier.size(24.dp), tint = TextSecondary)
-                            Text("Bookmark Days", modifier = Modifier.weight(1f).padding(horizontal = 8.dp), color = TextPrimary, fontWeight = FontWeight.Medium)
-                            TextField(
+                        if (uiState.readFrom == 1) {
+                            OutlinedTextField(
                                 value = uiState.bookmarkVal,
                                 onValueChange = { newValue -> onUpdateState { it.copy(bookmarkVal = newValue) } },
-                                modifier = Modifier.width(120.dp),
-                                placeholder = { Text("# days") },
+                                label = { Text("Bookmark Days") },
+                                modifier = Modifier.fillMaxWidth(),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                singleLine = true
+                                shape = RoundedCornerShape(8.dp)
                             )
                         }
-                    }
 
-                    if (uiState.readFrom == 2) {
-                        HorizontalDivider(color = DividerColor, thickness = 1.dp)
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(painterResource(R.drawable.ic_all_inbox), null, modifier = Modifier.size(24.dp), tint = TextSecondary)
-                            Text("From Date", modifier = Modifier.weight(1f).padding(horizontal = 8.dp), color = TextPrimary, fontWeight = FontWeight.Medium)
-                            Button(onClick = onPickDateClick) {
-                                Text(if (uiState.fromDate.isEmpty()) "Pick date" else uiState.fromDate)
+                        if (uiState.readFrom == 2) {
+                            Button(
+                                onClick = onPickDateClick,
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = UnsavedColor.copy(alpha = 0.1f), contentColor = UnsavedColor)
+                            ) {
+                                Icon(painterResource(R.drawable.ic_schedule), null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text(if (uiState.fromDate.isEmpty()) "Select Start Date" else "From: ${uiState.fromDate}")
                             }
                         }
                     }
                 }
             }
 
-            // 3. Interval
-            OptionsCard {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(painterResource(R.drawable.ic_sim_card), null, modifier = Modifier.size(48.dp), tint = Color.Gray)
-
-                    var expanded by remember { mutableStateOf(false) }
-                    ExposedDropdownMenuBox(
-                        expanded = expanded,
-                        onExpandedChange = { expanded = !expanded },
-                        modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
-                    ) {
-                        TextField(
-                            value = intervalOptions.getOrElse(uiState.mode) { "" },
-                            onValueChange = {},
-                            readOnly = true,
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                            colors = ExposedDropdownMenuDefaults.textFieldColors(
-                                focusedContainerColor = Color.Transparent,
-                                unfocusedContainerColor = Color.Transparent
-                            ),
-                            modifier = Modifier.menuAnchor().fillMaxWidth(),
-                            textStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
-                        )
-                        ExposedDropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = { expanded = false }
-                        ) {
-                            intervalOptions.forEachIndexed { index, option ->
-                                DropdownMenuItem(
-                                    text = { Text(option) },
-                                    onClick = {
-                                        onUpdateState { it.copy(mode = index) }
-                                        expanded = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // 4. More settings
-            OptionsCard {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        text = "Local exportation folder",
-                        fontWeight = FontWeight.ExtraBold,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = TextSecondary,
-                        letterSpacing = 1.sp
-                    )
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable { onExportFolderClick() }
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(painterResource(R.drawable.ic_all_inbox), null, tint = Color(0xFF009688))
+            // Section: Device Configuration
+            OptionsSection("DEVICE CONFIGURATION") {
+                OptionsCard {
+                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         Text(
-                            text = if (uiState.exportFolder.isEmpty()) "Exportation folder is empty" else uiState.exportFolder,
-                            modifier = Modifier.padding(start = 12.dp),
-                            style = MaterialTheme.typography.bodyLarge,
+                            text = "Measurement mode",
+                            style = MaterialTheme.typography.titleMedium,
                             color = TextPrimary,
                             fontWeight = FontWeight.Bold
                         )
-                    }
+                        
+                        var expanded by remember { mutableStateOf(false) }
+                        ExposedDropdownMenuBox(
+                            expanded = expanded,
+                            onExpandedChange = { expanded = !expanded }
+                        ) {
+                            OutlinedTextField(
+                                value = if (uiState.mode == 0) "Select a measurement mode" else intervalOptions.getOrElse(uiState.mode) { "Select a measurement mode" },
+                                onValueChange = {},
+                                readOnly = true,
+                                placeholder = { Text("Select a measurement mode") },
+                                leadingIcon = {
+                                    val iconId = getModeIcon(uiState.mode)
+                                    if (iconId != null) {
+                                        Icon(painterResource(iconId), null, modifier = Modifier.size(32.dp), tint = Color.Unspecified)
+                                    }
+                                },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                                modifier = Modifier.menuAnchor().fillMaxWidth().heightIn(min = 64.dp),
+                                shape = RoundedCornerShape(8.dp),
+                                textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 18.sp)
+                            )
+                            ExposedDropdownMenu(
+                                expanded = expanded,
+                                onDismissRequest = { expanded = false },
+                                modifier = Modifier
+                                    .background(SurfaceColor)
+                                    .fillMaxWidth(0.9f) // Slight inset to show the border better
+                            ) {
+                                Surface(
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, DividerColor),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column {
+                                        intervalOptions.forEachIndexed { index, option ->
+                                            val label = if (index == 0) "Keep current" else option
+                                            DropdownMenuItem(
+                                                modifier = Modifier.heightIn(min = 56.dp),
+                                                text = { 
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        val iconId = getModeIcon(index)
+                                                        if (iconId != null) {
+                                                            Icon(painterResource(iconId), null, modifier = Modifier.size(28.dp), tint = Color.Unspecified)
+                                                            Spacer(Modifier.width(16.dp))
+                                                        } else {
+                                                            // Provide spacing even if there's no icon for alignment
+                                                            Spacer(Modifier.width(44.dp))
+                                                        }
+                                                        Text(label, fontSize = 16.sp)
+                                                    }
+                                                },
+                                                onClick = {
+                                                    onUpdateState { it.copy(mode = index) }
+                                                    expanded = false
+                                                }
+                                            )
+                                            // Add separation between items, except after the last one
+                                            if (index < intervalOptions.size - 1) {
+                                                HorizontalDivider(color = DividerColor.copy(alpha = 0.5f))
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
 
-                    HorizontalDivider(color = DividerColor, modifier = Modifier.padding(vertical = 4.dp))
+                        HorizontalDivider(color = DividerColor)
 
-                    OptionSwitch("show graph after reading data", uiState.showGraph, Color(0xFF3F51B5)) { newValue ->
-                        onUpdateState { it.copy(showGraph = newValue) }
-                    }
-                    OptionSwitch("rotate graph after reading data", uiState.rotateGraph, Color(0xFF3F51B5)) { newValue ->
-                        onUpdateState { it.copy(rotateGraph = newValue) }
-                    }
-                    OptionSwitch("No led light", uiState.noLedLight, Color(0xFFFBC02D)) { newValue ->
-                        onUpdateState { it.copy(noLedLight = newValue) }
-                    }
-                    OptionSwitch("Use micrometers for dendrometer", uiState.showMicro, Color(0xFF2E7D32)) { newValue ->
-                        onUpdateState { it.copy(showMicro = newValue) }
-                    }
-                    OptionSwitch("Set time", uiState.setTime, Color.Gray) { newValue ->
-                        onUpdateState { it.copy(setTime = newValue) }
-                    }
-
-                    HorizontalDivider(color = DividerColor, modifier = Modifier.padding(vertical = 8.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(painterResource(R.drawable.ic_all_inbox), null, tint = Color.Gray, modifier = Modifier.size(24.dp))
-                        Text(
-                            "Decimal separator",
-                            modifier = Modifier.weight(1f).padding(start = 12.dp),
-                            color = TextPrimary,
-                            fontWeight = FontWeight.Medium
+                        OptionSwitch(
+                            label = "Disable LED",
+                            description = "disable LED",
+                            checked = uiState.noLedLight,
+                            onCheckedChange = { newValue -> onUpdateState { it.copy(noLedLight = newValue) } },
+                            customLedLogic = true
                         )
-                        TextField(
-                            value = uiState.decimalSeparator,
-                            onValueChange = { newValue -> onUpdateState { it.copy(decimalSeparator = newValue) } },
-                            modifier = Modifier.width(80.dp),
-                            singleLine = true
+                        
+                        OptionSwitch(
+                            label = "Sync System Time",
+                            description = "Set device time to phone time",
+                            checked = uiState.setTime,
+                            onCheckedChange = { newValue -> onUpdateState { it.copy(setTime = newValue) } }
                         )
                     }
-
-                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
 
-            OptionsCard {
+            // Section: Display & Files
+            OptionsSection("DISPLAY & EXPORT") {
+                OptionsCard {
+                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        OptionSwitch(
+                            label = "Auto-Open Graph",
+                            description = "Show visualization after reading",
+                            checked = uiState.showGraph,
+                            onCheckedChange = { newValue -> onUpdateState { it.copy(showGraph = newValue) } }
+                        )
+
+                        OptionSwitch(
+                            label = "Auto-Rotate Graph",
+                            description = "Force landscape for charts",
+                            checked = uiState.rotateGraph,
+                            onCheckedChange = { newValue -> onUpdateState { it.copy(rotateGraph = newValue) } }
+                        )
+
+                        OptionSwitch(
+                            label = "Use µm instead of mm",
+                            description = "Use µm instead of mm for dendrometer",
+                            checked = uiState.showMicro,
+                            onCheckedChange = { newValue -> onUpdateState { it.copy(showMicro = newValue) } },
+                            icon = R.drawable.ic_micrometer
+                        )
+
+                        HorizontalDivider(color = DividerColor)
+
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                text = "Export Destination",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = TextPrimary,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(AppBackground)
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null
+                                    ) { onExportFolderClick() }
+                                    .padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(painterResource(R.drawable.ic_folder_export), null, tint = UnsavedColor, modifier = Modifier.size(24.dp))
+                                Spacer(Modifier.width(12.dp))
+                                Text(
+                                    text = if (uiState.exportFolder.isEmpty()) "Not set - tap to choose" else uiState.exportFolder,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = if (uiState.exportFolder.isEmpty()) Color.Red else TextPrimary,
+                                    maxLines = 1
+                                )
+                            }
+                        }
+
+                        OutlinedTextField(
+                            value = uiState.decimalSeparator,
+                            onValueChange = { newValue -> onUpdateState { it.copy(decimalSeparator = newValue) } },
+                            label = { Text("Decimal Separator") },
+                            leadingIcon = {
+                                Icon(painterResource(R.drawable.ic_separator), null, modifier = Modifier.size(24.dp), tint = TextSecondary)
+                            },
+                            modifier = Modifier.width(180.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            singleLine = true
+                        )
+                    }
+                }
+            }
+
+            // About
+            OptionsCard(
+                modifier = Modifier.clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { onAboutClick() }
+            ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(onClick = onAboutClick)
-                        .padding(16.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(
-                        text = "About",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            color = Color(0xFF4CAF50).copy(alpha = 0.1f),
+                            shape = CircleShape,
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.Info, null, tint = Color(0xFF4CAF50), modifier = Modifier.size(24.dp))
+                            }
+                        }
+                        Spacer(Modifier.width(16.dp))
+                        Text(
+                            text = "About Application",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                    }
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         contentDescription = null,
@@ -342,45 +402,154 @@ fun OptionsScreenContent(
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.height(32.dp))
         }
+    }
+}
+
+private fun getModeIcon(index: Int): Int? {
+    return when (index) {
+        1 -> R.drawable.home_basic
+        2 -> R.drawable.home_meteo
+        3 -> R.drawable.home_smart
+        4 -> R.drawable.home_5min
+        5 -> R.drawable.home_1min
+        else -> null
+    }
+}
+
+@Composable
+private fun OptionsSection(title: String, content: @Composable () -> Unit) {
+    Column {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelLarge,
+            color = TextSecondary,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
+            letterSpacing = 1.sp
+        )
+        content()
     }
 }
 
 @Composable
 private fun OptionsCard(
     modifier: Modifier = Modifier,
-    padding: androidx.compose.ui.unit.Dp = 16.dp,
     content: @Composable ColumnScope.() -> Unit
 ) {
     ElevatedCard(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.elevatedCardColors(containerColor = SurfaceColor),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(padding)) {
+        Column(modifier = Modifier.padding(20.dp)) {
             content()
         }
     }
 }
 
 @Composable
-fun OptionSwitch(label: String, checked: Boolean, iconTint: Color, onCheckedChange: (Boolean) -> Unit) {
+private fun OptionRow(
+    title: String,
+    description: String,
+    icon: Int,
+    content: @Composable () -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                painter = painterResource(id = icon),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = TextSecondary
+            )
+            Spacer(Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = TextPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary
+                )
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        content()
+    }
+}
+
+@Composable
+private fun OptionSwitch(
+    label: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    icon: Int? = null,
+    customLedLogic: Boolean = false
+) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(painterResource(R.drawable.ic_all_inbox), null, tint = iconTint, modifier = Modifier.size(24.dp))
-        Text(
-            text = label,
-            modifier = Modifier.weight(1f).padding(start = 12.dp),
-            style = MaterialTheme.typography.bodyLarge,
-            color = TextPrimary,
-            fontWeight = FontWeight.Medium
+        // LED Icon State
+        val iconId = when {
+            icon != null -> icon
+            customLedLogic -> {
+                // For "Disable LED" option:
+                // checked (true) -> option is ON -> LED is physically OFF -> Gray
+                // not checked (false) -> option is OFF -> LED is physically ON -> Blue
+                if (checked) R.drawable.ic_led_off else R.drawable.ic_led_blue
+            }
+            else -> {
+                // Default logic: Green when ON, Gray when OFF
+                if (checked) R.drawable.ic_led_on else R.drawable.ic_led_off
+            }
+        }
+
+        Icon(
+            painter = painterResource(id = iconId),
+            contentDescription = null,
+            tint = if (icon != null) TextSecondary else Color.Unspecified,
+            modifier = Modifier.size(24.dp)
         )
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        
+        Spacer(Modifier.width(16.dp))
+        
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyLarge,
+                color = TextPrimary,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary
+            )
+        }
+        
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.White,
+                checkedTrackColor = if (customLedLogic) UnsavedColor else SavedColor,
+                uncheckedThumbColor = Color.White,
+                uncheckedTrackColor = DividerColor
+            )
+        )
     }
 }
 
@@ -395,13 +564,14 @@ fun OptionsScreenPreview() {
                 exportFolder = "/storage/emulated/0/Lolly",
                 showGraph = true,
                 rotateGraph = false,
-                noLedLight = true,
+                noLedLight = false,
                 showMicro = false,
                 setTime = true,
                 decimalSeparator = ".",
                 bookmarkVal = "7",
                 fromDate = "01.01.2024"
             ),
+            hasUnsavedChanges = true,
             onUpdateState = {},
             onSaveClick = {},
             onExportFolderClick = {},

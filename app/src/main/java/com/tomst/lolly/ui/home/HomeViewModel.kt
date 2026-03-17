@@ -38,9 +38,9 @@ class HomeViewModel : ViewModel() {
 
         _uiState.update {
             it.copy(
-                temp1 = String.format("%.1f", t1),
-                temp2 = String.format("%.1f", t2),
-                temp3 = String.format("%.1f", t3),
+                temp1 = "%.1f".format(t1),
+                temp2 = "%.1f".format(t2),
+                temp3 = "%.1f".format(t3),
                 humAD = proc.toString(),
                 humProc = proc
             )
@@ -61,10 +61,11 @@ class HomeViewModel : ViewModel() {
         }
     }
 
-    fun updateProgress(progress: Int, max: Int = 100, remainDaysInfo: String = "") {
+    fun updateProgress(progress: Int, max: Int = -1, remainDaysInfo: String = "") {
         _uiState.update {
             it.copy(
                 downloadProgress = progress,
+                maxProgress = if (max != -1) max else it.maxProgress,
                 remainDays = remainDaysInfo
             )
         }
@@ -89,7 +90,7 @@ class HomeViewModel : ViewModel() {
             TMeteo.mBasic -> R.drawable.home_basic
             TMeteo.mMeteo -> R.drawable.home_meteo
             TMeteo.mSmart -> R.drawable.home_smart
-            TMeteo.mIntensive -> R.drawable.home_5min // Předpokládám názvy z původního kódu
+            TMeteo.mIntensive -> R.drawable.home_5min
             TMeteo.mExperiment -> R.drawable.home_1min
             else -> R.drawable.shape_circle
         }

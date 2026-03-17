@@ -6,12 +6,16 @@ import android.widget.LinearLayout
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -25,11 +29,44 @@ import com.github.mikephil.charting.data.CombinedData
 import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
+import com.github.mikephil.charting.highlight.Highlight
+import com.github.mikephil.charting.utils.Utils
 import com.tomst.lolly.core.DmdViewModel
 import com.tomst.lolly.core.TPhysValue
 import java.util.ArrayList
 import kotlin.math.cos
 import kotlin.math.sin
+
+// Phase 5: MultilineXAxisRenderer (Canvas Override)
+class MultilineXAxisRenderer(
+    viewPortHandler: com.github.mikephil.charting.utils.ViewPortHandler?,
+    xAxis: XAxis?,
+    trans: com.github.mikephil.charting.utils.Transformer?
+) : com.github.mikephil.charting.renderer.XAxisRenderer(viewPortHandler, xAxis, trans) {
+    override fun drawLabel(
+        c: android.graphics.Canvas?,
+        formattedLabel: String?,
+        x: Float,
+        y: Float,
+        anchor: com.github.mikephil.charting.utils.MPPointF?,
+        angleDegrees: Float
+    ) {
+        val lines = formattedLabel?.split("\n") ?: return
+        var currentY = y
+        for (line in lines) {
+            Utils.drawXAxisValue(
+                c,
+                line,
+                x,
+                currentY,
+                mAxisLabelPaint,
+                anchor,
+                angleDegrees
+            )
+            currentY += mAxisLabelPaint.textSize + Utils.convertDpToPixel(2f)
+        }
+    }
+}
 
 @Composable
 fun GraphScreen(
@@ -51,127 +88,125 @@ fun GraphScreenContent(
     dmdData: DmdViewModel,
     onToggleLine: (Int, Boolean) -> Unit
 ) {
+    // Phase 4/6: Trigger to clear highlights from Compose
+    var clearHighlightTrigger by remember { mutableIntStateOf(0) }
+    val lastClearHighlightTrigger = remember { IntArray(1) { 0 } }
+    
+    // Phase 7: Store integer X-index of the crosshair
+    var lockedXIndex by remember { mutableStateOf<Int?>(null) }
+    // Phase 8: Strict Session Locking
+    var lockedDataSetSession by remember { mutableStateOf<Int?>(null) }
+
+    val dateFormat = remember { java.text.SimpleDateFormat("dd.MM.yyyy HH:mm", java.util.Locale.getDefault()) }
+    
+    // Phase 9: Reactive Global Date Range
+    val globalRange = remember(state.dataTimestamp) {
+        if (dmdData.timestamps.isNotEmpty()) {
+            val start = dateFormat.format(java.util.Date(dmdData.timestamps.first()))
+            val end = dateFormat.format(java.util.Date(dmdData.timestamps.last()))
+            "$start  –  $end"
+        } else {
+            ""
+        }
+    }
+
+    // Dynamic Label: Soil vs Tree
+    val growthLabel = remember(state.title) {
+        if (state.title.contains("Dendrometer", ignoreCase = true)) "Tree" else "Soil"
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            // Optimized insets: safeDrawing handles both status bars and side navigation bars in landscape
+            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .padding(horizontal = 2.dp, vertical = 4.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp)
-        ) {
-            if (state.maxProgress > 0) {
-                LinearProgressIndicator(
-                    progress = { state.progress.toFloat() / state.maxProgress.toFloat() },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(8.dp),
-                )
-            }
+        // Phase 7/9: Compact Header (Global Date Range + Device Title)
+        if (globalRange.isNotEmpty()) {
+            Text(
+                text = globalRange,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                color = androidx.compose.ui.graphics.Color.Gray,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center
+            )
+        }
+        Text(
+            text = state.title,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            color = androidx.compose.ui.graphics.Color.DarkGray,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Center
+        )
+
+        // Progress Bar Section
+        if (state.maxProgress > 0) {
+            LinearProgressIndicator(
+                progress = { state.progress.toFloat() / state.maxProgress.toFloat() },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(4.dp)
+                    .padding(vertical = 2.dp),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant
+            )
         }
 
-        // Zmenšený padding kolem checkboxů
+        // Tri-State Color Buttons (Refined Look)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 4.dp, bottom = 0.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
+                .padding(vertical = 4.dp, horizontal = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            GraphCheckbox("T1:", state.showT1) { onToggleLine(1, it) }
-            GraphCheckbox("T2:", state.showT2) { onToggleLine(2, it) }
-            GraphCheckbox("T3:", state.showT3) { onToggleLine(3, it) }
-            GraphCheckbox("Soil", state.showGrowth) { onToggleLine(4, it) }
-        }
-
-
-
-        // Zmenšený prostor pod checkboxy
-        Spacer(modifier = Modifier.height(2.dp))
-
-        var visibleTimeRange by remember { mutableStateOf("") }
-        // --- NOVÉ: Stav pro zobrazení Min/Max ---
-        var visibleStats by remember { mutableStateOf("") }
-        var selectedPointInfo by remember { mutableStateOf("") } // Stav pro uložený klik
-        val dateFormat = remember { java.text.SimpleDateFormat("dd.MM.yyyy HH:mm", java.util.Locale.getDefault()) }
-
-        val updateTimeRange: (CombinedChart) -> Unit = { chart ->
-            if (dmdData.timestamps.isNotEmpty()) {
-                val lowX = chart.lowestVisibleX.toInt().coerceAtLeast(0)
-                val highX = chart.highestVisibleX.toInt().coerceAtMost(dmdData.timestamps.size - 1)
-
-                if (lowX <= highX && lowX < dmdData.timestamps.size) {
-                    val start = dateFormat.format(java.util.Date(dmdData.timestamps[lowX]))
-                    val end = dateFormat.format(java.util.Date(dmdData.timestamps[highX]))
-                    val newRange = "$start  –  $end"
-
-                    if (visibleTimeRange != newRange) {
-                        visibleTimeRange = newRange
-                    }
+            TriStateButton(
+                label = "T1",
+                hasData = dmdData.getT1().isNotEmpty(),
+                isShown = state.showT1
+            ) { checked ->
+                onToggleLine(1, checked)
+                if (!checked) {
+                    lockedDataSetSession = null
+                    clearHighlightTrigger++
                 }
-
-                val statsBuilder = StringBuilder()
-
-               fun appendStats(name: String, data: ArrayList<Entry>, isVisible: Boolean) {
-                    if (isVisible && data.isNotEmpty()) {
-                        val startIdx = lowX.coerceAtMost(data.size - 1)
-                        val endIdx = highX.coerceAtMost(data.size - 1)
-                        if (startIdx <= endIdx) {
-                            var min = Float.MAX_VALUE
-                            var max = -Float.MAX_VALUE
-                            for (i in startIdx..endIdx) {
-                                val y = data[i].y
-                                if (y < min) min = y
-                                if (y > max) max = y
-                            }
-                            if (min != Float.MAX_VALUE && max != -Float.MAX_VALUE) {
-                                // Zformátujeme čísla na 1 desetinné místo a přidáme šipky ↓ a ↑
-                                val minStr = String.format(java.util.Locale.US, "%.1f", min)
-                                val maxStr = String.format(java.util.Locale.US, "%.1f", max)
-                                statsBuilder.append("$name: ↓$minStr  ↑$maxStr    ")
-                            }
-                        }
-                    }
+            }
+            TriStateButton(
+                label = "T2",
+                hasData = dmdData.getT2().isNotEmpty(),
+                isShown = state.showT2
+            ) { checked ->
+                onToggleLine(2, checked)
+                if (!checked) {
+                    lockedDataSetSession = null
+                    clearHighlightTrigger++
+                }
+            }
+            TriStateButton(
+                label = "T3",
+                hasData = dmdData.getT3().isNotEmpty(),
+                isShown = state.showT3
+            ) { checked ->
+                onToggleLine(3, checked)
+                if (!checked) {
+                    lockedDataSetSession = null
+                    clearHighlightTrigger++
+                }
+            }
+            TriStateButton(
+                label = growthLabel,
+                hasData = dmdData.getHA().isNotEmpty(),
+                isShown = state.showGrowth
+            ) { checked ->
+                onToggleLine(4, checked)
+                if (!checked) {
+                    lockedDataSetSession = null
+                    clearHighlightTrigger++
                 }
             }
         }
-
-        if (visibleTimeRange.isNotEmpty()) {
-            Text(
-                text = visibleTimeRange,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = androidx.compose.ui.graphics.Color.DarkGray,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 2.dp), // Zmenšený padding pod časovým rozmezím
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-            )
-        }
-
-        // --- NOVÉ: Vykreslení statistik Min / Max ---
-        if (visibleStats.isNotEmpty()) {
-            Text(
-                text = visibleStats,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium,
-                color = androidx.compose.ui.graphics.Color.Gray, // Světlejší šedá, aby to nekřičelo
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 6.dp),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-            )
-        }
-
-        val lastUpdateHash = remember { IntArray(1) { 0 } }
-        val currentHash = listOf(
-            state.showT1,
-            state.showT2,
-            state.showT3,
-            state.showGrowth,
-            state.dataTimestamp,
-            state.isHighlightingEnabled // Nutné hlídat změnu pro překreslení chování grafu
-        ).hashCode()
 
         Box(
             modifier = Modifier
@@ -182,101 +217,119 @@ fun GraphScreenContent(
                 modifier = Modifier.fillMaxSize(),
                 factory = { context ->
                     CombinedChart(context).apply {
+                        val chart = this
                         layoutParams = LinearLayout.LayoutParams(
                             ViewGroup.LayoutParams.MATCH_PARENT,
                             ViewGroup.LayoutParams.MATCH_PARENT
                         )
 
                         description.isEnabled = false
+                        // Phase 8: Static baseline room for multiline text
+                        extraBottomOffset = 60f
+                        
                         setTouchEnabled(true)
                         dragDecelerationFrictionCoef = 0.9f
                         isDragEnabled = true
+                        isHighlightPerDragEnabled = false
                         setScaleEnabled(true)
                         setDrawGridBackground(false)
-                        setViewPortOffsets(0f, 0f, 0f, 0f)
+                        
+                        // Phase 10: Industry-Standard Time-Series Zooming (Auto-Scale Y)
                         setPinchZoom(false)
-
-                        // --- NOVÉ: Vlastní zaměřovač (Highlighter) se zámkem ---
-                        val customHighlighter = object : com.github.mikephil.charting.highlight.CombinedHighlighter(this, this) {
-                            var lockedDataSetIndex = -1 // Zde si držíme index vybrané čáry
-
-                            override fun getHighlight(x: Float, y: Float): com.github.mikephil.charting.highlight.Highlight? {
-                                val closest = super.getHighlight(x, y) ?: return null
-
-                                if (lockedDataSetIndex == -1) {
-                                    // 1. První dotyk prstem: zamkneme tu čáru, na kterou uživatel sáhl
-                                    lockedDataSetIndex = closest.dataSetIndex
-                                    return closest
-                                } else {
-                                    // 2. Tažení prstem: pokud se křivky překříží, graf se snaží skočit na jinou.
-                                    // My mu ale vnutíme bod z naší zamknuté křivky na aktuální pozici prstu (X).
-                                    if (closest.dataSetIndex == lockedDataSetIndex) {
-                                        return closest
-                                    } else {
-                                        val lockedDataSet = this@apply.data?.getDataSetByIndex(lockedDataSetIndex)
-                                        val entries = lockedDataSet?.getEntriesForXValue(closest.x)
-
-                                        if (!entries.isNullOrEmpty()) {
-                                            val entry = entries.first()
-                                            // Dopočítáme fyzické pixely na displeji pro náš vnucený bod
-                                            val pixels = this@apply.getTransformer(lockedDataSet.axisDependency)
-                                                .getPixelForValues(entry.x, entry.y)
-
-                                            return com.github.mikephil.charting.highlight.Highlight(
-                                                entry.x, entry.y,
-                                                pixels.x.toFloat(), pixels.y.toFloat(),
-                                                lockedDataSetIndex,
-                                                lockedDataSet.axisDependency
-                                            )
-                                        }
-                                        return closest // Záloha
-                                    }
-                                }
-                            }
-                        }
-
+                        isScaleXEnabled = true
+                        isScaleYEnabled = false
+                        isAutoScaleMinMaxEnabled = false // Eradicate CPU Lag
+                        isDoubleTapToZoomEnabled = false
+                        
+                        // Phase 11: Atomic Resolution Anchor
+                        setVisibleXRangeMinimum(2f)
+                        
+                        maxHighlightDistance = Utils.convertDpToPixel(100f)
+                        setDrawMarkers(true)
 
                         setOnChartGestureListener(object : com.github.mikephil.charting.listener.OnChartGestureListener {
-                            override fun onChartScale(me: android.view.MotionEvent?, scaleX: Float, scaleY: Float) {
-                                updateTimeRange(this@apply)
-                            }
-                            override fun onChartTranslate(me: android.view.MotionEvent?, dX: Float, dY: Float) {
-                                updateTimeRange(this@apply)
-                            }
-                            override fun onChartGestureEnd(me: android.view.MotionEvent?, lastPerformedGesture: com.github.mikephil.charting.listener.ChartTouchListener.ChartGesture?) {
-                                updateTimeRange(this@apply)
-                                customHighlighter.lockedDataSetIndex = -1
-                            }
-
+                            override fun onChartScale(me: android.view.MotionEvent?, scaleX: Float, scaleY: Float) {}
+                            override fun onChartTranslate(me: android.view.MotionEvent?, dX: Float, dY: Float) {}
+                            override fun onChartGestureEnd(me: android.view.MotionEvent?, lastPerformedGesture: com.github.mikephil.charting.listener.ChartTouchListener.ChartGesture?) {}
                             override fun onChartGestureStart(me: android.view.MotionEvent?, lastPerformedGesture: com.github.mikephil.charting.listener.ChartTouchListener.ChartGesture?) {}
                             override fun onChartLongPressed(me: android.view.MotionEvent?) {}
                             override fun onChartDoubleTapped(me: android.view.MotionEvent?) {}
                             override fun onChartSingleTapped(me: android.view.MotionEvent?) {}
                             override fun onChartFling(me1: android.view.MotionEvent?, me2: android.view.MotionEvent?, velocityX: Float, velocityY: Float) {}
                         })
-                        setHighlighter(customHighlighter) // Nasadíme náš nový zaměřovač
 
-
-                        // Detekce kliknutí na bod v grafu
-                        setOnChartValueSelectedListener(object : com.github.mikephil.charting.listener.OnChartValueSelectedListener {
-                            override fun onValueSelected(e: Entry?, h: com.github.mikephil.charting.highlight.Highlight?) {
-                                if (e != null && h != null) {
-                                    val index = e.x.toInt()
-                                    val timeString = if (index in dmdData.timestamps.indices) {
-                                        val millis = dmdData.timestamps[index]
-                                        if (millis > 0L) {
-                                            java.text.SimpleDateFormat("dd.MM.yyyy HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date(millis))
-                                        } else ""
-                                    } else ""
-
-                                    val dataSetLabel = this@apply.data?.getDataSetByIndex(h.dataSetIndex)?.label ?: "Hodnota"
-                                    val roundedValue = String.format(java.util.Locale.US, "%.2f", e.y)
-                                    selectedPointInfo = "$timeString\n$dataSetLabel: $roundedValue"
+                        // Proxy Touch Interceptor
+                        var isScrubbing = false
+                        val nativeTouchListener = onTouchListener
+                        
+                        setOnTouchListener { v, event ->
+                            when (event.actionMasked) {
+                                android.view.MotionEvent.ACTION_DOWN -> {
+                                    val highlights = highlighted
+                                    if (highlights != null && highlights.isNotEmpty()) {
+                                        val h = highlights[0]
+                                        if (Math.abs(event.x - h.drawX) < Utils.convertDpToPixel(40f)) {
+                                            isScrubbing = true
+                                            v.parent?.requestDisallowInterceptTouchEvent(true)
+                                            return@setOnTouchListener true
+                                        }
+                                    }
+                                    lockedXIndex = null
+                                    lockedDataSetSession = null
+                                    highlightValues(null)
+                                    isScrubbing = false
+                                }
+                                android.view.MotionEvent.ACTION_POINTER_DOWN -> {
+                                    if (event.pointerCount >= 2) {
+                                        val xDist = Math.abs(event.getX(0) - event.getX(1))
+                                        val yDist = Math.abs(event.getY(0) - event.getY(1))
+                                        if (xDist > yDist * 1.5f) {
+                                            chart.setPinchZoom(false)
+                                            chart.isScaleXEnabled = true
+                                            chart.isScaleYEnabled = false
+                                        } else {
+                                            chart.setPinchZoom(true)
+                                            chart.isScaleXEnabled = true
+                                            chart.isScaleYEnabled = true
+                                        }
+                                    }
+                                    isScrubbing = false
+                                    return@setOnTouchListener nativeTouchListener?.onTouch(v, event) ?: false
+                                }
+                                android.view.MotionEvent.ACTION_MOVE -> {
+                                    if (isScrubbing && lockedDataSetSession != null) {
+                                        val trans = getTransformer(YAxis.AxisDependency.LEFT)
+                                        val pts = floatArrayOf(event.x, 0f)
+                                        trans.pixelsToValue(pts)
+                                        val targetX = Math.round(pts[0]).toFloat()
+                                        val h = com.github.mikephil.charting.highlight.Highlight(targetX, Float.NaN, lockedDataSetSession!!)
+                                        h.dataIndex = 0 
+                                        highlightValue(h, true)
+                                        return@setOnTouchListener true
+                                    }
+                                }
+                                android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
+                                    if (isScrubbing) {
+                                        isScrubbing = false
+                                        return@setOnTouchListener true
+                                    }
                                 }
                             }
+                            nativeTouchListener?.onTouch(v, event) ?: false
+                        }
 
+                        setOnChartValueSelectedListener(object : com.github.mikephil.charting.listener.OnChartValueSelectedListener {
+                            override fun onValueSelected(e: Entry?, h: Highlight?) {
+                                if (e != null && h != null) {
+                                    lockedXIndex = e.x.toInt()
+                                    if (lockedDataSetSession == null) {
+                                        lockedDataSetSession = h.dataSetIndex
+                                    }
+                                }
+                            }
                             override fun onNothingSelected() {
-                                selectedPointInfo = ""
+                                lockedXIndex = null
+                                lockedDataSetSession = null
                             }
                         })
 
@@ -287,53 +340,75 @@ fun GraphScreenContent(
                             verticalAlignment = Legend.LegendVerticalAlignment.BOTTOM
                             horizontalAlignment = Legend.LegendHorizontalAlignment.LEFT
                             orientation = Legend.LegendOrientation.HORIZONTAL
-                            setDrawInside(true)
+                            setDrawInside(false)
                         }
 
                         axisRight.apply {
-                            setDrawGridLines(true)
-                            setPosition(YAxis.YAxisLabelPosition.INSIDE_CHART)
+                            setDrawGridLines(false) // Phase 12: Grid Alignment
+                            setPosition(YAxis.YAxisLabelPosition.OUTSIDE_CHART)
+                            setDrawLabels(true)
+                            textColor = Color.BLACK
+                            spaceTop = 15f
+                            spaceBottom = 15f
+                            setLabelCount(6, true)
+                            valueFormatter = object : com.github.mikephil.charting.formatter.ValueFormatter() {
+                                override fun getAxisLabel(value: Float, axis: com.github.mikephil.charting.components.AxisBase?): String {
+                                    return String.format(java.util.Locale.getDefault(), "%,.0f", value)
+                                }
+                            }
                         }
                         axisLeft.apply {
-                            setDrawGridLines(false)
-                            setPosition(YAxis.YAxisLabelPosition.INSIDE_CHART)
+                            setDrawGridLines(true)
+                            setPosition(YAxis.YAxisLabelPosition.OUTSIDE_CHART)
+                            textColor = Color.BLACK
+                            spaceTop = 15f
+                            spaceBottom = 15f
+                            setLabelCount(6, true)
+                            valueFormatter = object : com.github.mikephil.charting.formatter.ValueFormatter() {
+                                override fun getAxisLabel(value: Float, axis: com.github.mikephil.charting.components.AxisBase?): String {
+                                    return String.format(java.util.Locale.getDefault(), "%.1f", value)
+                                }
+                            }
                         }
                         xAxis.apply {
-                            position = XAxis.XAxisPosition.BOTTOM_INSIDE
-                            labelRotationAngle = -90f
+                            position = XAxis.XAxisPosition.BOTTOM
+                            labelRotationAngle = 0f
                             textColor = Color.BLACK
-                            yOffset = 70f
-                            setLabelCount(10, false)
+                            setLabelCount(6, false)
                             textSize = 10f
                             setDrawAxisLine(true)
                             setDrawGridLines(true)
-                            setCenterAxisLabels(false)
                             granularity = 1f
-                            valueFormatter = DateAxisValueFormatter(dmdData.timestamps)
+                            isGranularityEnabled = true
+                            valueFormatter = DateAxisValueFormatter(dmdData.timestamps, chart)
                         }
+                        
+                        setXAxisRenderer(MultilineXAxisRenderer(viewPortHandler, xAxis, getTransformer(YAxis.AxisDependency.LEFT)))
                     }
                 },
                 update = { chart ->
-                    if (lastUpdateHash[0] == currentHash) return@AndroidView
-                    lastUpdateHash[0] = currentHash
-
-                    // Připojíme boolean z ViewModelu na nativní vlastnosti grafu
-                    chart.isHighlightPerTapEnabled = state.isHighlightingEnabled
-                    chart.isHighlightPerDragEnabled = state.isHighlightingEnabled
-
-                    // Pokud uživatel zrovna funkci vypnul, okamžitě smažeme kříž i text
-                    if (!state.isHighlightingEnabled) {
+                    if (clearHighlightTrigger != lastClearHighlightTrigger[0]) {
+                        lastClearHighlightTrigger[0] = clearHighlightTrigger
                         chart.highlightValues(null)
-                        selectedPointInfo = ""
+                        lockedXIndex = null
+                        lockedDataSetSession = null
                     }
 
-                    val dataSets = ArrayList<LineDataSet>()
+                    chart.extraBottomOffset = if (chart.visibleXRange <= 500) 80f else 60f
 
+                    val lineDataSets = ArrayList<LineDataSet>()
+                    var currentIdx = 0
                     fun addSet(data: ArrayList<Entry>, type: TPhysValue, visible: Boolean) {
                         if (data.isNotEmpty()) {
                             val set = createLineDataSet(data, type)
                             set.isVisible = visible
-                            dataSets.add(set)
+                            set.isHighlightEnabled = if (lockedDataSetSession != null) {
+                                lockedDataSetSession == currentIdx
+                            } else {
+                                visible
+                            }
+                            lineDataSets.add(set)
+                            currentIdx++
                         }
                     }
 
@@ -343,55 +418,39 @@ fun GraphScreenContent(
                     addSet(dmdData.getHA(), TPhysValue.vHum, state.showGrowth)
 
                     val combinedData = CombinedData()
-                    if (dataSets.isNotEmpty()) {
-                        combinedData.setData(LineData(dataSets.toList()))
+                    if (lineDataSets.isNotEmpty()) {
+                        combinedData.setData(LineData(lineDataSets.toList()))
                         chart.data = combinedData
-
                         chart.notifyDataSetChanged()
                         chart.invalidate()
-                        chart.fitScreen()
-                        updateTimeRange(chart)
+                        if (chart.scaleX <= 1.01f && chart.scaleY <= 1.01f) {
+                            chart.fitScreen()
+                        }
                     } else {
                         chart.clear()
                         chart.invalidate()
                     }
+
+                    chart.isHighlightPerTapEnabled = state.isHighlightingEnabled
+                    if (!state.isHighlightingEnabled) {
+                        lockedXIndex = null
+                        lockedDataSetSession = null
+                        chart.highlightValues(null)
+                    }
                 }
             )
 
-            // VRSTVA PŘEKRYVU 1: Plovoucí titulek grafu
-            if (state.title != "Device:" && state.title.isNotBlank()) {
-                Text(
-                    text = state.title,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = androidx.compose.ui.graphics.Color.DarkGray,
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(8.dp)
-                        .background(
-                            color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.7f),
-                            shape = RoundedCornerShape(4.dp)
-                        )
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                )
-            }
-
-            // VRSTVA PŘEKRYVU 2: Hodnoty z vybraného bodu
-            if (state.isHighlightingEnabled && selectedPointInfo.isNotEmpty()) {
-                Text(
-                    text = selectedPointInfo,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = androidx.compose.ui.graphics.Color.Black,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp)
-                        .background(
-                            color = androidx.compose.ui.graphics.Color.Yellow.copy(alpha = 0.85f),
-                            shape = RoundedCornerShape(4.dp)
-                        )
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Right
+            // Phase 7: Full-Width Yellow HUD
+            if (state.isHighlightingEnabled && lockedXIndex != null) {
+                HUDOverlay(
+                    index = lockedXIndex!!,
+                    dmdData = dmdData,
+                    state = state,
+                    onClose = {
+                        lockedXIndex = null
+                        lockedDataSetSession = null
+                        clearHighlightTrigger++
+                    }
                 )
             }
         }
@@ -399,21 +458,107 @@ fun GraphScreenContent(
 }
 
 @Composable
-fun GraphCheckbox(label: String, isChecked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Checkbox(
-            checked = isChecked,
-            onCheckedChange = onCheckedChange,
-            modifier = Modifier.scale(0.85f)
-        )
-        Text(
-            text = label,
-            fontSize = 13.sp,
-            modifier = Modifier.offset(x = (-6).dp)
-        )
+fun RowScope.TriStateButton(label: String, hasData: Boolean, isShown: Boolean, onClick: (Boolean) -> Unit) {
+    val bgColor = when {
+        !hasData -> androidx.compose.ui.graphics.Color.LightGray
+        isShown -> androidx.compose.ui.graphics.Color(0xFF4CAF50)
+        else -> androidx.compose.ui.graphics.Color(0xFFF44336)
     }
+    val textColor = if (hasData) androidx.compose.ui.graphics.Color.White else androidx.compose.ui.graphics.Color.DarkGray
+    
+    // Improved button look with shadow and slight gradient simulation via surface elevation
+    Surface(
+        modifier = Modifier
+            .weight(1f)
+            .height(36.dp)
+            .shadow(
+                elevation = if (hasData) 4.dp else 0.dp,
+                shape = RoundedCornerShape(8.dp)
+            ),
+        color = bgColor,
+        shape = RoundedCornerShape(8.dp),
+        onClick = { if (hasData) onClick(!isShown) }
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = label,
+                color = textColor,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.ExtraBold
+            )
+        }
+    }
+}
+
+@Composable
+fun HUDOverlay(
+    index: Int,
+    dmdData: DmdViewModel,
+    state: GraphUiState,
+    onClose: () -> Unit
+) {
+    val timeStr = remember(index) {
+        if (index in dmdData.timestamps.indices) {
+            val preciseDateFormat = java.text.SimpleDateFormat("dd.MM.yyyy HH:mm:ss", java.util.Locale.getDefault())
+            preciseDateFormat.format(java.util.Date(dmdData.timestamps[index]))
+        } else ""
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(androidx.compose.ui.graphics.Color(0xD9FFF9C4))
+            .padding(horizontal = 4.dp, vertical = 2.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = timeStr,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = androidx.compose.ui.graphics.Color.Black,
+                modifier = Modifier.weight(1f),
+                textAlign = TextAlign.Center
+            )
+            IconButton(
+                onClick = onClose,
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Close",
+                    tint = androidx.compose.ui.graphics.Color.Black,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            HUDValue(dmdData.getT1(), index, state.showT1)
+            HUDValue(dmdData.getT2(), index, state.showT2)
+            HUDValue(dmdData.getT3(), index, state.showT3)
+            HUDValue(dmdData.getHA(), index, state.showGrowth)
+        }
+    }
+}
+
+@Composable
+fun RowScope.HUDValue(data: ArrayList<Entry>, index: Int, isShown: Boolean) {
+    val entry = if (isShown) data.find { it.x.toInt() == index } else null
+    val text = if (entry != null) String.format(java.util.Locale.US, "%.1f", entry.y) else "--"
+    
+    Text(
+        text = text,
+        modifier = Modifier.weight(1f),
+        textAlign = TextAlign.Center,
+        fontSize = 13.sp,
+        fontWeight = FontWeight.Bold,
+        color = androidx.compose.ui.graphics.Color.Black
+    )
 }
 
 private fun createLineDataSet(entries: ArrayList<Entry>, type: TPhysValue): LineDataSet {
@@ -421,8 +566,7 @@ private fun createLineDataSet(entries: ArrayList<Entry>, type: TPhysValue): Line
     set.setDrawValues(false)
     set.setDrawCircles(false)
     set.mode = LineDataSet.Mode.LINEAR
-    set.setDrawFilled(false)
-    set.lineWidth = 1f
+    set.lineWidth = 2f
 
     val color = when (type) {
         TPhysValue.vT1 -> Color.rgb(20, 83, 45)
@@ -432,15 +576,16 @@ private fun createLineDataSet(entries: ArrayList<Entry>, type: TPhysValue): Line
         else -> Color.GRAY
     }
     set.color = color
-    set.lineWidth = 2f
 
-    // tloustka zamerovaciho krizku
-    set.highlightLineWidth = 4f
-    set.highLightColor = Color.YELLOW
+    // Phase 3: Enhanced Crosshair
+    set.highlightLineWidth = 2f
+    set.highLightColor = Color.BLACK
+    set.enableDashedHighlightLine(15f, 5f, 0f)
+    set.setDrawHorizontalHighlightIndicator(true)
+    set.setDrawVerticalHighlightIndicator(true)
 
     if (type == TPhysValue.vHum || type == TPhysValue.vAD || type == TPhysValue.vMicro) {
         set.axisDependency = YAxis.AxisDependency.RIGHT
-        set.enableDashedLine(20f, 20f, 0f)
     } else {
         set.axisDependency = YAxis.AxisDependency.LEFT
     }
@@ -460,7 +605,7 @@ fun GraphScreenPreview() {
         showT3 = false,
         showGrowth = true,
         dataTimestamp = System.currentTimeMillis(),
-        isHighlightingEnabled = true // Zapnuto pro náhled
+        isHighlightingEnabled = true
     )
 
     val fakeDmd = DmdViewModel(SavedStateHandle()).apply {

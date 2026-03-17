@@ -20,7 +20,8 @@ data class OptionsUiState(
     val exportFolder: String = "",
     val bookmarkVal: String = "",
     val fromDate: String = "",
-    val userEmail: String? = null
+    val userEmail: String? = null,
+    val initialLoadedState: OptionsUiState? = null
 )
 
 class OptionsViewModel : ViewModel() {
@@ -29,5 +30,32 @@ class OptionsViewModel : ViewModel() {
 
     fun updateState(transform: (OptionsUiState) -> OptionsUiState) {
         _uiState.update(transform)
+    }
+
+    fun setInitialState(state: OptionsUiState) {
+        _uiState.update { it.copy(initialLoadedState = state) }
+    }
+
+    fun markSaved() {
+        _uiState.update { it.copy(initialLoadedState = it.copy(initialLoadedState = null)) }
+    }
+
+    fun hasUnsavedChanges(): Boolean {
+        val current = _uiState.value
+        val initial = current.initialLoadedState ?: return false
+        
+        return current.readFrom != initial.readFrom ||
+               current.commandBookmark != initial.commandBookmark ||
+               current.checkboxBookmark != initial.checkboxBookmark ||
+               current.mode != initial.mode ||
+               current.showGraph != initial.showGraph ||
+               current.rotateGraph != initial.rotateGraph ||
+               current.noLedLight != initial.noLedLight ||
+               current.showMicro != initial.showMicro ||
+               current.setTime != initial.setTime ||
+               current.decimalSeparator != initial.decimalSeparator ||
+               current.exportFolder != initial.exportFolder ||
+               current.bookmarkVal != initial.bookmarkVal ||
+               current.fromDate != initial.fromDate
     }
 }
