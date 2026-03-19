@@ -5,6 +5,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -23,11 +24,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -36,12 +41,22 @@ import androidx.compose.ui.unit.sp
 import com.tomst.lolly.fileview.FileDetail
 
 // STATEFUL
+import androidx.compose.material.icons.filled.IosShare
+import androidx.compose.material.icons.filled.Deselect
+import androidx.compose.material.icons.filled.SelectAll
+import androidx.compose.material.icons.filled.Sort
+
+// ... inside the file, I will update FilesScreen and FilesScreenContent parameters and the top bar
+
+import com.tomst.lolly.ui.performLightTick
+import com.tomst.lolly.ui.viewfile.SortOrder
+
 @Composable
 fun FilesScreen(
     viewModel: ListViewModel,
     onGraphClick: (String) -> Unit,
-    onZipLogsClick: () -> Unit,
-    onZipAllClick: () -> Unit,
+    onZipLogsClick: (String) -> Unit,
+    onZipAllClick: (String) -> Unit,
     onSelectFolderClick: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -57,6 +72,15 @@ fun FilesScreen(
         },
         onSelectSingleFile = { path ->
             viewModel.selectSingleFile(path)
+        },
+        onToggleSelectionForDate = { dateStr, isSelected ->
+            viewModel.toggleSelectionForDate(dateStr, isSelected)
+        },
+        onToggleSelectAll = { isSelected ->
+            viewModel.toggleSelectAll(isSelected)
+        },
+        onSortOrderChange = { order ->
+            viewModel.setSortOrder(order)
         }
     )
 }
@@ -66,20 +90,30 @@ fun FilesScreen(
 fun FilesScreenContent(
     state: FilesUiState,
     onGraphClick: (String) -> Unit,
-    onZipLogsClick: () -> Unit,
-    onZipAllClick: () -> Unit,
+    onZipLogsClick: (String) -> Unit,
+    onZipAllClick: (String) -> Unit,
     onSelectFolderClick: () -> Unit,
     onToggleSelection: (String, Boolean) -> Unit,
-    onSelectSingleFile: (String) -> Unit
+    onSelectSingleFile: (String) -> Unit,
+    onToggleSelectionForDate: (String, Boolean) -> Unit,
+    onToggleSelectAll: (Boolean) -> Unit = {},
+    onSortOrderChange: (SortOrder) -> Unit = {}
 ) {
     val selectedFiles = state.files.filter { it.isSelected }
     val hasSelection = selectedFiles.isNotEmpty()
+    val allSelected = state.files.isNotEmpty() && selectedFiles.size == state.files.size
+
+    var showExportDialog by remember { mutableStateOf(false) }
+    var exportNote by remember { mutableStateOf("") }
+    
+    var showLogsDialog by remember { mutableStateOf(false) }
+    var logsNote by remember { mutableStateOf("") }
 
     // Hlavní obal pro umožnění plovoucí lišty
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF5F5F5))
+            .background(MaterialTheme.colorScheme.background)
     ) {
 
         // --- 1. VRSTVA: HLAVNÍ OBSAH (Statistiky + Seznam) ---
@@ -97,62 +131,94 @@ fun FilesScreenContent(
             ) {
                 Row(
                     modifier = Modifier
-                        .padding(start = 2.dp, top = 2.dp, end = 2.dp, bottom = 2.dp)
+                        .padding(start = 8.dp, top = 8.dp, end = 8.dp, bottom = 8.dp)
                         .fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Surface(
                         color = MaterialTheme.colorScheme.primaryContainer,
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.size(40.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        shadowElevation = 4.dp,
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = LocalIndication.current,
+                                onClick = onSelectFolderClick
+                            )
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 Icons.Default.Folder,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                contentDescription = "Změnit složku",
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(28.dp)
                             )
                         }
                     }
 
                     Column(modifier = Modifier
                         .weight(1f)
-                        .padding(start = 4.dp)
+                        .padding(start = 12.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = "Total: ${state.statTotal}",
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.Black
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("|", color = Color.DarkGray)
+                            Text("|", style = MaterialTheme.typography.titleMedium, color = Color.DarkGray)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(text = "T4:${state.statTms4}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
+                            Text(text = "T4:${state.statTms4}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text(text = "T3:${state.statTms3}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = Color(0xFF1B5E20))
+                            Text(text = "T3:${state.statTms3}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = Color(0xFF1B5E20))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text(text = "D:${state.statDendro}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = Color(0xFF795548))
+                            Text(text = "D:${state.statDendro}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = Color(0xFF795548))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text(text = "Th:${state.statThermo}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = Color(0xFF1565C0))
+                            Text(text = "Th:${state.statThermo}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = Color(0xFF1565C0))
                         }
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = state.fullPath,
-                            style = MaterialTheme.typography.labelSmall,
+                            style = MaterialTheme.typography.bodyMedium,
                             color = Color.DarkGray,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
 
-                    IconButton(onClick = onSelectFolderClick) {
-                        Icon(
-                            Icons.Default.Edit,
-                            contentDescription = "Změnit složku",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                    var showSortMenu by remember { mutableStateOf(false) }
+                    Box {
+                        IconButton(onClick = { showSortMenu = true }) {
+                            Icon(
+                                Icons.Default.Sort,
+                                contentDescription = "Sort Files",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showSortMenu,
+                            onDismissRequest = { showSortMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Newest First", fontWeight = if(state.sortOrder == SortOrder.DATE_DESC) FontWeight.Bold else FontWeight.Normal) },
+                                onClick = { onSortOrderChange(SortOrder.DATE_DESC); showSortMenu = false }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Oldest First", fontWeight = if(state.sortOrder == SortOrder.DATE_ASC) FontWeight.Bold else FontWeight.Normal) },
+                                onClick = { onSortOrderChange(SortOrder.DATE_ASC); showSortMenu = false }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Serial (Low to High)", fontWeight = if(state.sortOrder == SortOrder.SERIAL_ASC) FontWeight.Bold else FontWeight.Normal) },
+                                onClick = { onSortOrderChange(SortOrder.SERIAL_ASC); showSortMenu = false }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Serial (High to Low)", fontWeight = if(state.sortOrder == SortOrder.SERIAL_DESC) FontWeight.Bold else FontWeight.Normal) },
+                                onClick = { onSortOrderChange(SortOrder.SERIAL_DESC); showSortMenu = false }
+                            )
+                        }
                     }
                 }
             }
@@ -188,22 +254,47 @@ fun FilesScreenContent(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(top = 4.dp, bottom = 80.dp) // Extra padding for HUD
                     ) {
-                        items(
-                            items = state.files,
-                            key = { file -> file.internalFullName }
-                        ) { file ->
-                            FileRowItem(
-                                file = file,
-                                onToggleSelection = { isSelected ->
-                                    onToggleSelection(file.internalFullName, isSelected)
-                                },
-                                onClick = {
-                                    onSelectSingleFile(file.internalFullName)
-                                },
-                                onDoubleClick = {
-                                    onGraphClick(file.name)
+                        val groupedFiles = if (state.sortOrder == SortOrder.DATE_DESC || state.sortOrder == SortOrder.DATE_ASC) {
+                            state.files.groupBy { it.getFormattedFrom() }
+                        } else {
+                            mapOf("All Files" to state.files)
+                        }
+                        
+                        groupedFiles.forEach { (groupStr, filesInGroup) ->
+                            if (groupStr != "All Files") {
+                                item(key = "header_$groupStr") {
+                                    val allSelected = filesInGroup.isNotEmpty() && filesInGroup.all { it.isSelected }
+                                    DateSeparatorItem(
+                                        dateStr = groupStr,
+                                        isSelected = allSelected,
+                                        onToggle = { isSelected ->
+                                            onToggleSelectionForDate(groupStr, isSelected)
+                                        }
+                                    )
                                 }
-                            )
+                            } else {
+                                item(key = "header_all_files") {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                }
+                            }
+                            
+                            items(
+                                items = filesInGroup,
+                                key = { file -> file.internalFullName }
+                            ) { file ->
+                                FileRowItem(
+                                    file = file,
+                                    onToggleSelection = { isSelected ->
+                                        onToggleSelection(file.internalFullName, isSelected)
+                                    },
+                                    onClick = {
+                                        onSelectSingleFile(file.internalFullName)
+                                    },
+                                    onDoubleClick = {
+                                        onGraphClick(file.name)
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -229,10 +320,19 @@ fun FilesScreenContent(
                         .padding(horizontal = 8.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // Select All Checkbox
+                    Checkbox(
+                        checked = allSelected,
+                        onCheckedChange = { onToggleSelectAll(it) },
+                        colors = CheckboxDefaults.colors(
+                            checkedColor = MaterialTheme.colorScheme.primary,
+                            uncheckedColor = MaterialTheme.colorScheme.outline
+                        )
+                    )
+
                     // Počet vybraných položek
                     Text(
                         text = "Selected: ${selectedFiles.size}",
-                        modifier = Modifier.padding(start = 16.dp),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -250,22 +350,154 @@ fun FilesScreenContent(
                         }
                     )
 
-                    // Akce: ZIP DATA
+                    // Akce: EXPORT DATA
                     ActionButtonWithText(
-                        icon = Icons.Default.Archive,
-                        label = "Data",
-                        onClick = onZipAllClick
+                        icon = Icons.Default.IosShare,
+                        label = "Export",
+                        onClick = { showExportDialog = true }
                     )
 
                     // Akce: ZIP LOGY
                     ActionButtonWithText(
                         icon = Icons.Default.Description,
                         label = "Logs",
-                        onClick = onZipLogsClick
+                        onClick = { showLogsDialog = true }
                     )
                 }
             }
         }
+    }
+
+    if (showExportDialog) {
+        AlertDialog(
+            onDismissRequest = { showExportDialog = false },
+            title = { Text(text = "Export Selected Files", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text(
+                        text = "Add an optional note to the file name:",
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    OutlinedTextField(
+                        value = exportNote,
+                        onValueChange = { exportNote = it },
+                        label = { Text("Note (e.g. site_name)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showExportDialog = false
+                        onZipAllClick(exportNote)
+                        exportNote = "" // reset
+                    }
+                ) {
+                    Text("Export")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showExportDialog = false }
+                ) {
+                    Text("Cancel")
+                }
+            },
+            shape = RoundedCornerShape(16.dp),
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    }
+
+    if (showLogsDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogsDialog = false },
+            title = { Text(text = "Export Logs", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text(
+                        text = "Enter ZIP file name for the logs:",
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    OutlinedTextField(
+                        value = logsNote,
+                        onValueChange = { logsNote = it },
+                        label = { Text("File name") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showLogsDialog = false
+                        val finalName = if (logsNote.isEmpty()) "logs_${System.currentTimeMillis()}.zip" else logsNote
+                        onZipLogsClick(finalName)
+                        logsNote = "" // reset
+                    }
+                ) {
+                    Text("Export Logs")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showLogsDialog = false }
+                ) {
+                    Text("Cancel")
+                }
+            },
+            shape = RoundedCornerShape(16.dp),
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    }
+}
+
+@Composable
+fun DateSeparatorItem(
+    dateStr: String,
+    isSelected: Boolean,
+    onToggle: (Boolean) -> Unit
+) {
+    val haptic = LocalHapticFeedback.current
+    val interactionSource = remember { MutableInteractionSource() }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(
+                interactionSource = interactionSource,
+                indication = LocalIndication.current,
+                onClick = { 
+                    haptic.performLightTick()
+                    onToggle(!isSelected) 
+                }
+            )
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Checkbox(
+            checked = isSelected,
+            onCheckedChange = { 
+                haptic.performLightTick()
+                onToggle(it) 
+            },
+            colors = CheckboxDefaults.colors(
+                checkedColor = MaterialTheme.colorScheme.primary,
+                uncheckedColor = MaterialTheme.colorScheme.outline
+            )
+        )
+        Text(
+            text = dateStr,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        HorizontalDivider(
+            modifier = Modifier.weight(1f),
+            color = MaterialTheme.colorScheme.outlineVariant
+        )
     }
 }
 
@@ -335,11 +567,13 @@ fun FilesScreenPreview() {
         FilesScreenContent(
             state = sampleState,
             onGraphClick = {},
-            onZipLogsClick = {},
-            onZipAllClick = {},
+            onZipLogsClick = { _ -> },
+            onZipAllClick = { _ -> },
             onSelectFolderClick = {},
             onToggleSelection = { _, _ -> },
-            onSelectSingleFile = {}
+            onSelectSingleFile = {},
+            onToggleSelectionForDate = { _, _ -> },
+            onToggleSelectAll = { _ -> }
         )
     }
 }

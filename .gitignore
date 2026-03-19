@@ -13,3 +13,8 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Gemini Context File
+GEMINI.md
+
+.gemini/

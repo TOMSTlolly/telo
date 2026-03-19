@@ -15,6 +15,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import com.tomst.lolly.ui.theme.LollyTheme
 import androidx.core.content.FileProvider
 import androidx.documentfile.provider.DocumentFile
 import androidx.fragment.app.Fragment
@@ -90,7 +91,7 @@ class ListFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                MaterialTheme {
+                LollyTheme {
                     // Zde voláme naši Compose obrazovku
                     FilesScreen(
                         viewModel = viewModel,
@@ -100,11 +101,11 @@ class ListFragment : Fragment() {
                             // Logika pro přepnutí na graf
                             switchToGraphFragment()
                         },
-                        onZipLogsClick = {
-                            showZipDialog()
+                        onZipLogsClick = { fileName ->
+                            zipLogsDirectory(fileName)
                         },
-                        onZipAllClick = {
-                            shareExportedData()
+                        onZipAllClick = { note ->
+                            shareExportedData(note)
                         },
                         onSelectFolderClick = {
                            // Zavoláme veřejnou metodu z LollyActivity
@@ -119,33 +120,13 @@ class ListFragment : Fragment() {
     // --- Původní logika z Javy přepsaná do Kotlinu ---
 
     private fun switchToGraphFragment() {
-        val activity = requireActivity()
-        val bottomNav = activity.findViewById<BottomNavigationView>(R.id.nav_view)
-        bottomNav?.findViewById<View>(R.id.navigation_graph)?.performClick()
-    }
-
-    private fun showZipDialog() {
-        val input = android.widget.EditText(requireContext()).apply {
-            inputType = android.text.InputType.TYPE_CLASS_TEXT
-            setText("logs_${System.currentTimeMillis()}.zip")
-        }
-
-        AlertDialog.Builder(requireContext())
-            .setTitle("Enter ZIP file name")
-            .setView(input)
-            .setPositiveButton("OK") { _, _ ->
-                var zipFileName = input.text.toString().trim()
-                if (zipFileName.isEmpty()) {
-                    Toast.makeText(context, "File name cannot be empty", Toast.LENGTH_SHORT).show()
-                } else {
-                    if (!zipFileName.lowercase().endsWith(".zip")) {
-                        zipFileName += ".zip"
-                    }
-                    zipLogsDirectory(zipFileName)
-                }
-            }
-            .setNegativeButton("Cancel") { dialog, _ -> dialog.cancel() }
-            .show()
+        val navController = androidx.navigation.Navigation.findNavController(requireView())
+        val navOptions = androidx.navigation.NavOptions.Builder()
+            .setPopUpTo(navController.graph.startDestinationId, false, true)
+            .setLaunchSingleTop(true)
+            .setRestoreState(true)
+            .build()
+        navController.navigate(R.id.navigation_graph, null, navOptions)
     }
 
     private fun zipLogsDirectory(zipFileName: String) {
@@ -196,40 +177,50 @@ class ListFragment : Fragment() {
         }
     }
 
-    private fun shareExportedData() {
+    private fun shareExportedData(note: String) {
         val context = context ?: return
-        val sharedPath = LollyActivity.getInstance().prefExportFolder ?: ""
+        val selectedFiles = viewModel.uiState.value.files.filter { it.isSelected }
 
-        // Získání složky
-        val exportFolder = if (sharedPath.startsWith("content")) {
-            DocumentFile.fromTreeUri(context, Uri.parse(sharedPath))
-        } else {
-            DocumentFile.fromFile(File(sharedPath))
-        }
-
-        if (exportFolder == null || !exportFolder.isDirectory) {
-            Toast.makeText(context, "Export folder not found", Toast.LENGTH_SHORT).show()
+        if (selectedFiles.isEmpty()) {
+            Toast.makeText(context, "No files selected to export.", Toast.LENGTH_SHORT).show()
             return
         }
 
-        val sdf = SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.getDefault())
-        val timestamp = sdf.format(Date())
-        val zipFileName = "exported_data_$timestamp.zip"
+        val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val datePart = sdf.format(Date())
+        val timePart = SimpleDateFormat("HHmmss", Locale.getDefault()).format(Date())
+
+        val finalNote = if (note.isEmpty()) timePart else note.trim()
+        val zipFileName = "lolly_export_${datePart}_${selectedFiles.size}_$finalNote.zip"
         val zipFile = File(context.cacheDir, zipFileName)
 
+        // Vytvoříme list DocumentFile
+        val documentFiles = selectedFiles.mapNotNull { fileDetail ->
+            try {
+                DocumentFile.fromSingleUri(context, Uri.parse(fileDetail.internalFullName))
+            } catch (e: Exception) {
+                null
+            }
+        }
+
+        if (documentFiles.isEmpty()) {
+            Toast.makeText(context, "Could not resolve selected files.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         lifecycleScope.launch(Dispatchers.IO) {
-            viewModel.updateInfoText("Zipping all data...")
+            viewModel.updateInfoText("Zipping selected data...")
 
             val zipFiles = ZipFiles()
             val progressListener = com.tomst.lolly.core.OnProListener { progress ->
                 viewModel.updateProgress(progress)
             }
 
-            val success = zipFiles.zipDocumentFileDirectory(exportFolder, zipFile.absolutePath, context, progressListener)
+            val success = zipFiles.zipDocumentFileList(documentFiles, zipFile.absolutePath, context, progressListener)
 
             withContext(Dispatchers.Main) {
                 if (success) {
-                    val emailBody = "Here is the content of my export from the Lolly phone app.\n\n" +
+                    val emailBody = "Here is the exported data from the Lolly phone app.\n\n" +
                             "--- Device Info ---\n${getDeviceDiagnostics()}"
 
                     shareZipFile(
@@ -240,6 +231,7 @@ class ListFragment : Fragment() {
                     viewModel.updateInfoText("Data exported successfully")
                 } else {
                     viewModel.updateInfoText("Export failed")
+                    Toast.makeText(context, "Export failed.", Toast.LENGTH_SHORT).show()
                 }
             }
         }

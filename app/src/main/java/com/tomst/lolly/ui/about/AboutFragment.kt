@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.tomst.lolly.R
+import com.tomst.lolly.ui.theme.LollyTheme
 
 class AboutFragment : Fragment() {
 
@@ -39,7 +40,9 @@ class AboutFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                AboutScreen(onBackClick = { findNavController().popBackStack() })
+                LollyTheme {
+                    AboutScreen(onBackClick = { findNavController().popBackStack() })
+                }
             }
         }
     }
@@ -151,7 +154,7 @@ fun AboutScreen(onBackClick: () -> Unit) {
 @Preview(showBackground = true)
 @Composable
 fun AboutScreenPreview() {
-    MaterialTheme {
+    LollyTheme {
         AboutScreen(onBackClick = {})
     }
 }

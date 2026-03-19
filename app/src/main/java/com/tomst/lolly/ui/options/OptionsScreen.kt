@@ -27,7 +27,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import com.tomst.lolly.R
+
+import kotlinx.coroutines.launch
+import com.tomst.lolly.ui.performLightTick
+import com.tomst.lolly.ui.performSuccessTick
 
 // --- 🎨 PREMIUM PALETTE ---
 private val AppBackground = Color(0xFFF8FAFC)
@@ -84,6 +90,8 @@ fun OptionsScreenContent(
     val scrollState = rememberScrollState()
     val downloadOptions = stringArrayResource(id = R.array.download_array)
     val intervalOptions = stringArrayResource(id = R.array.modes_array)
+    val haptic = LocalHapticFeedback.current
+    val scope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier
@@ -106,7 +114,12 @@ fun OptionsScreenContent(
             )
             
             Button(
-                onClick = onSaveClick,
+                onClick = {
+                    scope.launch {
+                        haptic.performSuccessTick()
+                    }
+                    onSaveClick()
+                },
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (hasUnsavedChanges) UnsavedColor else SavedColor
@@ -496,6 +509,7 @@ private fun OptionSwitch(
     icon: Int? = null,
     customLedLogic: Boolean = false
 ) {
+    val haptic = LocalHapticFeedback.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -542,10 +556,13 @@ private fun OptionSwitch(
         
         Switch(
             checked = checked,
-            onCheckedChange = onCheckedChange,
+            onCheckedChange = { 
+                haptic.performLightTick()
+                onCheckedChange(it) 
+            },
             colors = SwitchDefaults.colors(
                 checkedThumbColor = Color.White,
-                checkedTrackColor = if (customLedLogic) UnsavedColor else SavedColor,
+                checkedTrackColor = SavedColor, // Make it green like the rest
                 uncheckedThumbColor = Color.White,
                 uncheckedTrackColor = DividerColor
             )

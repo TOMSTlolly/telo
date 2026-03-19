@@ -22,6 +22,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import com.tomst.lolly.ui.theme.LollyTheme
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.ViewModelProvider
@@ -242,7 +243,7 @@ class HomeFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                MaterialTheme {
+                LollyTheme {
                     val uiState by homeViewModel.uiState.collectAsState()
                     HomeScreen(
                         state = uiState,
@@ -353,7 +354,12 @@ class HomeFragment : Fragment() {
     }
 
     private fun switchToGraphFragment() {
-        val bottomNav = requireActivity().findViewById<BottomNavigationView>(R.id.nav_view)
-        bottomNav.selectedItemId = R.id.navigation_graph
+        val navController = androidx.navigation.Navigation.findNavController(requireView())
+        val navOptions = androidx.navigation.NavOptions.Builder()
+            .setPopUpTo(navController.graph.startDestinationId, false, true)
+            .setLaunchSingleTop(true)
+            .setRestoreState(true)
+            .build()
+        navController.navigate(R.id.navigation_graph, null, navOptions)
     }
 }

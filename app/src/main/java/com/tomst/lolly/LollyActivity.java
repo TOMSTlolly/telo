@@ -1,5 +1,8 @@
 package com.tomst.lolly;
 
+import androidx.compose.ui.platform.ComposeView;
+import com.tomst.lolly.ui.MainNavigationInterop;
+
 import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
@@ -1471,9 +1474,10 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
         // AppBarConfiguration appBarConfiguration = new AppBarConfiguration.Builder(
         //        R.id.navigation_home, R.id.navigation_graph, R.id.navigation_notifications, R.id.navigation_options)
         //        .build();
+
         navController = Navigation.findNavController(this, R.id.nav_host_fragment_activity_main);
-        // NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
-        NavigationUI.setupWithNavController(binding.navView, navController);
+        ComposeView composeView = binding.navView;
+        MainNavigationInterop.setupBottomNav(composeView, navController);
     }
 
     public void sendMessageToHomeFragment(String message) {
@@ -1487,10 +1491,7 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
     }
 
     private void switchToSettingsFragment() {
-        BottomNavigationView bottomNavigationView;
-        bottomNavigationView = (BottomNavigationView) binding.navView;
-        View view = bottomNavigationView.findViewById(R.id.navigation_options);
-        view.performClick();
+        navController.navigate(R.id.navigation_options);
     }
 
     @Override

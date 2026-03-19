@@ -15,14 +15,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.tomst.lolly.R
 import com.tomst.lolly.core.Constants
 import com.tomst.lolly.fileview.FileDetail
+import com.tomst.lolly.ui.performLightTick
 import java.time.LocalDateTime
 import com.tomst.lolly.core.TDeviceType
 
@@ -34,6 +39,7 @@ fun FileRowItem(
     onClick: () -> Unit = {},
     onDoubleClick: () -> Unit = {}
 ) {
+    val haptic = LocalHapticFeedback.current
     var showDetail by remember { mutableStateOf(false) }
     var lastClickTime by remember { mutableStateOf(0L) }
     val interactionSource = remember { MutableInteractionSource() }
@@ -58,6 +64,7 @@ fun FileRowItem(
             Checkbox(
                 checked = file.isSelected,
                 onCheckedChange = { isChecked ->
+                    haptic.performLightTick()
                     onToggleSelection(isChecked)
                 },
                 colors = CheckboxDefaults.colors(
@@ -74,11 +81,25 @@ fun FileRowItem(
                 contentColor = if (file.isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Outlined.InsertDriveFile,
-                        contentDescription = "File Icon",
-                        modifier = Modifier.size(24.dp)
-                    )
+                    val iconRes = when (file.deviceType) {
+                        TDeviceType.dLolly3, TDeviceType.dLolly4 -> R.drawable.dev_lolly
+                        TDeviceType.dAD, TDeviceType.dAdMicro -> R.drawable.dev_dendro
+                        TDeviceType.dTermoChron -> R.drawable.dev_wurst
+                        else -> null
+                    }
+                    if (iconRes != null) {
+                        Icon(
+                            painter = painterResource(id = iconRes),
+                            contentDescription = "Device Icon",
+                            modifier = Modifier.size(24.dp)
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Outlined.InsertDriveFile,
+                            contentDescription = "File Icon",
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
             }
 
@@ -91,6 +112,7 @@ fun FileRowItem(
                         interactionSource = interactionSource,
                         indication = null
                     ) {
+                        haptic.performLightTick()
                         val currentTime = System.currentTimeMillis()
                         if (currentTime - lastClickTime < 300) {
                             onDoubleClick()
@@ -100,8 +122,10 @@ fun FileRowItem(
                         lastClickTime = currentTime
                     }
             ) {
+                val serialToDisplay = file.serialNumber?.takeIf { it.isNotEmpty() }
+                    ?: com.tomst.lolly.core.shared.getSerialNumberFromFileName(file.name)
                 Text(
-                    text = file.niceName ?: file.name,
+                    text = "$serialToDisplay - ${file.getFullDeviceTypeName()}",
                     style = MaterialTheme.typography.bodyLarge.copy(
                         fontWeight = FontWeight.Bold,
                         letterSpacing = (-0.5).sp
@@ -111,7 +135,7 @@ fun FileRowItem(
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "${file.getDeviceTypeLabel()} • ${file.getFormattedSize()} • ${file.getFormattedCreated()}",
+                    text = "${file.getFormattedInto()} UTC • ${file.getFormattedSize()}",
                     style = MaterialTheme.typography.bodySmall.copy(
                         fontWeight = FontWeight.Medium
                     ),
