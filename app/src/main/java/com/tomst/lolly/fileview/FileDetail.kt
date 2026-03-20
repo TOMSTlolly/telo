@@ -49,6 +49,9 @@ data class FileDetail @JvmOverloads constructor(
     var minHum: Double = 0.0
     var maxHum: Double = 0.0
 
+    // Hole Detection
+    var holeCount: Int = 0
+
     // Další metadata
     @JvmField var iCount: Long = 0
     @JvmField var iFrom: LocalDateTime? = null
@@ -166,6 +169,11 @@ data class FileDetail @JvmOverloads constructor(
         return iInto?.format(fmt) ?: "Unknown Date"
     }
     
+    fun getFormattedIntoDateOnly(): String {
+        val fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+        return iInto?.format(fmt) ?: "Unknown Date"
+    }
+    
     fun getDeviceTimezone(): String {
         // Using UTC as requested for device time basis.
         return "UTC" 
@@ -214,6 +222,7 @@ data class FileDetail @JvmOverloads constructor(
         newObj.maxT3 = this.maxT3
         newObj.minHum = this.minHum
         newObj.maxHum = this.maxHum
+        newObj.holeCount = this.holeCount
 
         // Ostatní
         newObj.iCount = this.iCount

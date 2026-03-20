@@ -1,6 +1,10 @@
 package com.tomst.lolly.ui.options
 
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
+import com.tomst.lolly.R
+import com.tomst.lolly.LollyActivity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -11,7 +15,7 @@ data class OptionsUiState(
     val commandBookmark: String = "",
     val checkboxBookmark: Boolean = false,
     val mode: Int = 0,
-    val showGraph: Boolean = true,
+    val disableAutoGraph: Boolean = true,
     val rotateGraph: Boolean = true,
     val noLedLight: Boolean = true,
     val showMicro: Boolean = true,
@@ -70,7 +74,7 @@ class OptionsViewModel : ViewModel() {
                current.commandBookmark != initial.commandBookmark ||
                current.checkboxBookmark != initial.checkboxBookmark ||
                current.mode != initial.mode ||
-               current.showGraph != initial.showGraph ||
+               current.disableAutoGraph != initial.disableAutoGraph ||
                current.rotateGraph != initial.rotateGraph ||
                current.noLedLight != initial.noLedLight ||
                current.showMicro != initial.showMicro ||
@@ -79,5 +83,74 @@ class OptionsViewModel : ViewModel() {
                current.exportFolder != initial.exportFolder ||
                current.bookmarkVal != initial.bookmarkVal ||
                current.fromDate != initial.fromDate
+    }
+
+    fun saveToDevice(context: Context) {
+        val sharedPref = context.getSharedPreferences(context.getString(R.string.save_options), Context.MODE_PRIVATE)
+        val state = _uiState.value
+
+        with(sharedPref.edit()) {
+            putInt("readFrom", state.readFrom)
+            putString("commandBookmark", state.commandBookmark)
+            putBoolean("checkboxBookmark", state.checkboxBookmark)
+            putInt("mode", state.mode)
+            putBoolean("showgraph", state.disableAutoGraph)
+            putBoolean("rotategraph", state.rotateGraph)
+            putBoolean("noledlight", state.noLedLight)
+            putBoolean("showmicro", state.showMicro)
+            putBoolean("settime", state.setTime)
+            putString("decimalseparator", state.decimalSeparator)
+
+            state.bookmarkVal.toIntOrNull()?.let {
+                putInt("bookmarkVal", it)
+            }
+            putString("fromDate", state.fromDate)
+            apply()
+        }
+        markSaved()
+    }
+
+    fun loadFromDevice(context: Context) {
+        val sharedPref = context.getSharedPreferences(context.getString(R.string.save_options), Context.MODE_PRIVATE)
+
+        val folderUri = sharedPref.getString("prefExportFolder", "") ?: ""
+        val folderName = extractFolderNameFromEncodedUri(folderUri)
+
+        val loadedState = OptionsUiState(
+            readFrom = sharedPref.getInt("readFrom", 0),
+            commandBookmark = sharedPref.getString("commandBookmark", "") ?: "",
+            checkboxBookmark = sharedPref.getBoolean("checkboxBookmark", false),
+            mode = sharedPref.getInt("mode", 0),
+            disableAutoGraph = sharedPref.getBoolean("showgraph", true),
+            rotateGraph = sharedPref.getBoolean("rotategraph", true),
+            noLedLight = sharedPref.getBoolean("noledlight", true),
+            showMicro = sharedPref.getBoolean("showmicro", true),
+            setTime = sharedPref.getBoolean("settime", true),
+            decimalSeparator = sharedPref.getString("decimalseparator", ",") ?: ",",
+            exportFolder = folderName,
+            bookmarkVal = sharedPref.getInt("bookmarkVal", 0).let { v -> if (v == 0) "" else v.toString() },
+            fromDate = sharedPref.getString("fromDate", "") ?: ""
+        )
+        
+        updateState { loadedState }
+        setInitialState(loadedState)
+    }
+
+    fun setPrefExportFolder(folder: String, context: Context) {
+        val sharedPref = context.getSharedPreferences(context.getString(R.string.save_options), Context.MODE_PRIVATE)
+        sharedPref.edit().putString("prefExportFolder", folder).apply()
+
+        val folderName = extractFolderNameFromEncodedUri(folder)
+        updateState { it.copy(exportFolder = folderName) }
+        LollyActivity.getInstance().prefExportFolder = folder
+    }
+
+    private fun extractFolderNameFromEncodedUri(uriPath: String): String {
+        val spath = Uri.decode(uriPath)
+        val pathSeparator = ":"
+        return if (spath.contains(pathSeparator)) {
+            val spathParts = spath.split(pathSeparator)
+            spathParts.last()
+        } else spath
     }
 }

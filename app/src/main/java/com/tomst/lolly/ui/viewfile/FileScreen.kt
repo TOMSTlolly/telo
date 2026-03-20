@@ -52,6 +52,14 @@ import androidx.compose.material.icons.filled.Sort
 import com.tomst.lolly.ui.performLightTick
 import com.tomst.lolly.ui.viewfile.SortOrder
 
+import androidx.compose.runtime.DisposableEffect
+import com.tomst.lolly.core.EventBusMSG
+import org.greenrobot.eventbus.EventBus
+import org.greenrobot.eventbus.Subscribe
+import org.greenrobot.eventbus.ThreadMode
+import android.os.Build
+import androidx.annotation.RequiresApi
+
 @Composable
 fun FilesScreen(
     viewModel: ListViewModel,
@@ -61,6 +69,23 @@ fun FilesScreen(
     onSelectFolderClick: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
+
+    // EventBus Registration for UPDATE_TRACKLIST
+    DisposableEffect(Unit) {
+        val subscriber = object {
+            @RequiresApi(Build.VERSION_CODES.O)
+            @Subscribe(threadMode = ThreadMode.MAIN)
+            fun onMessageEvent(event: Short) {
+                if (event == EventBusMSG.UPDATE_TRACKLIST) {
+                    viewModel.loadFiles()
+                }
+            }
+        }
+        EventBus.getDefault().register(subscriber)
+        onDispose {
+            EventBus.getDefault().unregister(subscriber)
+        }
+    }
 
     FilesScreenContent(
         state = state,
@@ -341,7 +366,7 @@ fun FilesScreenContent(
                         contentPadding = PaddingValues(top = 4.dp, bottom = 80.dp) // Extra padding for HUD
                     ) {
                         val groupedFiles = if (state.sortOrder == SortOrder.DATE_DESC || state.sortOrder == SortOrder.DATE_ASC) {
-                            state.files.groupBy { it.getFormattedFrom() }
+                            state.files.groupBy { it.getFormattedIntoDateOnly() }
                         } else {
                             mapOf("All Files" to state.files)
                         }

@@ -95,6 +95,7 @@ public class CSVReader extends Thread
     //private Handler progressBarHandler = new Handler();  // handler pro vysilani z Threadu
 
     private String FileName="";
+    private int holeCount = 0;
 
     // pozice progressBaru
     public void SetProgressListener(OnProListener AListener){
@@ -137,6 +138,7 @@ public class CSVReader extends Thread
         currDay = 0;
         iline = 0;
         currIx = 1;
+        holeCount = 0;
     }
     // constructor
     public CSVReader(String AFileName)
@@ -358,6 +360,7 @@ public class CSVReader extends Thread
         // rozdil > 1 hod je podezrely
         if (duration.getSeconds() > 60*60) {
             Mer.Err = Constants.PARSER_HOLE_ERR;
+            holeCount++;
         }
     }
 
@@ -553,6 +556,7 @@ public class CSVReader extends Thread
         fileDetail.setMinHum(minHm);
         fileDetail.setDeviceType(Mer.dev);
         fileDetail.setErr(Mer.Err);
+        fileDetail.setHoleCount(holeCount);
 
         det = fileDetail;
         DoFinished();
