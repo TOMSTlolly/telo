@@ -24,16 +24,16 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import com.tomst.lolly.R
 
-data class NavItem(val id: Int, val label: String, val iconRes: Int)
+data class NavItem(val route: String, val label: String, val iconRes: Int)
 
 @Composable
 fun MainBottomNavigation(navController: NavController) {
     val haptic = LocalHapticFeedback.current
-    var currentDestinationId by remember { mutableStateOf(navController.currentDestination?.id) }
+    var currentRoute by remember { mutableStateOf(navController.currentDestination?.route) }
 
     DisposableEffect(navController) {
         val listener = NavController.OnDestinationChangedListener { _, destination, _ ->
-            currentDestinationId = destination.id
+            currentRoute = destination.route
         }
         navController.addOnDestinationChangedListener(listener)
         onDispose {
@@ -47,26 +47,27 @@ fun MainBottomNavigation(navController: NavController) {
         tonalElevation = 3.dp
     ) {
         val items = listOf(
-            NavItem(R.id.navigation_home, "Home", R.drawable.ic_home_black_24dp),
-            NavItem(R.id.navigation_graph, "Graph", R.drawable.baseline_bar_chart_24),
-            NavItem(R.id.navigation_notifications, "File Viewer", R.drawable.baseline_insert_drive_file_24),
-            NavItem(R.id.navigation_options, "Options", R.drawable.baseline_settings_24)
+            NavItem("home", "Home", R.drawable.ic_home_black_24dp),
+            NavItem("graph", "Graph", R.drawable.baseline_bar_chart_24),
+            NavItem("files", "File Viewer", R.drawable.baseline_insert_drive_file_24),
+            NavItem("options", "Options", R.drawable.baseline_settings_24)
         )
 
         items.forEach { item ->
-            val selected = currentDestinationId == item.id
+            val selected = currentRoute == item.route
             NavigationBarItem(
                 selected = selected,
                 alwaysShowLabel = false,
                 onClick = {
                     haptic.performLightTick()
                     if (!selected) {
-                        val navOptions = androidx.navigation.NavOptions.Builder()
-                            .setPopUpTo(navController.graph.startDestinationId, false, true)
-                            .setLaunchSingleTop(true)
-                            .setRestoreState(item.id != R.id.navigation_options) // Don't restore state for Options to ensure it resets
-                            .build()
-                        navController.navigate(item.id, null, navOptions)
+                        navController.navigate(item.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = (item.route != "options") // Don't restore state for Options to ensure it resets
+                        }
                     }
                 },
                 icon = {

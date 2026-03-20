@@ -165,7 +165,8 @@ fun GraphScreenContent(
             TriStateButton(
                 label = "T1",
                 hasData = dmdData.getT1().isNotEmpty(),
-                isShown = state.showT1
+                isShown = state.showT1,
+                activeColor = androidx.compose.ui.graphics.Color(0xFF14532D) // Dark Green
             ) { checked ->
                 onToggleLine(1, checked)
                 if (!checked) {
@@ -176,7 +177,8 @@ fun GraphScreenContent(
             TriStateButton(
                 label = "T2",
                 hasData = dmdData.getT2().isNotEmpty(),
-                isShown = state.showT2
+                isShown = state.showT2,
+                activeColor = androidx.compose.ui.graphics.Color(0xFF064E3B) // Slightly darker green
             ) { checked ->
                 onToggleLine(2, checked)
                 if (!checked) {
@@ -187,7 +189,8 @@ fun GraphScreenContent(
             TriStateButton(
                 label = "T3",
                 hasData = dmdData.getT3().isNotEmpty(),
-                isShown = state.showT3
+                isShown = state.showT3,
+                activeColor = androidx.compose.ui.graphics.Color(0xFF16A34A) // Slightly lighter green
             ) { checked ->
                 onToggleLine(3, checked)
                 if (!checked) {
@@ -198,7 +201,8 @@ fun GraphScreenContent(
             TriStateButton(
                 label = growthLabel,
                 hasData = dmdData.getHA().isNotEmpty(),
-                isShown = state.showGrowth
+                isShown = state.showGrowth,
+                activeColor = androidx.compose.ui.graphics.Color(0xFF1E3A8A) // Darker Blue
             ) { checked ->
                 onToggleLine(4, checked)
                 if (!checked) {
@@ -334,13 +338,7 @@ fun GraphScreenContent(
                         })
 
                         legend.apply {
-                            form = Legend.LegendForm.LINE
-                            textSize = 11f
-                            textColor = Color.BLACK
-                            verticalAlignment = Legend.LegendVerticalAlignment.BOTTOM
-                            horizontalAlignment = Legend.LegendHorizontalAlignment.LEFT
-                            orientation = Legend.LegendOrientation.HORIZONTAL
-                            setDrawInside(false)
+                            isEnabled = false // Phase 13: Remove text legend to maximize graph space
                         }
 
                         axisRight.apply {
@@ -458,11 +456,11 @@ fun GraphScreenContent(
 }
 
 @Composable
-fun RowScope.TriStateButton(label: String, hasData: Boolean, isShown: Boolean, onClick: (Boolean) -> Unit) {
+fun RowScope.TriStateButton(label: String, hasData: Boolean, isShown: Boolean, activeColor: androidx.compose.ui.graphics.Color, onClick: (Boolean) -> Unit) {
     val bgColor = when {
         !hasData -> androidx.compose.ui.graphics.Color.LightGray
-        isShown -> androidx.compose.ui.graphics.Color(0xFF4CAF50)
-        else -> androidx.compose.ui.graphics.Color(0xFFF44336)
+        isShown -> activeColor
+        else -> androidx.compose.ui.graphics.Color(0xFFF44336) // Red if off
     }
     val textColor = if (hasData) androidx.compose.ui.graphics.Color.White else androidx.compose.ui.graphics.Color.DarkGray
     
@@ -569,10 +567,10 @@ private fun createLineDataSet(entries: ArrayList<Entry>, type: TPhysValue): Line
     set.lineWidth = 2f
 
     val color = when (type) {
-        TPhysValue.vT1 -> Color.rgb(20, 83, 45)
-        TPhysValue.vT2 -> Color.rgb(241, 168, 51)
-        TPhysValue.vT3 -> Color.RED
-        TPhysValue.vHum, TPhysValue.vAD, TPhysValue.vMicro -> Color.rgb(0, 197, 255)
+        TPhysValue.vT1 -> Color.rgb(20, 83, 45) // Dark Green
+        TPhysValue.vT2 -> Color.rgb(6, 78, 59) // Slightly darker green
+        TPhysValue.vT3 -> Color.rgb(22, 163, 74) // Slightly lighter green
+        TPhysValue.vHum, TPhysValue.vAD, TPhysValue.vMicro -> Color.rgb(30, 58, 138) // Darker Blue
         else -> Color.GRAY
     }
     set.color = color

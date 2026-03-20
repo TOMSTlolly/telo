@@ -64,7 +64,6 @@ import com.tomst.lolly.core.Constants;
 import com.tomst.lolly.core.DatabaseHandler;
 import com.tomst.lolly.core.FileOpener;
 import com.tomst.lolly.core.TDeviceType;
-import com.tomst.lolly.databinding.ActivityMainBinding;
 import com.tomst.lolly.core.DmdViewModel;
 import com.tomst.lolly.core.LocationExtended;
 import com.tomst.lolly.core.EventBusMSG;
@@ -258,8 +257,7 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
     private boolean prefShowGraph = true;                         // Show the graph in the main activity
     private boolean prefRotateGraph = true;                         // Rotate the graph in the main activity
     private View view;
-    private ActivityMainBinding binding;
-    private NavController navController;
+    // private NavController navController;
     private DmdViewModel dmdViewModel;
     private LollyService lolly;
     private ServiceConnection connection = new ServiceConnection() {
@@ -1366,10 +1364,9 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
         FirebaseApp.initializeApp(this);
         FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(true);
 
-        binding = ActivityMainBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
-        view = binding.getRoot();
-
+        ComposeView composeView = new ComposeView(this);
+        setContentView(composeView);
+        view = composeView;
 
         // remove stupid line on bottom of action bar
         if (getSupportActionBar() != null) {
@@ -1470,14 +1467,7 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
         // sdileny datovy modul
         dmdViewModel = new ViewModelProvider(this).get(DmdViewModel.class);
 
-        //BottomNavigationView navView = findViewById(R.id.nav_view);
-        // AppBarConfiguration appBarConfiguration = new AppBarConfiguration.Builder(
-        //        R.id.navigation_home, R.id.navigation_graph, R.id.navigation_notifications, R.id.navigation_options)
-        //        .build();
-
-        navController = Navigation.findNavController(this, R.id.nav_host_fragment_activity_main);
-        ComposeView composeView = binding.navView;
-        MainNavigationInterop.setupBottomNav(composeView, navController);
+        MainNavigationInterop.setContent((ComposeView) view);
     }
 
     public void sendMessageToHomeFragment(String message) {
@@ -1491,7 +1481,9 @@ public class LollyActivity extends AppCompatActivity implements View.OnClickList
     }
 
     private void switchToSettingsFragment() {
-        navController.navigate(R.id.navigation_options);
+        if (MainNavigationInterop.INSTANCE.getNavigateToOptions() != null) {
+            MainNavigationInterop.INSTANCE.getNavigateToOptions().invoke();
+        }
     }
 
     @Override

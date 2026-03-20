@@ -77,8 +77,12 @@ fun FileRowItem(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(RoundedCornerShape(8.dp)),
-                color = if (file.isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = if (file.isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                color = if (file.isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) 
+                        else if (file.holeCount > 0) Color(0xFFFFF176) // Warning Yellow
+                        else MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = if (file.isSelected) MaterialTheme.colorScheme.primary 
+                               else if (file.holeCount > 0) Color(0xFFE65100) // Deep Orange/Brown
+                               else MaterialTheme.colorScheme.onSurfaceVariant
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     val iconRes = when (file.deviceType) {

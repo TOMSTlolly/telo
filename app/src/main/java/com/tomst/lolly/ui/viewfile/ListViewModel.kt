@@ -29,7 +29,164 @@ import java.time.ZoneId
 import java.util.concurrent.atomic.AtomicInteger
 import com.tomst.lolly.core.TDeviceType
 
+import android.content.Context
+import android.content.Intent
+import android.widget.Toast
+import androidx.core.content.FileProvider
+import com.tomst.lolly.BuildConfig
+import com.tomst.lolly.core.ZipFiles
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
 class ListViewModel(application: Application) : AndroidViewModel(application) {
+
+    fun zipLogsDirectory(zipFileName: String, context: Context) {
+        val cacheDir = context.cacheDir
+        val logsDir = File(cacheDir, "Logs")
+
+        if (!logsDir.exists() || !logsDir.isDirectory ) {
+            Toast.makeText(context, "Logs directory does not exist.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (logsDir.listFiles()?.isEmpty() == true) {
+            Toast.makeText(context, "Logs directory is empty", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val zipFile = File(cacheDir, zipFileName)
+
+        viewModelScope.launch(Dispatchers.IO) {
+            updateInfoText("Zipping logs...")
+
+            val zipFiles = ZipFiles()
+            val progressListener = com.tomst.lolly.core.OnProListener { progress ->
+                updateProgress(progress)
+            }
+
+            val success = zipFiles.zipDirectory(logsDir, zipFile.absolutePath, progressListener)
+
+            withContext(Dispatchers.Main) {
+                if (success) {
+                    val body = getDeviceDiagnostics(context)
+                    shareZipFile(
+                        zipFile,
+                        "Lolly App Logs",
+                        "Attached are the zipped log files from the Lolly phone app.\r\n$body",
+                        context
+                    )
+                    updateInfoText("Logs zipped successfully")
+                } else {
+                    Toast.makeText(context, "Failed to create zip file.", Toast.LENGTH_SHORT).show()
+                    updateInfoText("Failed to zip logs")
+                }
+            }
+        }
+    }
+
+    fun shareExportedData(note: String, context: Context) {
+        val selectedFiles = uiState.value.files.filter { it.isSelected }
+
+        if (selectedFiles.isEmpty()) {
+            Toast.makeText(context, "No files selected to export.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val datePart = sdf.format(Date())
+        val timePart = SimpleDateFormat("HHmmss", Locale.getDefault()).format(Date())
+
+        val finalNote = if (note.isEmpty()) timePart else note.trim()
+        val zipFileName = "lolly_export_${datePart}_${selectedFiles.size}_$finalNote.zip"
+        val zipFile = File(context.cacheDir, zipFileName)
+
+        val documentFiles = selectedFiles.mapNotNull { fileDetail ->
+            try {
+                DocumentFile.fromSingleUri(context, Uri.parse(fileDetail.internalFullName))
+            } catch (e: Exception) {
+                null
+            }
+        }
+
+        if (documentFiles.isEmpty()) {
+            Toast.makeText(context, "Could not resolve selected files.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            updateInfoText("Zipping selected data...")
+
+            val zipFiles = ZipFiles()
+            val progressListener = com.tomst.lolly.core.OnProListener { progress ->
+                updateProgress(progress)
+            }
+
+            val success = zipFiles.zipDocumentFileList(documentFiles, zipFile.absolutePath, context, progressListener)
+
+            withContext(Dispatchers.Main) {
+                if (success) {
+                    val emailBody = "Here is the exported data from the Lolly phone app.\n\n" +
+                            "--- Device Info ---\n${getDeviceDiagnostics(context)}"
+
+                    shareZipFile(
+                        zipFile,
+                        "Lolly App Export - ${Build.MODEL}",
+                        emailBody,
+                        context
+                    )
+                    updateInfoText("Data exported successfully")
+                } else {
+                    updateInfoText("Export failed")
+                    Toast.makeText(context, "Export failed.", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private fun shareZipFile(zipFile: File, subject: String, text: String, context: Context) {
+        if (!zipFile.exists()) {
+            Toast.makeText(context, "File to share not found.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val zipUri = FileProvider.getUriForFile(
+            context,
+            "${BuildConfig.APPLICATION_ID}.provider",
+            zipFile
+        )
+
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "application/zip"
+            putExtra(Intent.EXTRA_EMAIL, arrayOf("krata@tomst.com"))
+            putExtra(Intent.EXTRA_SUBJECT, subject)
+            putExtra(Intent.EXTRA_TEXT, text)
+            putExtra(Intent.EXTRA_STREAM, zipUri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+
+        context.startActivity(Intent.createChooser(shareIntent, "Share ZIP File"))
+    }
+
+    private fun getDeviceDiagnostics(context: Context): String {
+        val sb = StringBuilder()
+        sb.append("App Version: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})\n")
+        sb.append("OS Version: ${System.getProperty("os.version")} (${Build.VERSION.INCREMENTAL})\n")
+        sb.append("OS API Level: ${Build.VERSION.SDK_INT}\n")
+        sb.append("Device: ${Build.DEVICE}\n")
+        sb.append("Model (and Product): ${Build.MODEL} (${Build.PRODUCT})\n")
+
+        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? android.app.ActivityManager
+        if (activityManager != null) {
+            val memInfo = android.app.ActivityManager.MemoryInfo()
+            activityManager.getMemoryInfo(memInfo)
+            sb.append("Total Memory: ${memInfo.totalMem / (1024 * 1024)} MB\n")
+            sb.append("Available Memory: ${memInfo.availMem / (1024 * 1024)} MB\n")
+        }
+
+        sb.append("\nTimestamp: ${Date()}\n")
+        return sb.toString()
+    }
 
     private val db = DatabaseHandler(application)
     private val _uiState = MutableStateFlow(FilesUiState())

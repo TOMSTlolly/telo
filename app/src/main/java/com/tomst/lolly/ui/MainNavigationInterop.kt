@@ -1,16 +1,14 @@
 package com.tomst.lolly.ui
 
 import androidx.compose.ui.platform.ComposeView
-import androidx.navigation.NavController
-import com.tomst.lolly.ui.theme.LollyTheme
 
 object MainNavigationInterop {
+    var navigateToOptions: (() -> Unit)? = null
+
     @JvmStatic
-    fun setupBottomNav(composeView: ComposeView, navController: NavController) {
+    fun setContent(composeView: ComposeView) {
         composeView.setContent {
-            LollyTheme {
-                MainBottomNavigation(navController)
-            }
+            LollyAppRouter()
         }
     }
 }

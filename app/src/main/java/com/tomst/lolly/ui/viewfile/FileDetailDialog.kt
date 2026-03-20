@@ -59,7 +59,7 @@ fun FileDetailDialog(
 
 @Composable
 fun FileDetailContent(file: FileDetail) {
-    if (file.errFlag == Constants.PARSER_OK) {
+    if (file.errFlag == Constants.PARSER_OK || file.errFlag == Constants.PARSER_HOLE_ERR) {
         Surface(
             modifier = Modifier.fillMaxWidth(),
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -90,6 +90,29 @@ fun FileDetailContent(file: FileDetail) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 8.dp)
                 )
+
+                if (file.holeCount > 0) {
+                    val holeText = if (file.holeCount == 1) {
+                        "Detected hole in data longer than 1h"
+                    } else {
+                        "Detected ${file.holeCount} holes in data longer than 1h"
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFFFFF9C4), shape = RoundedCornerShape(8.dp))
+                            .padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Warning, contentDescription = "Warning", tint = Color(0xFFF57F17), modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = holeText,
+                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                            color = Color(0xFFF57F17)
+                        )
+                    }
+                }
             }
         }
     } else {
