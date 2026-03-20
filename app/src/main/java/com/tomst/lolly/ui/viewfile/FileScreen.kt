@@ -366,7 +366,7 @@ fun FilesScreenContent(
                         contentPadding = PaddingValues(top = 4.dp, bottom = 80.dp) // Extra padding for HUD
                     ) {
                         val groupedFiles = if (state.sortOrder == SortOrder.DATE_DESC || state.sortOrder == SortOrder.DATE_ASC) {
-                            state.files.groupBy { it.getFormattedIntoDateOnly() }
+                            state.files.groupBy { it.getFormattedCreatedDateOnly() }
                         } else {
                             mapOf("All Files" to state.files)
                         }

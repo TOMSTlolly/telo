@@ -279,7 +279,7 @@ class ListViewModel(application: Application) : AndroidViewModel(application) {
                     // Společná logika pro oba případy
                     fdet.internalFullName = file.uri.toString()
                     fdet.createdDt = Instant.ofEpochMilli(file.lastModified())
-                        .atZone(ZoneId.systemDefault())
+                        .atZone(ZoneId.of("UTC"))
                         .toLocalDateTime()
 
                     // --- VÝPOČET STATISTIKY (Thread-safe) ---
@@ -344,8 +344,8 @@ class ListViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun sortFiles(files: List<FileDetail>, order: SortOrder): List<FileDetail> {
         return when (order) {
-            SortOrder.DATE_DESC -> files.sortedByDescending { it.iInto }
-            SortOrder.DATE_ASC -> files.sortedBy { it.iInto }
+            SortOrder.DATE_DESC -> files.sortedByDescending { it.createdDt }
+            SortOrder.DATE_ASC -> files.sortedBy { it.createdDt }
             SortOrder.SERIAL_ASC -> files.sortedWith(compareBy<FileDetail> { it.serialNumber?.toLongOrNull() ?: Long.MAX_VALUE }.thenBy { it.name })
             SortOrder.SERIAL_DESC -> files.sortedWith(compareByDescending<FileDetail> { it.serialNumber?.toLongOrNull() ?: Long.MIN_VALUE }.thenByDescending { it.name })
         }
@@ -436,7 +436,7 @@ class ListViewModel(application: Application) : AndroidViewModel(application) {
     fun toggleSelectionForDate(dateStr: String, isSelected: Boolean) {
         _uiState.update { state ->
             val updatedList = state.files.map { file ->
-                val fileDate = file.getFormattedFrom() // Použití Device Time format
+                val fileDate = file.getFormattedCreatedDateOnly() // Použití Creation Time format
                 if (fileDate == dateStr) {
                     file.cloneWithSelection(isSelected)
                 } else {

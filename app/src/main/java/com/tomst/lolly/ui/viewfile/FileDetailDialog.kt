@@ -92,11 +92,7 @@ fun FileDetailContent(file: FileDetail) {
                 )
 
                 if (file.holeCount > 0) {
-                    val holeText = if (file.holeCount == 1) {
-                        "Detected hole in data longer than 1h"
-                    } else {
-                        "Detected ${file.holeCount} holes in data longer than 1h"
-                    }
+                    val holeText = "detected a hole in the data count: ${file.holeCount}"
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
