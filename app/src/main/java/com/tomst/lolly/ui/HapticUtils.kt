@@ -15,3 +15,12 @@ suspend fun HapticFeedback.performSuccessTick() {
     delay(80L)
     this.performLightTick()
 }
+
+// Reusable alerting tick (Warning/Review needed)
+suspend fun HapticFeedback.performWarningTick() {
+    this.performLightTick()
+    delay(60L)
+    this.performLightTick()
+    delay(60L)
+    this.performLightTick()
+}

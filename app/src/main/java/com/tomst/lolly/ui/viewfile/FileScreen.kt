@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Folder
@@ -161,63 +162,148 @@ fun FilesScreenContent(
                         .weight(1f)
                         .padding(start = 12.dp)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = "Total: ${state.statTotal}",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.Black
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("|", style = MaterialTheme.typography.titleMedium, color = Color.DarkGray)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(text = "T4:${state.statTms4}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(text = "T3:${state.statTms3}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = Color(0xFF1B5E20))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(text = "D:${state.statDendro}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = Color(0xFF795548))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(text = "Th:${state.statThermo}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = Color(0xFF1565C0))
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
+                        // Location is now more prominent on top
                         Text(
                             text = state.fullPath,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.DarkGray,
+                            style = MaterialTheme.typography.titleMedium, // Slightly larger for prominence
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
+                        
+                        Spacer(modifier = Modifier.height(2.dp))
+
+                        // Device Stats underneath
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "Total: ${state.statTotal}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.DarkGray
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("|", style = MaterialTheme.typography.bodyMedium, color = Color.LightGray)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = "T4:${state.statTms4}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(text = "T3:${state.statTms3}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = Color(0xFF1B5E20))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(text = "D:${state.statDendro}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = Color(0xFF795548))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(text = "Th:${state.statThermo}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = Color(0xFF1565C0))
+                        }
                     }
 
                     var showSortMenu by remember { mutableStateOf(false) }
                     Box {
-                        IconButton(onClick = { showSortMenu = true }) {
-                            Icon(
-                                Icons.Default.Sort,
-                                contentDescription = "Sort Files",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                        DropdownMenu(
-                            expanded = showSortMenu,
-                            onDismissRequest = { showSortMenu = false }
+                        Surface(
+                            color = MaterialTheme.colorScheme.primaryContainer, // Match Folder button
+                            shape = RoundedCornerShape(12.dp),
+                            shadowElevation = 4.dp, // Match Folder button
+                            modifier = Modifier
+                                .size(48.dp) // Match Folder button
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = LocalIndication.current,
+                                    onClick = { showSortMenu = true }
+                                )
                         ) {
-                            DropdownMenuItem(
-                                text = { Text("Newest First", fontWeight = if(state.sortOrder == SortOrder.DATE_DESC) FontWeight.Bold else FontWeight.Normal) },
-                                onClick = { onSortOrderChange(SortOrder.DATE_DESC); showSortMenu = false }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Oldest First", fontWeight = if(state.sortOrder == SortOrder.DATE_ASC) FontWeight.Bold else FontWeight.Normal) },
-                                onClick = { onSortOrderChange(SortOrder.DATE_ASC); showSortMenu = false }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Serial (Low to High)", fontWeight = if(state.sortOrder == SortOrder.SERIAL_ASC) FontWeight.Bold else FontWeight.Normal) },
-                                onClick = { onSortOrderChange(SortOrder.SERIAL_ASC); showSortMenu = false }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Serial (High to Low)", fontWeight = if(state.sortOrder == SortOrder.SERIAL_DESC) FontWeight.Bold else FontWeight.Normal) },
-                                onClick = { onSortOrderChange(SortOrder.SERIAL_DESC); showSortMenu = false }
-                            )
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Default.Sort,
+                                    contentDescription = "Sort Files",
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer, // Match Folder button
+                                    modifier = Modifier.size(28.dp) // Match Folder button
+                                )
+                            }
+                        }
+
+                        // Override MaterialTheme shapes for this specific dropdown to get rounded corners
+                        MaterialTheme(
+                            shapes = MaterialTheme.shapes.copy(extraSmall = RoundedCornerShape(16.dp))
+                        ) {
+                            DropdownMenu(
+                                expanded = showSortMenu,
+                                onDismissRequest = { showSortMenu = false },
+                                offset = androidx.compose.ui.unit.DpOffset(x = 0.dp, y = 8.dp),
+                                modifier = Modifier
+                                    .background(Color.White)
+                                    .padding(vertical = 4.dp)
+                            ) {
+                                val selectedColor = MaterialTheme.colorScheme.primary
+                                val defaultColor = MaterialTheme.colorScheme.onSurface
+
+                                DropdownMenuItem(
+                                    text = { 
+                                        Text(
+                                            "Newest First", 
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            color = if(state.sortOrder == SortOrder.DATE_DESC) selectedColor else defaultColor,
+                                            fontWeight = if(state.sortOrder == SortOrder.DATE_DESC) FontWeight.Bold else FontWeight.Normal
+                                        ) 
+                                    },
+                                    leadingIcon = { 
+                                        if(state.sortOrder == SortOrder.DATE_DESC) 
+                                            Icon(Icons.Default.Check, null, tint = selectedColor) 
+                                        else 
+                                            Spacer(Modifier.size(24.dp)) 
+                                    },
+                                    onClick = { onSortOrderChange(SortOrder.DATE_DESC); showSortMenu = false }
+                                )
+                                DropdownMenuItem(
+                                    text = { 
+                                        Text(
+                                            "Oldest First", 
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            color = if(state.sortOrder == SortOrder.DATE_ASC) selectedColor else defaultColor,
+                                            fontWeight = if(state.sortOrder == SortOrder.DATE_ASC) FontWeight.Bold else FontWeight.Normal
+                                        ) 
+                                    },
+                                    leadingIcon = { 
+                                        if(state.sortOrder == SortOrder.DATE_ASC) 
+                                            Icon(Icons.Default.Check, null, tint = selectedColor) 
+                                        else 
+                                            Spacer(Modifier.size(24.dp)) 
+                                    },
+                                    onClick = { onSortOrderChange(SortOrder.DATE_ASC); showSortMenu = false }
+                                )
+                                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), color = Color.LightGray.copy(alpha = 0.5f))
+                                DropdownMenuItem(
+                                    text = { 
+                                        Text(
+                                            "Serial (Low to High)", 
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            color = if(state.sortOrder == SortOrder.SERIAL_ASC) selectedColor else defaultColor,
+                                            fontWeight = if(state.sortOrder == SortOrder.SERIAL_ASC) FontWeight.Bold else FontWeight.Normal
+                                        ) 
+                                    },
+                                    leadingIcon = { 
+                                        if(state.sortOrder == SortOrder.SERIAL_ASC) 
+                                            Icon(Icons.Default.Check, null, tint = selectedColor) 
+                                        else 
+                                            Spacer(Modifier.size(24.dp)) 
+                                    },
+                                    onClick = { onSortOrderChange(SortOrder.SERIAL_ASC); showSortMenu = false }
+                                )
+                                DropdownMenuItem(
+                                    text = { 
+                                        Text(
+                                            "Serial (High to Low)", 
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            color = if(state.sortOrder == SortOrder.SERIAL_DESC) selectedColor else defaultColor,
+                                            fontWeight = if(state.sortOrder == SortOrder.SERIAL_DESC) FontWeight.Bold else FontWeight.Normal
+                                        ) 
+                                    },
+                                    leadingIcon = { 
+                                        if(state.sortOrder == SortOrder.SERIAL_DESC) 
+                                            Icon(Icons.Default.Check, null, tint = selectedColor) 
+                                        else 
+                                            Spacer(Modifier.size(24.dp)) 
+                                    },
+                                    onClick = { onSortOrderChange(SortOrder.SERIAL_DESC); showSortMenu = false }
+                                )
+                            }
                         }
                     }
                 }

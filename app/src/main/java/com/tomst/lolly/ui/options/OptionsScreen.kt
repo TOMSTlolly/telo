@@ -34,6 +34,7 @@ import com.tomst.lolly.R
 import kotlinx.coroutines.launch
 import com.tomst.lolly.ui.performLightTick
 import com.tomst.lolly.ui.performSuccessTick
+import com.tomst.lolly.ui.performWarningTick
 
 // --- 🎨 PREMIUM PALETTE ---
 private val AppBackground = Color(0xFFF8FAFC)
@@ -93,6 +94,39 @@ fun OptionsScreenContent(
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
 
+    var showHardwareWarning by remember { mutableStateOf(false) }
+    var hardwareChangesList by remember { mutableStateOf<List<String>>(emptyList()) }
+
+    // Logic to check hardware changes before saving
+    val checkAndSave = {
+        val changes = mutableListOf<String>()
+        val initial = uiState.initialLoadedState
+        if (initial != null) {
+            if (uiState.mode != initial.mode) {
+                val modeName = if (uiState.mode == 0) "Keep current" else intervalOptions.getOrElse(uiState.mode) { "Unknown" }
+                changes.add("Measurement mode set to $modeName")
+            }
+            if (uiState.noLedLight != initial.noLedLight) {
+                changes.add(if (uiState.noLedLight) "LED Disabled" else "LED Enabled")
+            }
+            if (uiState.setTime != initial.setTime) {
+                changes.add(if (uiState.setTime) "Sync with phone time: ON" else "Sync with phone time: OFF")
+            }
+            if (uiState.decimalSeparator != initial.decimalSeparator) {
+                changes.add("Decimal separator set to '${uiState.decimalSeparator}'")
+            }
+        }
+
+        if (changes.isNotEmpty()) {
+            hardwareChangesList = changes
+            scope.launch { haptic.performWarningTick() }
+            showHardwareWarning = true
+        } else {
+            scope.launch { haptic.performSuccessTick() }
+            onSaveClick()
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -114,15 +148,14 @@ fun OptionsScreenContent(
             )
             
             Button(
-                onClick = {
-                    scope.launch {
-                        haptic.performSuccessTick()
-                    }
-                    onSaveClick()
-                },
+                onClick = { checkAndSave() },
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (hasUnsavedChanges) UnsavedColor else SavedColor
+                ),
+                elevation = ButtonDefaults.buttonElevation(
+                    defaultElevation = 4.dp,
+                    pressedElevation = 8.dp
                 ),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
             ) {
@@ -244,7 +277,7 @@ fun OptionsScreenContent(
                                 onDismissRequest = { expanded = false },
                                 modifier = Modifier
                                     .background(SurfaceColor)
-                                    .fillMaxWidth(0.9f) // Slight inset to show the border better
+                                    .fillMaxWidth(0.9f)
                             ) {
                                 Surface(
                                     border = androidx.compose.foundation.BorderStroke(1.dp, DividerColor),
@@ -263,7 +296,6 @@ fun OptionsScreenContent(
                                                             Icon(painterResource(iconId), null, modifier = Modifier.size(28.dp), tint = Color.Unspecified)
                                                             Spacer(Modifier.width(16.dp))
                                                         } else {
-                                                            // Provide spacing even if there's no icon for alignment
                                                             Spacer(Modifier.width(44.dp))
                                                         }
                                                         Text(label, fontSize = 16.sp)
@@ -274,7 +306,6 @@ fun OptionsScreenContent(
                                                     expanded = false
                                                 }
                                             )
-                                            // Add separation between items, except after the last one
                                             if (index < intervalOptions.size - 1) {
                                                 HorizontalDivider(color = DividerColor.copy(alpha = 0.5f))
                                             }
@@ -288,12 +319,11 @@ fun OptionsScreenContent(
 
                         OptionSwitch(
                             label = "Disable LED",
-                            description = "disable LED",
+                            description = if (uiState.noLedLight) "LED disabled" else "LED enabled",
                             checked = uiState.noLedLight,
                             onCheckedChange = { newValue -> onUpdateState { it.copy(noLedLight = newValue) } },
                             customLedLogic = true
-                        )
-                        
+                        )                        
                         OptionSwitch(
                             label = "Sync System Time",
                             description = "Set device time to phone time",
@@ -417,6 +447,52 @@ fun OptionsScreenContent(
             }
         }
     }
+
+    if (showHardwareWarning) {
+        AlertDialog(
+            onDismissRequest = { showHardwareWarning = false },
+            title = { 
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Info, null, tint = UnsavedColor)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Device Settings Modified", fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Column {
+                    Text("The following changes will modify the configuration on your physical device:", modifier = Modifier.padding(bottom = 12.dp))
+                    hardwareChangesList.forEach { change ->
+                        Text("• $change", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    Text("Make sure to check what you changed. Proceed with saving?", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showHardwareWarning = false
+                        scope.launch { haptic.performSuccessTick() }
+                        onSaveClick()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = SavedColor),
+                    elevation = ButtonDefaults.buttonElevation(
+                        defaultElevation = 4.dp,
+                        pressedElevation = 8.dp
+                    )
+                ) {
+                    Text("Yes, Save to Device")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showHardwareWarning = false }) {
+                    Text("Cancel")
+                }
+            },
+            shape = RoundedCornerShape(16.dp),
+            containerColor = Color.White
+        )
+    }
 }
 
 private fun getModeIcon(index: Int): Int? {
@@ -516,17 +592,12 @@ private fun OptionSwitch(
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // LED Icon State
         val iconId = when {
             icon != null -> icon
             customLedLogic -> {
-                // For "Disable LED" option:
-                // checked (true) -> option is ON -> LED is physically OFF -> Gray
-                // not checked (false) -> option is OFF -> LED is physically ON -> Blue
                 if (checked) R.drawable.ic_led_off else R.drawable.ic_led_blue
             }
             else -> {
-                // Default logic: Green when ON, Gray when OFF
                 if (checked) R.drawable.ic_led_on else R.drawable.ic_led_off
             }
         }
@@ -562,7 +633,7 @@ private fun OptionSwitch(
             },
             colors = SwitchDefaults.colors(
                 checkedThumbColor = Color.White,
-                checkedTrackColor = SavedColor, // Make it green like the rest
+                checkedTrackColor = SavedColor,
                 uncheckedThumbColor = Color.White,
                 uncheckedTrackColor = DividerColor
             )

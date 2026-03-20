@@ -42,7 +42,7 @@ fun MainBottomNavigation(navController: NavController) {
     }
 
     NavigationBar(
-        modifier = Modifier.height(72.dp),
+        modifier = Modifier.height(64.dp),
         containerColor = Color.White,
         tonalElevation = 3.dp
     ) {
@@ -62,9 +62,9 @@ fun MainBottomNavigation(navController: NavController) {
                     haptic.performLightTick()
                     if (!selected) {
                         val navOptions = androidx.navigation.NavOptions.Builder()
-                            .setPopUpTo(navController.graph.findStartDestination().id, inclusive = false, saveState = true)
+                            .setPopUpTo(navController.graph.startDestinationId, false, true)
                             .setLaunchSingleTop(true)
-                            .setRestoreState(true)
+                            .setRestoreState(item.id != R.id.navigation_options) // Don't restore state for Options to ensure it resets
                             .build()
                         navController.navigate(item.id, null, navOptions)
                     }
