@@ -159,12 +159,13 @@ class ListViewModel(application: Application) : AndroidViewModel(application) {
 
             // Čekáme na dokončení analýzy všech souborů
             val loadedFiles = deferredResults.awaitAll().filterNotNull()
+            val sortedFiles = sortFiles(loadedFiles, _uiState.value.sortOrder)
 
             // Závěrečná aktualizace po načtení všeho (schováme spinner/progress)
             withContext(Dispatchers.Main) {
                 _uiState.update {
                     it.copy(
-                        files = loadedFiles,
+                        files = sortedFiles,
                         isLoading = false,
                         progress = 0
                     )
@@ -173,6 +174,24 @@ class ListViewModel(application: Application) : AndroidViewModel(application) {
         }
 
 
+    }
+
+    fun setSortOrder(order: SortOrder) {
+        _uiState.update { state ->
+            state.copy(
+                sortOrder = order,
+                files = sortFiles(state.files, order)
+            )
+        }
+    }
+
+    private fun sortFiles(files: List<FileDetail>, order: SortOrder): List<FileDetail> {
+        return when (order) {
+            SortOrder.DATE_DESC -> files.sortedByDescending { it.iInto }
+            SortOrder.DATE_ASC -> files.sortedBy { it.iInto }
+            SortOrder.SERIAL_ASC -> files.sortedWith(compareBy<FileDetail> { it.serialNumber?.toLongOrNull() ?: Long.MAX_VALUE }.thenBy { it.name })
+            SortOrder.SERIAL_DESC -> files.sortedWith(compareByDescending<FileDetail> { it.serialNumber?.toLongOrNull() ?: Long.MIN_VALUE }.thenByDescending { it.name })
+        }
     }
 
     private fun getFolderFromPath(path: String): DocumentFile? {
@@ -253,6 +272,29 @@ class ListViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
             // Uložíme nový seznam do StateFlow -> Compose pozná změnu a překreslí UI
+            state.copy(files = updatedList)
+        }
+    }
+
+    fun toggleSelectionForDate(dateStr: String, isSelected: Boolean) {
+        _uiState.update { state ->
+            val updatedList = state.files.map { file ->
+                val fileDate = file.getFormattedFrom() // Použití Device Time format
+                if (fileDate == dateStr) {
+                    file.cloneWithSelection(isSelected)
+                } else {
+                    file
+                }
+            }
+            state.copy(files = updatedList)
+        }
+    }
+
+    fun toggleSelectAll(isSelected: Boolean) {
+        _uiState.update { state ->
+            val updatedList = state.files.map { file ->
+                file.cloneWithSelection(isSelected)
+            }
             state.copy(files = updatedList)
         }
     }

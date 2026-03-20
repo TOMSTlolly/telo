@@ -125,11 +125,43 @@ public class ZipFiles {
 
 
 
-    /**
-     * This method populates all the files in a directory to a List
-     * @param dir
-     * @throws IOException
-     */
+    public boolean zipDocumentFileList(List<DocumentFile> files, String zipFilePath, Context context, OnProListener listener) {
+        if (files == null || files.isEmpty()) return false;
+
+        try (FileOutputStream fos = new FileOutputStream(zipFilePath);
+             ZipOutputStream zos = new ZipOutputStream(fos)) {
+
+            int filesZipped = 0;
+            int totalFiles = files.size();
+
+            for (DocumentFile file : files) {
+                if (file.isFile()) {
+                    try (ParcelFileDescriptor pfd = context.getContentResolver().openFileDescriptor(file.getUri(), "r");
+                         FileInputStream fis = new FileInputStream(pfd.getFileDescriptor())) {
+
+                        ZipEntry zipEntry = new ZipEntry(file.getName());
+                        zos.putNextEntry(zipEntry);
+
+                        byte[] bytes = new byte[4096];
+                        int length;
+                        while ((length = fis.read(bytes)) >= 0) {
+                            zos.write(bytes, 0, length);
+                        }
+                        zos.closeEntry();
+                    }
+                }
+                filesZipped++;
+                if (listener != null) {
+                    int progress = (int) ((filesZipped / (float) totalFiles) * 100);
+                    listener.OnProEvent(progress);
+                }
+            }
+            return true;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
     private void populateFilesList(File dir) throws IOException {
         File[] files = dir.listFiles();
         for(File file : files){

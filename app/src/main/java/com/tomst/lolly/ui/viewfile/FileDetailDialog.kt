@@ -71,19 +71,25 @@ fun FileDetailContent(file: FileDetail) {
             ) {
                 Row(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.weight(1f)) {
-                        DataLabelValue("From:", file.getFormattedFrom())
+                        DataLabelValue("Data from:", file.getFormattedFrom())
                         DataLabelValue("Records:", file.iCount.toString())
                         DataLabelValue("Min Tx:", file.getDisplayMinTx())
                         DataLabelValue("Min Hum:", file.getDisplayMinHum())
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        DataLabelValue("To:", file.getFormattedInto())
+                        DataLabelValue("Data to:", file.getFormattedInto())
                         DataLabelValue("Size:", file.getFormattedSize())
                         DataLabelValue("Max Tx:", file.getDisplayMaxTx())
                         DataLabelValue("Max Hum:", file.getDisplayMaxHum())
                     }
                 }
+                Text(
+                    text = "Note: The times displayed are device time, not phone time.",
+                    style = MaterialTheme.typography.bodySmall.copy(fontStyle = androidx.compose.ui.text.font.FontStyle.Italic),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
             }
         }
     } else {

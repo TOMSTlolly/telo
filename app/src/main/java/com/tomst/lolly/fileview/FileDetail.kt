@@ -147,14 +147,28 @@ data class FileDetail @JvmOverloads constructor(
         }
     }
 
+    fun getFullDeviceTypeName(): String {
+        return when (deviceType) {
+            TDeviceType.dLolly3, TDeviceType.dLolly4 -> "TMS"
+            TDeviceType.dAD, TDeviceType.dAdMicro -> "Dendrometer"
+            TDeviceType.dTermoChron -> "Thermometer"
+            else -> "Unknown Device"
+        }
+    }
+
     fun getFormattedFrom(): String {
         val fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-        return iFrom?.format(fmt) ?: ""
+        return iFrom?.format(fmt) ?: "Unknown Date"
     }
 
     fun getFormattedInto(): String {
-        val fmt = DateTimeFormatter.ofPattern("yy-MM-dd HH:mm")
-        return iInto?.format(fmt) ?: ""
+        val fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+        return iInto?.format(fmt) ?: "Unknown Date"
+    }
+    
+    fun getDeviceTimezone(): String {
+        // Using UTC as requested for device time basis.
+        return "UTC" 
     }
 
     fun getDisplayMinTx(): String {

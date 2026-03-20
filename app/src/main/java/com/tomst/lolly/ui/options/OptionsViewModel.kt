@@ -37,7 +37,29 @@ class OptionsViewModel : ViewModel() {
     }
 
     fun markSaved() {
-        _uiState.update { it.copy(initialLoadedState = it.copy(initialLoadedState = null)) }
+        _uiState.update { it.copy(initialLoadedState = it) }
+    }
+
+    fun getHardwareChanges(modeOptions: List<String>): List<String> {
+        val current = _uiState.value
+        val initial = current.initialLoadedState ?: return emptyList()
+        val changes = mutableListOf<String>()
+
+        if (current.mode != initial.mode) {
+            val modeName = if (current.mode == 0) "Keep current" else modeOptions.getOrElse(current.mode) { "Unknown" }
+            changes.add("Measurement mode set to $modeName")
+        }
+        if (current.noLedLight != initial.noLedLight) {
+            changes.add(if (current.noLedLight) "LED Disabled" else "LED Enabled")
+        }
+        if (current.setTime != initial.setTime) {
+            changes.add(if (current.setTime) "Sync with phone time: ON" else "Sync with phone time: OFF")
+        }
+        if (current.decimalSeparator != initial.decimalSeparator) {
+            changes.add("Decimal separator set to '${current.decimalSeparator}'")
+        }
+
+        return changes
     }
 
     fun hasUnsavedChanges(): Boolean {

@@ -25,6 +25,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.tomst.lolly.LoginActivity
 import com.tomst.lolly.LollyActivity
 import com.tomst.lolly.R
+import com.tomst.lolly.ui.theme.LollyTheme
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -75,7 +76,8 @@ class OptionsFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                OptionsScreen(
+                LollyTheme {
+                    OptionsScreen(
                     viewModel = viewModel,
                     onSaveClick = {
                         saveOptions()
@@ -113,6 +115,7 @@ class OptionsFragment : Fragment() {
                         findNavController().navigateUp()
                     }
                 )
+                }
             }
         }
     }

@@ -2,6 +2,13 @@ package com.tomst.lolly.ui.viewfile
 
 import com.tomst.lolly.fileview.FileDetail
 
+enum class SortOrder {
+    DATE_DESC, // Newest first
+    DATE_ASC,  // Oldest first
+    SERIAL_ASC, // Smallest number first
+    SERIAL_DESC // Biggest number first
+}
+
 /**
  * Reprezentuje kompletní stav obrazovky (Data Model pro UI).
  * Nahrazuje jednotlivé LiveData (mText, seznamy, progress bary).
@@ -9,6 +16,8 @@ import com.tomst.lolly.fileview.FileDetail
 data class FilesUiState(
     // Seznam načtených souborů
     val files: List<FileDetail> = emptyList(),
+
+    val sortOrder: SortOrder = SortOrder.DATE_DESC,
 
     // Indikátor načítání (pro progress bar/spinner)
     val isLoading: Boolean = false,
