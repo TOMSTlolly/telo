@@ -102,7 +102,12 @@ data class FileDetail @JvmOverloads constructor(
 
     // Metoda pro formátované zobrazení (navíc oproti původní Javě, pro Compose)
     fun getFormattedCreated(): String {
-        val formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")
+        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+        return createdDt?.format(formatter) ?: ""
+    }
+
+    fun getFormattedCreatedDateOnly(): String {
+        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
         return createdDt?.format(formatter) ?: ""
     }
 

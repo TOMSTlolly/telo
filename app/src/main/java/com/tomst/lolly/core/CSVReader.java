@@ -295,14 +295,14 @@ public class CSVReader extends Thread
         //  existuji t2,t3 teplomery
         if ((mer.t2 <-199) && (mer.t3<-199))
         {
-            // wurst nebo dendrometr
-            if (mer.adc>65300)
+            // wurst nebo dendrometr (podle humidity - dendrometr ma > 0, teplomer 0)
+            if (mer.hum > 0)
             {
-                mer.dev = TDeviceType.dTermoChron;
+                mer.dev = TDeviceType.dAD;
             }
             else
             {
-                mer.dev = TDeviceType.dAD;
+                mer.dev = TDeviceType.dTermoChron;
             }
         }
         else
@@ -310,7 +310,7 @@ public class CSVReader extends Thread
             mer.dev = TDeviceType.dLolly4;
         }
 
-        return (mer.dev);
+        return mer.dev;
     }
 
 

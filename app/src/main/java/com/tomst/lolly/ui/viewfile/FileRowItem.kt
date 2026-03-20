@@ -44,7 +44,14 @@ fun FileRowItem(
     var lastClickTime by remember { mutableStateOf(0L) }
     val interactionSource = remember { MutableInteractionSource() }
 
-    val backgroundColor = if (file.isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+    val backgroundColor = if (file.isSelected) {
+        MaterialTheme.colorScheme.primaryContainer
+    } else if (file.holeCount > 0) {
+        Color(0xFFFFF9C4) // Warning Yellow for the entire file row
+    } else {
+        MaterialTheme.colorScheme.surface
+    }
+    
     val contentColor = if (file.isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
 
     ElevatedCard(
@@ -95,7 +102,8 @@ fun FileRowItem(
                         Icon(
                             painter = painterResource(id = iconRes),
                             contentDescription = "Device Icon",
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(24.dp),
+                            tint = Color.Unspecified
                         )
                     } else {
                         Icon(
@@ -139,7 +147,7 @@ fun FileRowItem(
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "${file.getFormattedInto()} UTC • ${file.getFormattedSize()}",
+                    text = "${file.getFormattedCreated()} UTC • ${file.getFormattedSize()}",
                     style = MaterialTheme.typography.bodySmall.copy(
                         fontWeight = FontWeight.Medium
                     ),
