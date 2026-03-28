@@ -18,6 +18,7 @@ import androidx.documentfile.provider.DocumentFile;
 import com.tomst.lolly.LollyActivity;
 
 import java.io.File;
+import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -31,39 +32,71 @@ public class shared {
     public static RFirmware rfir;
 
     @RequiresApi(api = Build.VERSION_CODES.O)
-    public static  String CompileFileName(String Prefix,String Serial, String ADir){
+    public static String CompileFileName(String Prefix, String Serial, String ADir) {
         Context context = LollyActivity.getInstance().getApplicationContext();
-
-        Uri treeUri = Uri.parse(ADir);
-        DocumentFile targetDirectory = DocumentFile.fromTreeUri(context, treeUri);
 
         LocalDateTime now = LocalDateTime.now();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy_MM_dd");
         String timestamp = now.format(formatter);
 
-        // Vytvoření základního názvu, např. "data_92221411_2023_10_26_14_30_05"
-        String baseFileName = Prefix  + Serial + "_" + timestamp;
-
-        int index = 0;
+        // Vytvoření základního názvu, např. "data_92221411_2023_10_26"
+        String baseFileName = Prefix + Serial + "_" + timestamp;
         String finalFileName = baseFileName + ".csv";
-        // Kontrola existence souboru - dokud nachází shodu, zvyšuje index
-        while (targetDirectory.findFile(finalFileName) != null) {
-            index++;
-            finalFileName = baseFileName + "_" + index + ".csv";
-            Log.w("CompileFileName", "File already exists, generating new name: " + finalFileName);
-        }
+        int index = 0;
 
-        DocumentFile newFile = targetDirectory.createFile("text/csv", finalFileName);
+        if (ADir == null || ADir.isEmpty()) {
+            Log.e("CompileFileName", "Directory is empty! Falling back to cache directory.");
+            String cacheDir = LollyActivity.getInstance().getLollyStorageManager().getCacheCsvPath(context);
+            if (cacheDir == null) {
+                cacheDir = context.getCacheDir().getAbsolutePath() + "/Tracks";
+            }
+            File fallbackDir = new File(cacheDir);
+            if (!fallbackDir.exists()) fallbackDir.mkdirs();
 
-        if (newFile != null) {
-            Log.i("CompileFileName", "Successfully created file: " + newFile.getUri().toString());
-            return newFile.getUri().toString();
-        } else {
-            Log.e("CompileFileName", "Failed to create file in the target directory.");
+            File newFile = new File(fallbackDir, finalFileName);
+            while (newFile.exists()) {
+                index++;
+                finalFileName = baseFileName + "_" + index + ".csv";
+                newFile = new File(fallbackDir, finalFileName);
+            }
+            
+            try {
+                if (newFile.createNewFile()) {
+                    return Uri.fromFile(newFile).toString();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             return "";
         }
 
+        try {
+            Uri treeUri = Uri.parse(ADir);
+            DocumentFile targetDirectory = DocumentFile.fromTreeUri(context, treeUri);
+            if (targetDirectory == null) {
+                return "";
+            }
 
+            // Kontrola existence souboru - dokud nachází shodu, zvyšuje index
+            while (targetDirectory.findFile(finalFileName) != null) {
+                index++;
+                finalFileName = baseFileName + "_" + index + ".csv";
+                Log.w("CompileFileName", "File already exists, generating new name: " + finalFileName);
+            }
+
+            DocumentFile newFile = targetDirectory.createFile("text/csv", finalFileName);
+
+            if (newFile != null) {
+                Log.i("CompileFileName", "Successfully created file: " + newFile.getUri().toString());
+                return newFile.getUri().toString();
+            } else {
+                Log.e("CompileFileName", "Failed to create file in the target directory.");
+                return "";
+            }
+        } catch (Exception e) {
+            Log.e("CompileFileName", "Exception while creating file in SAF directory", e);
+            return "";
+        }
     }
 
     /**

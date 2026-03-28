@@ -31,6 +31,7 @@ import com.tomst.lolly.ui.performLightTick
 import java.time.LocalDateTime
 import com.tomst.lolly.core.TDeviceType
 
+@Suppress("DEPRECATION")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FileRowItem(

@@ -892,7 +892,7 @@ public class Track {
      */
     public long getPrefTime() {
         LollyActivity gpsApp = LollyActivity.getInstance();
-        int pTime = gpsApp.getPrefShowTrackStatsType();
+        int pTime = gpsApp.getPrefsManager().getPrefShowTrackStatsType();
         switch (pTime) {
             case 0:         // Total based
                 return duration;
@@ -909,7 +909,7 @@ public class Track {
     public float getPrefSpeedAverage() {
         if (numberOfLocations == 0) return NOT_AVAILABLE;
         LollyActivity gpsApp = LollyActivity.getInstance();
-        int pTime = gpsApp.getPrefShowTrackStatsType();
+        int pTime = gpsApp.getPrefsManager().getPrefShowTrackStatsType();
         switch (pTime) {
             case 0:         // Total based
                 return speedAverage;

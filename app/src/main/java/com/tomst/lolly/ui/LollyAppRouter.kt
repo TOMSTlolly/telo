@@ -44,6 +44,9 @@ fun LollyAppRouter() {
         val graphViewModel: GraphViewModel = viewModel(viewModelStoreOwner = activity)
         val optionsViewModel: OptionsViewModel = viewModel(viewModelStoreOwner = activity)
 
+        // Propagate dmdViewModel to HomeViewModel for real-time graph data populating
+        homeViewModel.dmd = dmdViewModel
+
         // Register router callback for Java Interop
         MainNavigationInterop.navigateToOptions = {
             navController.navigate("options")
@@ -54,7 +57,7 @@ fun LollyAppRouter() {
             val serial = homeViewModel.uiState.value.serialNumber
             if (serial.isNotEmpty()) {
                 graphViewModel.processGraphMessage("TMD $serial", dmdViewModel)
-                if (!optionsViewModel.uiState.value.disableAutoGraph) {
+                if (optionsViewModel.uiState.value.showGraph) {
                     navController.navigate("graph") {
                         popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                         launchSingleTop = true
@@ -124,7 +127,7 @@ fun LollyAppRouter() {
                             listViewModel.shareExportedData(note, activity)
                         },
                         onSelectFolderClick = {
-                            activity.openDirectoryPicker()
+                            (activity as? LollyActivity)?.lollyStorageManager?.openDirectoryPicker()
                         }
                     )
                 }
@@ -135,7 +138,7 @@ fun LollyAppRouter() {
                     OptionsScreen(
                         viewModel = optionsViewModel,
                         onSaveClick = { optionsViewModel.saveToDevice(activity) },
-                        onExportFolderClick = { activity.openDirectoryPicker() },
+                        onExportFolderClick = { (activity as? LollyActivity)?.lollyStorageManager?.openDirectoryPicker() },
                         onPickDateClick = { /* Implement Date Picker */ },
                         onLoginClick = { /* Implement Login */ },
                         onLogoutClick = { /* Implement Logout */ },

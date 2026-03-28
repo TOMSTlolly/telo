@@ -112,6 +112,7 @@ fun FilesScreen(
 }
 
 // STATELESS (Design)
+@Suppress("DEPRECATION")
 @Composable
 fun FilesScreenContent(
     state: FilesUiState,

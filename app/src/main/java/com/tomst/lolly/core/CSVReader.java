@@ -574,7 +574,7 @@ public class CSVReader extends Thread
 
         CSVReader.context = LollyActivity.getInstance().getApplicationContext();
 
-        String ADir = LollyActivity.getInstance().getPrefExportFolder();
+        String ADir = LollyActivity.getInstance().getPrefsManager().getPrefExportFolder();
         DocumentFile exportDir = DocumentFile.fromTreeUri(CSVReader.context, Uri.parse(ADir));
         if (exportDir == null) return;
 

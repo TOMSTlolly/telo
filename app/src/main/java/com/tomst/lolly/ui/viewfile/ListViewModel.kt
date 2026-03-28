@@ -205,7 +205,7 @@ class ListViewModel(application: Application) : AndroidViewModel(application) {
     @RequiresApi(Build.VERSION_CODES.O)
     fun loadFiles() {
         viewModelScope.launch(Dispatchers.IO) {
-            val sharedPath = LollyActivity.getInstance().getPrefExportFolder() ?: ""
+            val sharedPath = LollyActivity.instance?.prefsManager?.prefExportFolder ?: ""
             val folderDisplay = shared.extractFolderNameFromEncodedUri(sharedPath)
             val humanReadablePath = getHumanReadablePath(sharedPath)
 

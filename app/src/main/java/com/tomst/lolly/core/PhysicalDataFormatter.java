@@ -67,7 +67,7 @@ public class PhysicalDataFormatter {
 
             switch (format) {
                 case FORMAT_SPEED:  // Speed
-                    switch (gpsApp.getPrefUMOfSpeed()) {
+                    switch (gpsApp.getPrefsManager().getPrefUMOfSpeed()) {
                         case UM_SPEED_KMH:
                             physicalData.value = String.valueOf(Math.round(number * MS_TO_KMH));
                             physicalData.um = gpsApp.getString(R.string.UM_km_h);
@@ -91,7 +91,7 @@ public class PhysicalDataFormatter {
                     }
 
                 case FORMAT_SPEED_AVG:  // Average Speed, formatted with 1 decimal
-                    switch (gpsApp.getPrefUMOfSpeed()) {
+                    switch (gpsApp.getPrefsManager().getPrefUMOfSpeed()) {
                         case UM_SPEED_KMH:
                             physicalData.value = String.format(Locale.getDefault(), "%.1f", (number * MS_TO_KMH));
                             physicalData.um = gpsApp.getString(R.string.UM_km_h);
@@ -115,9 +115,9 @@ public class PhysicalDataFormatter {
                     }
 
                 case FORMAT_ACCURACY:   // Accuracy
-                    switch (gpsApp.getPrefUM()) {
+                    switch (gpsApp.getPrefsManager().getPrefUM()) {
                         case UM_METRIC:
-                            if (LollyActivity.getInstance().isAccuracyDecimal()) {
+                            if (LollyActivity.getInstance().getTrackRecordingManager().isAccuracyDecimal()) {
                                 if (Math.round(number) >= 10)
                                     physicalData.value = String.valueOf(Math.round(number));
                                 else if (Math.round(number * 10) >= 10)
@@ -131,7 +131,7 @@ public class PhysicalDataFormatter {
                             return(physicalData);
                         case UM_IMPERIAL:
                         case UM_NAUTICAL:
-                            if (LollyActivity.getInstance().isAccuracyDecimal()) {
+                            if (LollyActivity.getInstance().getTrackRecordingManager().isAccuracyDecimal()) {
                                 if (Math.round(number * M_TO_FT) >= 10)
                                     physicalData.value = String.valueOf(Math.round(number * M_TO_FT));
                                 else if (Math.round(number * M_TO_FT * 10) >= 10)
@@ -146,7 +146,7 @@ public class PhysicalDataFormatter {
                     }
 
                 case FORMAT_BEARING:    // Bearing (Direction)
-                    switch (gpsApp.getPrefShowDirections()) {
+                    switch (gpsApp.getPrefsManager().getPrefShowDirections()) {
                         case 0:         // NSWE
                             int dr = (int) Math.round(number / 22.5);
                             switch (dr) {
@@ -174,7 +174,7 @@ public class PhysicalDataFormatter {
                     }
 
                 case FORMAT_DISTANCE:   // Distance
-                    switch (gpsApp.getPrefUM()) {
+                    switch (gpsApp.getPrefsManager().getPrefUM()) {
                         case UM_METRIC:
                             if (number < 1000) {
                                 physicalData.value = String.format(Locale.getDefault(), "%.0f", (Math.floor(number)));
@@ -223,20 +223,20 @@ public class PhysicalDataFormatter {
 
             switch (format) {
                 case FORMAT_LATITUDE:   // Latitude
-                    physicalData.value = gpsApp.getPrefShowDecimalCoordinates() ?
+                    physicalData.value = gpsApp.getPrefsManager().getPrefShowDecimalCoordinates() ?
                             String.format(Locale.getDefault(), "%.9f", Math.abs(number)) :
                             Location.convert(Math.abs(number), Location.FORMAT_SECONDS).replaceFirst(":", "°").replaceFirst(":", "' ").concat("\"");
                     physicalData.um = number >= 0 ? gpsApp.getString(R.string.north) : gpsApp.getString(R.string.south);
                     return(physicalData);
                 case FORMAT_LONGITUDE:  // Longitude
-                    physicalData.value = gpsApp.getPrefShowDecimalCoordinates() ?
+                    physicalData.value = gpsApp.getPrefsManager().getPrefShowDecimalCoordinates() ?
                             String.format(Locale.getDefault(), "%.9f", Math.abs(number)) :
                             Location.convert(Math.abs(number), Location.FORMAT_SECONDS).replaceFirst(":", "°").replaceFirst(":", "' ").concat("\"");
                     physicalData.um = number >= 0 ?
                             gpsApp.getString(R.string.east) : gpsApp.getString(R.string.west);
                     return(physicalData);
                 case FORMAT_ALTITUDE:   // Altitude
-                    switch (gpsApp.getPrefUM()) {
+                    switch (gpsApp.getPrefsManager().getPrefUM()) {
                         case UM_METRIC:
                             physicalData.value = String.valueOf(Math.round(number));
                             physicalData.um = gpsApp.getString(R.string.UM_m);
@@ -285,7 +285,7 @@ public class PhysicalDataFormatter {
                     physicalData.value = hours.equals("00") ? minutes + ":" + seconds : hours + ":" + minutes + ":" + seconds;
                     return(physicalData);
                 case FORMAT_TIME:   // Timestamps
-                    if (gpsApp.getPrefShowLocalTime()) {
+                    if (gpsApp.getPrefsManager().getPrefShowLocalTime()) {
                         SimpleDateFormat dfdTime = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());        // date and time formatter
                         SimpleDateFormat dfdTimeZone = new SimpleDateFormat("ZZZZZ", Locale.getDefault());       // timezone formatter
                         physicalData.value = dfdTime.format(number);

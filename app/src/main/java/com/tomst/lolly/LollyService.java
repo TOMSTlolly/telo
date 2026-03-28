@@ -121,7 +121,7 @@ public class LollyService extends Service {
                 Log.w("lollyService", "[#] LollyService.java - handleMessage " + msg.arg1);
 
                 ftTMS.Enable(true);
-                if (!ftTMS.started)
+                if (!ftTMS.getStarted())
                    ftTMS.start();
 
                 Thread.sleep(500);
@@ -242,7 +242,7 @@ public class LollyService extends Service {
         builder = new NotificationCompat.Builder(this, CHANNEL_ID);
         builder.setSmallIcon(R.drawable.ic_launcher_foreground)
        // builder.setSmallIcon(recordingState ? R.mipmap.ic_notify_recording_24dp : R.mipmap.ic_notify_24dp)
-                .setColor(getResources().getColor(R.color.colorPrimaryLight))
+                .setColor(ContextCompat.getColor(this, R.color.colorPrimaryLight))
                 .setContentTitle(getString(R.string.app_name))
                 .setShowWhen(false)
                 .setPriority(NotificationCompat.PRIORITY_LOW)
@@ -264,7 +264,7 @@ public class LollyService extends Service {
      * @return true if the icon should be the filled one, indicating that the app is recording.
      */
     private boolean isIconRecording () {
-        return ((LollyActivity.getInstance().getGPSStatus() == LollyActivity.GPS_OK) && LollyActivity.getInstance().isRecording());
+        return ((LollyActivity.getInstance().getTrackRecordingManager().getGpsStatus() == LollyActivity.GPS_OK) && LollyActivity.getInstance().getTrackRecordingManager().isRecording());
     }
 
 
@@ -274,7 +274,7 @@ public class LollyService extends Service {
      */
     private String composeContentText () {
         String notificationText = "";
-        int gpsStatus = LollyActivity.getInstance().getGPSStatus();
+        int gpsStatus = LollyActivity.getInstance().getTrackRecordingManager().getGpsStatus();
         switch (gpsStatus) {
             case LollyActivity.GPS_DISABLED:
                 notificationText = getString(R.string.gps_disabled);
@@ -290,18 +290,18 @@ public class LollyService extends Service {
                 notificationText = getString(R.string.gps_stabilizing);
                 break;
             case LollyActivity.GPS_OK:
-                if (LollyActivity.getInstance().isRecording() && (LollyActivity.getInstance().getCurrentTrack() != null)) {
+                if (LollyActivity.getInstance().getTrackRecordingManager().isRecording() && (LollyActivity.getInstance().getTrackRecordingManager().getCurrentTrack() != null)) {
                     PhysicalDataFormatter phdformatter = new PhysicalDataFormatter();
                     PhysicalData phdDuration;
                     PhysicalData phdDistance;
 
                     // Duration
-                    phdDuration = phdformatter.format(LollyActivity.getInstance().getCurrentTrack().getPrefTime(), PhysicalDataFormatter.FORMAT_DURATION);
+                    phdDuration = phdformatter.format(LollyActivity.getInstance().getTrackRecordingManager().getCurrentTrack().getPrefTime(), PhysicalDataFormatter.FORMAT_DURATION);
                     if (phdDuration.value.isEmpty()) phdDuration.value = "00:00";
                     notificationText = getString(R.string.duration) + ": " + phdDuration.value;
 
                     // Distance (if available)
-                    phdDistance = phdformatter.format(LollyActivity.getInstance().getCurrentTrack().getEstimatedDistance(), PhysicalDataFormatter.FORMAT_DISTANCE);
+                    phdDistance = phdformatter.format(LollyActivity.getInstance().getTrackRecordingManager().getCurrentTrack().getEstimatedDistance(), PhysicalDataFormatter.FORMAT_DISTANCE);
                     if (!phdDistance.value.isEmpty()) {
                         notificationText += " - " + getString(R.string.distance) + ": " + phdDistance.value + " " + phdDistance.um;
                     }

@@ -339,10 +339,10 @@ fun OptionsScreenContent(
                 OptionsCard {
                     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         OptionSwitch(
-                            label = "Disable Auto-Open Graph",
-                            description = "Don't automatically show graph after reading",
-                            checked = uiState.disableAutoGraph,
-                            onCheckedChange = { newValue -> onUpdateState { it.copy(disableAutoGraph = newValue) } }
+                            label = "Auto-Open Graph",
+                            description = "Automatically show graph after reading",
+                            checked = uiState.showGraph,
+                            onCheckedChange = { newValue -> onUpdateState { it.copy(showGraph = newValue) } }
                         )
 
                         OptionSwitch(
@@ -650,7 +650,7 @@ fun OptionsScreenPreview() {
                 readFrom = 0,
                 mode = 1,
                 exportFolder = "/storage/emulated/0/Lolly",
-                disableAutoGraph = false,
+                showGraph = false,
                 rotateGraph = false,
                 noLedLight = false,
                 showMicro = false,

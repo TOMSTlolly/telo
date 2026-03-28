@@ -96,6 +96,8 @@ fun GraphScreenContent(
     var lockedXIndex by remember { mutableStateOf<Int?>(null) }
     // Phase 8: Strict Session Locking
     var lockedDataSetSession by remember { mutableStateOf<Int?>(null) }
+    // Odkaz na graf pro manuální vyhledávání extrémů
+    var chartRef by remember { mutableStateOf<CombinedChart?>(null) }
 
     val dateFormat = remember { java.text.SimpleDateFormat("dd.MM.yyyy HH:mm", java.util.Locale.getDefault()) }
     
@@ -305,7 +307,46 @@ fun GraphScreenContent(
                                         val trans = getTransformer(YAxis.AxisDependency.LEFT)
                                         val pts = floatArrayOf(event.x, 0f)
                                         trans.pixelsToValue(pts)
-                                        val targetX = Math.round(pts[0]).toFloat()
+                                        var targetX = Math.round(pts[0]).toFloat()
+
+                                        // Sticky Extrema Logic
+                                        val lineData = chart.data?.lineData
+                                        if (lineData != null) {
+                                            val dataSet = lineData.getDataSetByIndex(lockedDataSetSession!!)
+                                            if (dataSet != null) {
+                                                // Nízký fixní radius pro okamžitou odezvu bez zamrzání
+                                                val radius = 5
+                                                
+                                                val targetIdx = targetX.toInt()
+                                                var bestIdx = targetIdx
+                                                var highestScore = -1f
+
+                                                val startIdx = Math.max(1, targetIdx - radius)
+                                                val endIdx = Math.min(dataSet.entryCount - 2, targetIdx + radius)
+
+                                                for (i in startIdx..endIdx) {
+                                                    val yPrev = dataSet.getEntryForIndex(i - 1).y
+                                                    val yCurr = dataSet.getEntryForIndex(i).y
+                                                    val yNext = dataSet.getEntryForIndex(i + 1).y
+
+                                                    val isMax = yCurr >= yPrev && yCurr >= yNext && (yCurr > yPrev || yCurr > yNext)
+                                                    val isMin = yCurr <= yPrev && yCurr <= yNext && (yCurr < yPrev || yCurr < yNext)
+
+                                                    if (isMax || isMin) {
+                                                        val dist = Math.abs(i - targetIdx)
+                                                        val magnitude = Math.abs(yCurr - yPrev) + Math.abs(yCurr - yNext)
+                                                        val score = magnitude - (dist * 0.001f)
+                                                        
+                                                        if (score > highestScore) {
+                                                            highestScore = score
+                                                            bestIdx = i
+                                                        }
+                                                    }
+                                                }
+                                                targetX = bestIdx.toFloat()
+                                            }
+                                        }
+
                                         val h = com.github.mikephil.charting.highlight.Highlight(targetX, Float.NaN, lockedDataSetSession!!)
                                         h.dataIndex = 0 
                                         highlightValue(h, true)
@@ -434,6 +475,10 @@ fun GraphScreenContent(
                         lockedXIndex = null
                         lockedDataSetSession = null
                         chart.highlightValues(null)
+                    } else if (lockedXIndex != null && lockedDataSetSession != null) {
+                        val h = Highlight(lockedXIndex!!.toFloat(), Float.NaN, lockedDataSetSession!!)
+                        h.dataIndex = 0
+                        chart.highlightValue(h, false)
                     }
                 }
             )
@@ -448,6 +493,98 @@ fun GraphScreenContent(
                         lockedXIndex = null
                         lockedDataSetSession = null
                         clearHighlightTrigger++
+                    },
+                    onSeekToMin = {
+                        val chart = chartRef ?: return@HUDOverlay
+                        val lineData = chart.data?.lineData ?: return@HUDOverlay
+                        val session = lockedDataSetSession ?: return@HUDOverlay
+                        val dataSet = lineData.getDataSetByIndex(session) ?: return@HUDOverlay
+
+                        val currentX = lockedXIndex!!.toFloat()
+                        val currentEntryIdx = dataSet.getEntryIndex(currentX, Float.NaN, com.github.mikephil.charting.data.DataSet.Rounding.CLOSEST)
+
+                        var foundX: Float? = null
+                        // Dynamické okno podle přiblížení - hledá "makro" propady, ignoruje mikro-šum
+                        val W = Math.max(10, (chart.visibleXRange * 0.05f).toInt())
+
+                        val startI = Math.min(dataSet.entryCount - 1, currentEntryIdx + 1)
+                        for (i in startI until dataSet.entryCount) {
+                            val yCurr = dataSet.getEntryForIndex(i).y
+                            var isValley = true
+
+                            val checkStart = Math.max(0, i - W)
+                            val checkEnd = Math.min(dataSet.entryCount - 1, i + W)
+
+                            for (j in checkStart..checkEnd) {
+                                if (j == i) continue
+                                if (dataSet.getEntryForIndex(j).y < yCurr) {
+                                    isValley = false
+                                    break
+                                }
+                            }
+
+                            if (isValley && i > currentEntryIdx + W / 2) {
+                                foundX = dataSet.getEntryForIndex(i).x
+                                break
+                            }
+                        }
+
+                        if (foundX != null) {
+                            val h = Highlight(foundX, Float.NaN, session)
+                            h.dataIndex = 0
+                            chart.highlightValue(h, true)
+                            lockedXIndex = foundX.toInt()
+                            // Pokud bod vyskočí ze zorného pole, posuneme kameru
+                            if (foundX > chart.highestVisibleX || foundX < chart.lowestVisibleX) {
+                                chart.moveViewToX(foundX - chart.visibleXRange / 2f)
+                            }
+                        }
+                    },
+                    onSeekToMax = {
+                        val chart = chartRef ?: return@HUDOverlay
+                        val lineData = chart.data?.lineData ?: return@HUDOverlay
+                        val session = lockedDataSetSession ?: return@HUDOverlay
+                        val dataSet = lineData.getDataSetByIndex(session) ?: return@HUDOverlay
+
+                        val currentX = lockedXIndex!!.toFloat()
+                        val currentEntryIdx = dataSet.getEntryIndex(currentX, Float.NaN, com.github.mikephil.charting.data.DataSet.Rounding.CLOSEST)
+
+                        var foundX: Float? = null
+                        // Dynamické okno pro ignorování šumu
+                        val W = Math.max(10, (chart.visibleXRange * 0.05f).toInt())
+
+                        val startI = Math.min(dataSet.entryCount - 1, currentEntryIdx + 1)
+                        for (i in startI until dataSet.entryCount) {
+                            val yCurr = dataSet.getEntryForIndex(i).y
+                            var isPeak = true
+
+                            val checkStart = Math.max(0, i - W)
+                            val checkEnd = Math.min(dataSet.entryCount - 1, i + W)
+
+                            for (j in checkStart..checkEnd) {
+                                if (j == i) continue
+                                if (dataSet.getEntryForIndex(j).y > yCurr) {
+                                    isPeak = false
+                                    break
+                                }
+                            }
+
+                            if (isPeak && i > currentEntryIdx + W / 2) {
+                                foundX = dataSet.getEntryForIndex(i).x
+                                break
+                            }
+                        }
+
+                        if (foundX != null) {
+                            val h = Highlight(foundX, Float.NaN, session)
+                            h.dataIndex = 0
+                            chart.highlightValue(h, true)
+                            lockedXIndex = foundX.toInt()
+                            // Pokud bod vyskočí ze zorného pole, posuneme kameru
+                            if (foundX > chart.highestVisibleX || foundX < chart.lowestVisibleX) {
+                                chart.moveViewToX(foundX - chart.visibleXRange / 2f)
+                            }
+                        }
                     }
                 )
             }
@@ -493,7 +630,9 @@ fun HUDOverlay(
     index: Int,
     dmdData: DmdViewModel,
     state: GraphUiState,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    onSeekToMin: () -> Unit = {},
+    onSeekToMax: () -> Unit = {}
 ) {
     val timeStr = remember(index) {
         if (index in dmdData.timestamps.indices) {
@@ -520,6 +659,27 @@ fun HUDOverlay(
                 modifier = Modifier.weight(1f),
                 textAlign = TextAlign.Center
             )
+            
+            // Jasná navigační tlačítka pro hledání extrémů
+            Button(
+                onClick = onSeekToMin,
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = androidx.compose.ui.graphics.Color(0xFF3B82F6)), // Výrazná modrá
+                shape = RoundedCornerShape(4.dp),
+                modifier = Modifier.height(28.dp).padding(end = 4.dp)
+            ) {
+                Text("▼ Seek Min", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = androidx.compose.ui.graphics.Color.White)
+            }
+            Button(
+                onClick = onSeekToMax,
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = androidx.compose.ui.graphics.Color(0xFFEF4444)), // Výrazná červená
+                shape = RoundedCornerShape(4.dp),
+                modifier = Modifier.height(28.dp).padding(end = 8.dp)
+            ) {
+                Text("▲ Seek Max", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = androidx.compose.ui.graphics.Color.White)
+            }
+
             IconButton(
                 onClick = onClose,
                 modifier = Modifier.size(24.dp)

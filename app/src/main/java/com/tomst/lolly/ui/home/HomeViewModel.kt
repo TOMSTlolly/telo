@@ -147,14 +147,14 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 TDevState.tSerial -> {
                     val serialNumber = info.msg
                     updateSerialNumber(info.msg)
-                    LollyActivity.getInstance().serialNumber = serialNumber
+                    LollyActivity.serialNumber = serialNumber
                     dmd?.ClearMereni() // Ensure old graph data is wiped before new data streams in
-                    val trackDir = LollyActivity.getInstance().prefExportFolder
+                    val trackDir = LollyActivity.instance?.prefsManager?.prefExportFolder ?: ""
                     val csvFileName = shared.CompileFileName("data_", serialNumber, trackDir)
                     csv = CSVReader(csvFileName)
                     csv?.OpenForWrite(csvFileName)
-                    ALogFileName = LollyActivity.getInstance().cacheLogPath + "/command_" + shared.aft(csvFileName, "data_")
-                    AErrFileName = LollyActivity.getInstance().cacheLogPath + "/err_" + shared.aft(csvFileName, "data_")
+                    ALogFileName = LollyActivity.instance?.lollyStorageManager?.getCacheLogPath(LollyActivity.instance!!) + "/command_" + shared.aft(csvFileName, "data_")
+                    AErrFileName = LollyActivity.instance?.lollyStorageManager?.getCacheLogPath(LollyActivity.instance!!) + "/err_" + shared.aft(csvFileName, "data_")
                 }
                 TDevState.tInfo -> {
                     updateDiagnostics(info.t1, info.t2, info.t3, info.humAd)
@@ -258,7 +258,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     fun handleDebugAction(action: String) {
         when (action) {
             "t.Tup" -> {
-                ALogFileName = LollyActivity.getInstance().cacheLogPath + "/testlog.csv"
+                ALogFileName = LollyActivity.instance?.lollyStorageManager?.getCacheLogPath(LollyActivity.instance!!) + "/testlog.csv"
                 saveLogAndData()
             }
             "t.Blowfish" -> {
@@ -407,3 +407,4 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 }
+

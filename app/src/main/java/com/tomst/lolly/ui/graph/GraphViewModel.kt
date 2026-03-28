@@ -72,6 +72,7 @@ class GraphViewModel(application: Application) : AndroidViewModel(application) {
                 fSerialNumber = parts[1]
             }
             setGraphTitleAndCheckboxes(dmd)
+            setHighlightingEnabled(true)
             notifyDataChanged()
         } else {
             // Data ze souboru (kliknutí v ListFragment)

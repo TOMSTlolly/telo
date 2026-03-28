@@ -15,7 +15,7 @@ data class OptionsUiState(
     val commandBookmark: String = "",
     val checkboxBookmark: Boolean = false,
     val mode: Int = 0,
-    val disableAutoGraph: Boolean = true,
+    val showGraph: Boolean = true,
     val rotateGraph: Boolean = true,
     val noLedLight: Boolean = true,
     val showMicro: Boolean = true,
@@ -69,12 +69,12 @@ class OptionsViewModel : ViewModel() {
     fun hasUnsavedChanges(): Boolean {
         val current = _uiState.value
         val initial = current.initialLoadedState ?: return false
-        
+
         return current.readFrom != initial.readFrom ||
                current.commandBookmark != initial.commandBookmark ||
                current.checkboxBookmark != initial.checkboxBookmark ||
                current.mode != initial.mode ||
-               current.disableAutoGraph != initial.disableAutoGraph ||
+               current.showGraph != initial.showGraph ||
                current.rotateGraph != initial.rotateGraph ||
                current.noLedLight != initial.noLedLight ||
                current.showMicro != initial.showMicro ||
@@ -94,7 +94,7 @@ class OptionsViewModel : ViewModel() {
             putString("commandBookmark", state.commandBookmark)
             putBoolean("checkboxBookmark", state.checkboxBookmark)
             putInt("mode", state.mode)
-            putBoolean("showgraph", state.disableAutoGraph)
+            putBoolean("showgraph", state.showGraph)
             putBoolean("rotategraph", state.rotateGraph)
             putBoolean("noledlight", state.noLedLight)
             putBoolean("showmicro", state.showMicro)
@@ -121,7 +121,7 @@ class OptionsViewModel : ViewModel() {
             commandBookmark = sharedPref.getString("commandBookmark", "") ?: "",
             checkboxBookmark = sharedPref.getBoolean("checkboxBookmark", false),
             mode = sharedPref.getInt("mode", 0),
-            disableAutoGraph = sharedPref.getBoolean("showgraph", true),
+            showGraph = sharedPref.getBoolean("showgraph", true),
             rotateGraph = sharedPref.getBoolean("rotategraph", true),
             noLedLight = sharedPref.getBoolean("noledlight", true),
             showMicro = sharedPref.getBoolean("showmicro", true),
@@ -131,7 +131,7 @@ class OptionsViewModel : ViewModel() {
             bookmarkVal = sharedPref.getInt("bookmarkVal", 0).let { v -> if (v == 0) "" else v.toString() },
             fromDate = sharedPref.getString("fromDate", "") ?: ""
         )
-        
+
         updateState { loadedState }
         setInitialState(loadedState)
     }
@@ -142,7 +142,7 @@ class OptionsViewModel : ViewModel() {
 
         val folderName = extractFolderNameFromEncodedUri(folder)
         updateState { it.copy(exportFolder = folderName) }
-        LollyActivity.getInstance().prefExportFolder = folder
+        LollyActivity.instance?.prefsManager?.prefExportFolder = folder
     }
 
     private fun extractFolderNameFromEncodedUri(uriPath: String): String {

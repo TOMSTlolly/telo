@@ -49,6 +49,7 @@ public class Satellites {
     /**
      * Updates the status of the satellites using the Legacy GpsStatus.
      */
+    @SuppressWarnings("deprecation")
     public void updateStatus(GpsStatus gpsStatus) {
         if (gpsStatus != null) {
             int satsTotal = 0;     // Total number of Satellites;

@@ -71,6 +71,7 @@ public class Tools {
         }
     }
 
+    @SuppressWarnings("deprecation")
     public static void setSystemBarColorInt(Activity act, @ColorInt int color) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             Window window = act.getWindow();
@@ -114,6 +115,7 @@ public class Tools {
         }
     }
 
+    @SuppressWarnings("deprecation")
     public static void clearSystemBarLight(Activity act) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             Window window = act.getWindow();
@@ -124,6 +126,7 @@ public class Tools {
     /**
      * Making notification bar transparent
      */
+    @SuppressWarnings("deprecation")
     public static void setSystemBarTransparent(Activity act) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             Window window = act.getWindow();
